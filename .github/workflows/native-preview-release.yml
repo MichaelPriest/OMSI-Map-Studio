@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.112: publish the final OSM/placement fix with release-tag integrity protection.
+# Test 10.113: split real-map creation into responsive wizard pages and diversify Overpass fallback.
 
 on:
   push:
@@ -195,6 +195,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.111-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.112-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.112-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.113-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.113-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -207,8 +209,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.112-native
-  TAG: v0.2.0-alpha.5-test.10.112-native
+  VERSION: 0.2.0-alpha.5-test.10.113-native
+  TAG: v0.2.0-alpha.5-test.10.113-native
 
 jobs:
   build-native-preview:
@@ -4500,6 +4502,51 @@ jobs:
 
           Write-Host "Verified per-request Overpass timeout architecture and multi-tile placement bounds."
 
+      - name: Verify test 10.113 responsive real-map wizard and Overpass fallback
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $progress = Get-Content src/MapStudio.Native/Controls/RealWorldGenerationPanel.xaml -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOverpassSceneClient.cs -Raw
+
+          foreach ($required in @(
+            'RealMapAreaWizardTabs',
+            '1 · Área',
+            '2 · Fontes',
+            '3 · Reconstrução',
+            '4 · Progresso',
+            'VerticalScrollBarVisibility="Auto"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.113 responsive wizard marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RealMapAreaWizardTabs.SelectedIndex',
+            'WorkspaceGrid.ActualWidth',
+            'WorkspaceGrid.ActualHeight'
+          )) {
+            if (-not $code.Contains($required)) {
+              throw "Test 10.113 adaptive window marker is missing: $required"
+            }
+          }
+
+          if (-not $progress.Contains('MaxHeight="150"')) {
+            throw "Test 10.113 progress/error panel must cap long status text and scroll."
+          }
+
+          if (-not $overpass.Contains('https://maps.mail.ru/osm/tools/overpass/api/interpreter')) {
+            throw "Test 10.113 must include the current VK Maps global Overpass fallback."
+          }
+
+          if ($overpass.Contains('https://overpass.kumi.systems/api/interpreter')) {
+            throw "Test 10.113 must not duplicate the former Kumi/Private.coffee fallback."
+          }
+
+          Write-Host "Verified responsive real-map wizard, readable progress panel, and diversified Overpass endpoints."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4654,11 +4701,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.112-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.113-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.112-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.113-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

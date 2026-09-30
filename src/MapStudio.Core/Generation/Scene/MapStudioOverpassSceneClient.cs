@@ -53,7 +53,7 @@ public sealed class MapStudioOverpassSceneClient
             new(
                 "https://overpass-api.de/api/interpreter"),
             new(
-                "https://overpass.kumi.systems/api/interpreter"),
+                "https://maps.mail.ru/osm/tools/overpass/api/interpreter"),
             new(
                 "https://overpass.private.coffee/api/interpreter")
         ];

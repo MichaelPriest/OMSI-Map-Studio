@@ -27087,6 +27087,38 @@ public sealed partial class MainWindow : Window
         RealMapAreaWindow.Visibility =
             Visibility.Visible;
 
+        RealMapAreaWizardTabs.SelectedIndex =
+            0;
+
+        if (
+            WorkspaceGrid.ActualWidth >
+                0 &&
+            WorkspaceGrid.ActualHeight >
+                0)
+        {
+            RealMapAreaWindow.Width =
+                Math.Min(
+                    860,
+                    Math.Max(
+                        360,
+                        WorkspaceGrid.ActualWidth -
+                            32));
+
+            RealMapAreaWindow.Height =
+                Math.Min(
+                    640,
+                    Math.Max(
+                        320,
+                        WorkspaceGrid.ActualHeight -
+                            32));
+
+            RealMapAreaWindowTranslate.X =
+                0;
+
+            RealMapAreaWindowTranslate.Y =
+                0;
+        }
+
         if (_realMapAreaWindowMinimized)
         {
             SetRealMapAreaMinimized(
@@ -28113,7 +28145,7 @@ setTimeout(postBounds, 250);
         {
             _realMapAreaRestoreHeight =
                 Math.Max(
-                    480,
+                    360,
                     RealMapAreaWindow
                         .ActualHeight);
         }
@@ -28126,13 +28158,7 @@ setTimeout(postBounds, 250);
                 ? Visibility.Collapsed
                 : Visibility.Visible;
 
-        RealMapAreaOptionsRow.Visibility =
-            visibility;
-
-        RealMapAreaMapRow.Visibility =
-            visibility;
-
-        RealMapAreaFooterRow.Visibility =
+        RealMapAreaWizardTabs.Visibility =
             visibility;
 
         RealMapAreaResizeGrip.Visibility =
@@ -28142,7 +28168,7 @@ setTimeout(postBounds, 250);
             minimized
                 ? 70
                 : Math.Max(
-                    480,
+                    360,
                     _realMapAreaRestoreHeight);
 
         RealMapAreaMinimizeButton.Content =
@@ -28200,6 +28226,28 @@ setTimeout(postBounds, 250);
                 _realMapEast
             ) *
             0.5;
+
+        var requestedRoadImportMode =
+            RealMapRoadImportModeBox
+                .SelectedIndex;
+
+        var requestedFullReconstruction =
+            (
+                requestedRoadImportMode <
+                    0
+                    ? 2
+                    : Math.Clamp(
+                        requestedRoadImportMode,
+                        0,
+                        2)
+            ) ==
+            2;
+
+        if (requestedFullReconstruction)
+        {
+            RealMapAreaWizardTabs.SelectedIndex =
+                3;
+        }
 
         CreateRealMapAreaButton.IsEnabled =
             false;
@@ -29267,9 +29315,9 @@ setTimeout(postBounds, 250);
                 _realMapAreaResizeOriginWidth +
                 position.X -
                 _realMapAreaResizeStartX,
-                620,
+                420,
                 Math.Max(
-                    620,
+                    420,
                     WorkspaceGrid.ActualWidth -
                         24));
 
@@ -29278,9 +29326,9 @@ setTimeout(postBounds, 250);
                 _realMapAreaResizeOriginHeight +
                     position.Y -
                     _realMapAreaResizeStartY,
-                480,
+                360,
                 Math.Max(
-                    480,
+                    360,
                     WorkspaceGrid.ActualHeight -
                         24));
 

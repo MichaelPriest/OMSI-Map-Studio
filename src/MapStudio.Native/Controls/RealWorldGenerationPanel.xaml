@@ -36,10 +36,15 @@
                     Click="OnCancelClick" />
             </Grid>
 
-            <TextBlock
-                x:Name="StatusText"
-                Text="Pronto para gerar mapa real."
-                TextWrapping="Wrap" />
+            <ScrollViewer
+                MaxHeight="150"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+                <TextBlock
+                    x:Name="StatusText"
+                    Text="Pronto para gerar mapa real."
+                    TextWrapping="Wrap" />
+            </ScrollViewer>
 
             <StackPanel
                 x:Name="OverallProgressPanel"

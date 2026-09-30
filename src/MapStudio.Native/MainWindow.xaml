@@ -3052,9 +3052,9 @@
             <Border x:Name="RealMapAreaWindow"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    Width="800"
-                    Height="600"
-                    Margin="190,58,0,0"
+                    Width="860"
+                    Height="640"
+                    Margin="16,16,0,0"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
                     Visibility="Collapsed"
@@ -3071,9 +3071,7 @@
                       RowSpacing="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <Grid Background="Transparent"
@@ -3093,10 +3091,10 @@
                                       FontSize="16"
                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             <StackPanel>
-                                <TextBlock Text="CRIAR MAPA REAL POR ÁREA"
+                                <TextBlock Text="CRIAR MAPA REAL"
                                            FontSize="13"
                                            FontWeight="SemiBold" />
-                                <TextBlock Text="Mova/zoome o mapa sob o retângulo para escolher a área"
+                                <TextBlock Text="Assistente em 4 etapas · área, fontes, reconstrução e progresso"
                                            FontSize="10"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
@@ -3121,322 +3119,381 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid x:Name="RealMapAreaOptionsRow"
-                          Grid.Row="1"
-                          ColumnSpacing="8"
-                          RowSpacing="7">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1.2*" />
-                            <ColumnDefinition Width="1.2*" />
-                            <ColumnDefinition Width="1*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                    <TabView x:Name="RealMapAreaWizardTabs"
+                             Grid.Row="1"
+                             SelectedIndex="0"
+                             IsAddTabButtonVisible="False"
+                             CanDragTabs="False"
+                             CanReorderTabs="False"
+                             TabWidthMode="SizeToContent">
+                        <TabViewItem Header="1 · Área">
+                            <Grid Margin="4,8,4,4"
+                                  RowSpacing="8">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
 
-                        <TextBox x:Name="RealMapDirectoryBox"
-                                 Grid.Row="0"
-                                 Grid.Column="0"
-                                 Header="Pasta"
-                                 PlaceholderText="MeuMapaReal" />
-                        <TextBox x:Name="RealMapDisplayNameBox"
-                                 Grid.Row="0"
-                                 Grid.Column="1"
-                                 Header="Nome"
-                                 PlaceholderText="Meu mapa real" />
-                        <ComboBox x:Name="RealMapProviderBox"
-                                  Grid.Row="0"
-                                  Grid.Column="2"
-                                  Header="Mapa para escolher a área"
-                                  SelectedIndex="0"
-                                  SelectionChanged="OnRealMapProviderChanged">
-                            <ComboBoxItem Content="CARTO / OpenStreetMap · API key CARTO" />
-                            <ComboBoxItem Content="Google Maps · chave do usuário" />
-                        </ComboBox>
-                        <Button Grid.Row="0"
-                                Grid.Column="3"
-                                VerticalAlignment="Bottom"
-                                Content="Recarregar"
-                                Click="OnReloadRealMapAreaClick" />
-
-                        <Grid Grid.Row="1"
-                              Grid.Column="0"
-                              Grid.ColumnSpan="4"
-                              ColumnSpacing="7">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.45*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="1.4*" />
-                                <ColumnDefinition Width="105" />
-                                <ColumnDefinition Width="105" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBox x:Name="RealMapSearchBox"
-                                     Grid.Column="0"
-                                     Header="Buscar cidade, endereço ou local"
-                                     PlaceholderText="Ex.: Av. Paulista, São Paulo" />
-
-                            <Button x:Name="RealMapSearchButton"
-                                    Grid.Column="1"
-                                    VerticalAlignment="Bottom"
-                                    Content="Buscar"
-                                    Click="OnRealMapSearchClick" />
-
-                            <ComboBox x:Name="RealMapSearchResultsBox"
-                                      Grid.Column="2"
-                                      Header="Resultados"
-                                      DisplayMemberPath="DisplayName"
-                                      PlaceholderText="Selecione um resultado"
-                                      SelectionChanged="OnRealMapSearchResultChanged" />
-
-                            <NumberBox x:Name="RealMapAreaWidthPercentBox"
-                                       Grid.Column="3"
-                                       Header="Largura área %"
-                                       Minimum="20"
-                                       Maximum="95"
-                                       SmallChange="5"
-                                       Value="62"
-                                       SpinButtonPlacementMode="Compact"
-                                       ValueChanged="OnRealMapAreaSelectionSizeChanged" />
-
-                            <NumberBox x:Name="RealMapAreaHeightPercentBox"
-                                       Grid.Column="4"
-                                       Header="Altura área %"
-                                       Minimum="20"
-                                       Maximum="95"
-                                       SmallChange="5"
-                                       Value="58"
-                                       SpinButtonPlacementMode="Compact"
-                                       ValueChanged="OnRealMapAreaSelectionSizeChanged" />
-                        </Grid>
-
-                        <Grid x:Name="RealMapCartoKeyPanel"
-                              Grid.Row="2"
-                              Grid.Column="0"
-                              Grid.ColumnSpan="4"
-                              ColumnSpacing="7">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.4*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="1.2*" />
-                            </Grid.ColumnDefinitions>
-
-                            <PasswordBox x:Name="RealMapCartoKeyBox"
-                                         Grid.Column="0"
-                                         Header="Chave CARTO Basemaps"
-                                         PlaceholderText="Cole aqui a chave enviada pela CARTO" />
-
-                            <Button x:Name="SaveRealMapCartoKeyButton"
-                                    Grid.Column="1"
-                                    VerticalAlignment="Bottom"
-                                    Content="Salvar chave"
-                                    Click="OnSaveRealMapCartoKeyClick" />
-
-                            <Button Grid.Column="2"
-                                    VerticalAlignment="Bottom"
-                                    Content="Como obter"
-                                    Click="OnOpenCartoKeyHelpClick" />
-
-                            <TextBlock Grid.Column="3"
-                                       VerticalAlignment="Bottom"
-                                       Margin="2,0,0,4"
-                                       FontSize="10"
-                                       TextWrapping="Wrap"
-                                       Foreground="{ThemeResource MapStudioTextMutedBrush}"
-                                       Text="A CARTO envia a chave por e-mail. Ela fica salva somente no Windows Credential Manager deste PC." />
-                        </Grid>
-                    </Grid>
-
-                    <Grid x:Name="RealMapAreaMapRow"
-                          Grid.Row="2">
-                        <WebView2 x:Name="RealMapAreaWebView"
-                                  HorizontalAlignment="Stretch"
-                                  VerticalAlignment="Stretch" />
-
-                        <Grid IsHitTestVisible="False">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition x:Name="RealMapAreaLeftColumn"
-                                                  Width="19*" />
-                                <ColumnDefinition x:Name="RealMapAreaCenterColumn"
-                                                  Width="62*" />
-                                <ColumnDefinition x:Name="RealMapAreaRightColumn"
-                                                  Width="19*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition x:Name="RealMapAreaTopRow"
-                                               Height="21*" />
-                                <RowDefinition x:Name="RealMapAreaCenterRow"
-                                               Height="58*" />
-                                <RowDefinition x:Name="RealMapAreaBottomRow"
-                                               Height="21*" />
-                            </Grid.RowDefinitions>
-
-                            <Border Grid.Row="1"
-                                    Grid.Column="1"
-                                    BorderBrush="{ThemeResource MapStudioAccentBrush}"
-                                    BorderThickness="3"
-                                    Background="#08000000"
-                                    CornerRadius="4">
-                                <Grid>
-                                    <Border HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Width="12"
-                                            Height="12"
-                                            CornerRadius="6"
-                                            Background="{ThemeResource MapStudioAccentBrush}" />
-                                    <Border HorizontalAlignment="Center"
-                                            VerticalAlignment="Top"
-                                            Margin="0,7,0,0"
-                                            Padding="7,3"
-                                            Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
-                                            CornerRadius="4">
-                                        <TextBlock Text="ÁREA DO MAPA"
-                                                   FontSize="10"
-                                                   FontWeight="SemiBold" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </Grid>
-
-                    <Grid x:Name="RealMapAreaFooterRow"
-                          Grid.Row="3"
-                          ColumnSpacing="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Spacing="4">
-                            <TextBlock x:Name="RealMapAreaBoundsText"
-                                       Text="Mova o mapa para selecionar uma área."
-                                       FontSize="10"
-                                       TextWrapping="Wrap"
-                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
-                            <TextBlock x:Name="RealMapAreaEstimateText"
-                                       Text="—"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
-                            <StackPanel Spacing="5">
-                                <ComboBox x:Name="RealMapRoadImportModeBox"
-                                          Header="Vias OpenStreetMap"
-                                          SelectedIndex="2"
-                                          HorizontalAlignment="Stretch">
-                                    <ComboBoxItem Content="Criar apenas terreno / referência" />
-                                    <ComboBoxItem Content="Importar vias como guias" />
-                                    <ComboBoxItem Content="Reconstrução completa automática · vias + cruzamentos + cenário" />
-                                </ComboBox>
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1.2*" />
-                                        <ColumnDefinition Width="1*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <ComboBox x:Name="RealMapElevationProviderBox"
-                                              Grid.Column="0"
-                                              Header="Elevação"
-                                              SelectedIndex="0"
-                                              HorizontalAlignment="Stretch"
-                                              SelectionChanged="OnRealMapElevationProviderChanged">
-                                        <ComboBoxItem Content="Nenhuma" />
-                                        <ComboBoxItem Content="Open-Meteo / Copernicus GLO-90 · gratuito sem chave" />
-                                        <ComboBoxItem Content="Google Elevation · chave do usuário" />
-                                    </ComboBox>
-
-                                    <PasswordBox x:Name="RealMapOpenMeteoKeyBox"
-                                                 Grid.Column="1"
-                                                 Header="Chave Open-Meteo comercial (opcional)"
-                                                 PlaceholderText="Deixe vazio para usar gratuito"
-                                                 Visibility="Collapsed" />
-
-                                    <Button x:Name="SaveRealMapOpenMeteoKeyButton"
-                                            Grid.Column="2"
-                                            VerticalAlignment="Bottom"
-                                            Content="Salvar chave"
-                                            Visibility="Collapsed"
-                                            Click="OnSaveRealMapOpenMeteoKeyClick" />
-                                </Grid>
-
-                                <StackPanel Spacing="4">
-                                    <StackPanel Orientation="Horizontal"
-                                                Spacing="12">
-                                        <CheckBox x:Name="RealMapApplyElevationCheckBox"
-                                                  Content="Aplicar elevação automaticamente"
-                                                  IsChecked="False" />
-                                        <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
-                                                  Content="Referência visual no terreno"
-                                                  IsChecked="True" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal"
-                                                Spacing="12">
-                                        <CheckBox x:Name="RealMapUseBuildingVisualEvidenceCheckBox"
-                                                  Content="Imagens locais + IA"
-                                                  ToolTipService.ToolTip="Opcional. Usa PNG/JPG/WEBP em .mapstudio\references\buildings\&lt;id OSM&gt; com o provedor de IA configurado."
-                                                  IsChecked="False" />
-                                        <CheckBox x:Name="RealMapUseOpenAerialMapEvidenceCheckBox"
-                                                  Content="OpenAerialMap + IA para telhados"
-                                                  ToolTipService.ToolTip="Opcional. Procura ortofotos OpenAerialMap com licença CC BY 4.0 e boa resolução. A vista aérea só refina informações visíveis de telhado; a origem fica registrada no manifest do asset."
-                                                  IsChecked="False" />
-                                    </StackPanel>
-                                </StackPanel>
-
-                                <Grid ColumnSpacing="7">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0"
-                                            Content="+ Pasta de itens"
-                                            ToolTipService.ToolTip="Adicionar SCO/SLI e outros itens ao Workspace"
-                                            Click="OnAddAssetFolderClick" />
-                                    <Button Grid.Column="1"
-                                            Content="Abrir Biblioteca"
-                                            ToolTipService.ToolTip="Escolher objetos/splines e posicionar no mapa"
-                                            Click="OnOpenAssetLibraryFromRealMapClick" />
-                                    <CheckBox x:Name="RealMapOpenLibraryAfterCreateCheckBox"
-                                              Grid.Column="2"
-                                              HorizontalAlignment="Right"
-                                              VerticalAlignment="Center"
-                                              Content="Abrir Biblioteca após criar"
-                                              ToolTipService.ToolTip="Opcional. No modo automático de ruas, deixe desmarcado para terminar diretamente no mapa."
-                                              IsChecked="False" />
+                                    <TextBox x:Name="RealMapDirectoryBox"
+                                             Grid.Column="0"
+                                             Header="Pasta"
+                                             PlaceholderText="MeuMapaReal" />
+                                    <TextBox x:Name="RealMapDisplayNameBox"
+                                             Grid.Column="1"
+                                             Header="Nome"
+                                             PlaceholderText="Meu mapa real" />
                                 </Grid>
-                            </StackPanel>
-                            <controls:RealWorldGenerationPanel
-                                x:Name="RealWorldGenerationStatusPanel"
-                                Margin="0,4,0,0"
-                                Visibility="Collapsed" />
-                            <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos. Open-Meteo/Copernicus funciona pelo endpoint público sem chave; chave comercial é opcional. Google Elevation usa credencial do próprio usuário."
-                                       FontSize="9.5"
-                                       TextWrapping="Wrap"
-                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
-                            <TextBlock Text="Elevação Open-Meteo: Copernicus DEM 2021 GLO-90 · dados com atribuição Open-Meteo / Copernicus."
-                                       FontSize="9"
-                                       TextWrapping="Wrap"
-                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
-                        </StackPanel>
 
-                        <StackPanel Grid.Column="1"
-                                    Orientation="Horizontal"
-                                    Spacing="7"
-                                    VerticalAlignment="Bottom">
-                            <Button Content="Avançado"
-                                    Click="OnCreateCoordinateMapAdvancedClick" />
-                            <Button x:Name="CreateRealMapAreaButton"
-                                    Content="Criar + reconstruir"
-                                    IsEnabled="False"
-                                    Click="OnCreateRealMapAreaClick" />
-                        </StackPanel>
-                    </Grid>
+                                <Grid Grid.Row="1"
+                                      ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="RealMapSearchBox"
+                                             Header="Buscar cidade, endereço ou local"
+                                             PlaceholderText="Ex.: Av. Paulista, São Paulo" />
+                                    <Button x:Name="RealMapSearchButton"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Bottom"
+                                            Content="Buscar"
+                                            Click="OnRealMapSearchClick" />
+                                </Grid>
+
+                                <Grid Grid.Row="2"
+                                      ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="112" />
+                                        <ColumnDefinition Width="112" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="RealMapSearchResultsBox"
+                                              Header="Resultados"
+                                              DisplayMemberPath="DisplayName"
+                                              PlaceholderText="Selecione um resultado"
+                                              SelectionChanged="OnRealMapSearchResultChanged" />
+                                    <NumberBox x:Name="RealMapAreaWidthPercentBox"
+                                               Grid.Column="1"
+                                               Header="Largura %"
+                                               Minimum="20"
+                                               Maximum="95"
+                                               SmallChange="5"
+                                               Value="62"
+                                               SpinButtonPlacementMode="Compact"
+                                               ValueChanged="OnRealMapAreaSelectionSizeChanged" />
+                                    <NumberBox x:Name="RealMapAreaHeightPercentBox"
+                                               Grid.Column="2"
+                                               Header="Altura %"
+                                               Minimum="20"
+                                               Maximum="95"
+                                               SmallChange="5"
+                                               Value="58"
+                                               SpinButtonPlacementMode="Compact"
+                                               ValueChanged="OnRealMapAreaSelectionSizeChanged" />
+                                </Grid>
+
+                                <Grid Grid.Row="3"
+                                      ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="2">
+                                        <TextBlock x:Name="RealMapAreaBoundsText"
+                                                   Text="Mova o mapa para selecionar uma área."
+                                                   FontSize="10"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                                        <TextBlock x:Name="RealMapAreaEstimateText"
+                                                   Text="—"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Content="Recarregar mapa"
+                                            Click="OnReloadRealMapAreaClick" />
+                                </Grid>
+
+                                <Grid x:Name="RealMapAreaMapRow"
+                                      Grid.Row="4"
+                                      MinHeight="220">
+                                    <WebView2 x:Name="RealMapAreaWebView"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Stretch" />
+
+                                    <Grid IsHitTestVisible="False">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition x:Name="RealMapAreaLeftColumn"
+                                                              Width="19*" />
+                                            <ColumnDefinition x:Name="RealMapAreaCenterColumn"
+                                                              Width="62*" />
+                                            <ColumnDefinition x:Name="RealMapAreaRightColumn"
+                                                              Width="19*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition x:Name="RealMapAreaTopRow"
+                                                           Height="21*" />
+                                            <RowDefinition x:Name="RealMapAreaCenterRow"
+                                                           Height="58*" />
+                                            <RowDefinition x:Name="RealMapAreaBottomRow"
+                                                           Height="21*" />
+                                        </Grid.RowDefinitions>
+
+                                        <Border Grid.Row="1"
+                                                Grid.Column="1"
+                                                BorderBrush="{ThemeResource MapStudioAccentBrush}"
+                                                BorderThickness="3"
+                                                Background="#08000000"
+                                                CornerRadius="4">
+                                            <Grid>
+                                                <Border HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Width="12"
+                                                        Height="12"
+                                                        CornerRadius="6"
+                                                        Background="{ThemeResource MapStudioAccentBrush}" />
+                                                <Border HorizontalAlignment="Center"
+                                                        VerticalAlignment="Top"
+                                                        Margin="0,7,0,0"
+                                                        Padding="7,3"
+                                                        Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
+                                                        CornerRadius="4">
+                                                    <TextBlock Text="ÁREA DO MAPA"
+                                                               FontSize="10"
+                                                               FontWeight="SemiBold" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </TabViewItem>
+
+                        <TabViewItem Header="2 · Fontes">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Margin="4,8,10,12"
+                                            Spacing="12">
+                                    <Border Padding="12"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="Mapa-base"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold" />
+                                            <ComboBox x:Name="RealMapProviderBox"
+                                                      Header="Mapa para escolher a área"
+                                                      SelectedIndex="0"
+                                                      HorizontalAlignment="Stretch"
+                                                      SelectionChanged="OnRealMapProviderChanged">
+                                                <ComboBoxItem Content="CARTO / OpenStreetMap · API key CARTO" />
+                                                <ComboBoxItem Content="Google Maps · chave do usuário" />
+                                            </ComboBox>
+
+                                            <StackPanel x:Name="RealMapCartoKeyPanel"
+                                                        Spacing="7">
+                                                <PasswordBox x:Name="RealMapCartoKeyBox"
+                                                             Header="Chave CARTO Basemaps"
+                                                             PlaceholderText="Cole aqui a chave enviada pela CARTO" />
+                                                <StackPanel Orientation="Horizontal"
+                                                            Spacing="7">
+                                                    <Button x:Name="SaveRealMapCartoKeyButton"
+                                                            Content="Salvar chave"
+                                                            Click="OnSaveRealMapCartoKeyClick" />
+                                                    <Button Content="Como obter"
+                                                            Click="OnOpenCartoKeyHelpClick" />
+                                                </StackPanel>
+                                                <TextBlock FontSize="10"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{ThemeResource MapStudioTextMutedBrush}"
+                                                           Text="A chave CARTO fica salva somente no Windows Credential Manager deste PC." />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Padding="12"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="Elevação"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold" />
+                                            <ComboBox x:Name="RealMapElevationProviderBox"
+                                                      Header="Fonte de elevação"
+                                                      SelectedIndex="0"
+                                                      HorizontalAlignment="Stretch"
+                                                      SelectionChanged="OnRealMapElevationProviderChanged">
+                                                <ComboBoxItem Content="Nenhuma" />
+                                                <ComboBoxItem Content="Open-Meteo / Copernicus GLO-90 · gratuito sem chave" />
+                                                <ComboBoxItem Content="Google Elevation · chave do usuário" />
+                                            </ComboBox>
+
+                                            <PasswordBox x:Name="RealMapOpenMeteoKeyBox"
+                                                         Header="Chave Open-Meteo comercial (opcional)"
+                                                         PlaceholderText="Deixe vazio para usar gratuito"
+                                                         Visibility="Collapsed" />
+                                            <Button x:Name="SaveRealMapOpenMeteoKeyButton"
+                                                    HorizontalAlignment="Left"
+                                                    Content="Salvar chave Open-Meteo"
+                                                    Visibility="Collapsed"
+                                                    Click="OnSaveRealMapOpenMeteoKeyClick" />
+
+                                            <CheckBox x:Name="RealMapApplyElevationCheckBox"
+                                                      Content="Aplicar elevação automaticamente"
+                                                      IsChecked="False" />
+                                            <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
+                                                      Content="Referência visual no terreno"
+                                                      IsChecked="True" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Padding="12"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="Evidência visual opcional"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold" />
+                                            <CheckBox x:Name="RealMapUseBuildingVisualEvidenceCheckBox"
+                                                      Content="Imagens locais + IA para prédios"
+                                                      ToolTipService.ToolTip="Usa imagens em .mapstudio/references/buildings/&lt;id OSM&gt; com o provedor de IA configurado."
+                                                      IsChecked="False" />
+                                            <CheckBox x:Name="RealMapUseOpenAerialMapEvidenceCheckBox"
+                                                      Content="OpenAerialMap + IA para telhados"
+                                                      ToolTipService.ToolTip="Procura ortofotos OpenAerialMap e usa a vista aérea somente para refinar informações visíveis de telhado."
+                                                      IsChecked="False" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="OpenStreetMap fornece os dados vetoriais. Open-Meteo/Copernicus funciona pelo endpoint público sem chave; a chave comercial é opcional. Google Elevation usa credencial do próprio usuário."
+                                               FontSize="10"
+                                               TextWrapping="Wrap"
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabViewItem>
+
+                        <TabViewItem Header="3 · Reconstrução">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <Grid x:Name="RealMapAreaFooterRow"
+                                      Margin="4,8,10,12"
+                                      RowSpacing="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Border Padding="12"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="O que será construído"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold" />
+                                            <ComboBox x:Name="RealMapRoadImportModeBox"
+                                                      Header="Vias OpenStreetMap"
+                                                      SelectedIndex="2"
+                                                      HorizontalAlignment="Stretch">
+                                                <ComboBoxItem Content="Criar apenas terreno / referência" />
+                                                <ComboBoxItem Content="Importar vias como guias" />
+                                                <ComboBoxItem Content="Reconstrução completa automática · vias + cruzamentos + cenário" />
+                                            </ComboBox>
+                                            <TextBlock Text="A reconstrução completa baixa os dados OSM, aplica a elevação escolhida e gera vias, cruzamentos, prédios, vegetação, mobiliário e infraestrutura."
+                                                       FontSize="10"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Row="1"
+                                            Padding="12"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="Biblioteca / assets"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold" />
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="7">
+                                                <Button Content="+ Pasta de itens"
+                                                        ToolTipService.ToolTip="Adicionar SCO/SLI e outros itens ao Workspace"
+                                                        Click="OnAddAssetFolderClick" />
+                                                <Button Content="Abrir Biblioteca"
+                                                        ToolTipService.ToolTip="Escolher objetos/splines e posicionar no mapa"
+                                                        Click="OnOpenAssetLibraryFromRealMapClick" />
+                                            </StackPanel>
+                                            <CheckBox x:Name="RealMapOpenLibraryAfterCreateCheckBox"
+                                                      Content="Abrir Biblioteca após criar"
+                                                      ToolTipService.ToolTip="Opcional. No modo automático, deixe desmarcado para terminar diretamente no mapa."
+                                                      IsChecked="False" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Grid.Row="2"
+                                            Padding="12"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource MapStudioAccentSurfaceBrush}">
+                                        <StackPanel Spacing="5">
+                                            <TextBlock Text="Pronto para gerar?"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold" />
+                                            <TextBlock Text="Revise a área na etapa 1 e as fontes na etapa 2. Durante a geração, o assistente muda automaticamente para Progresso."
+                                                       FontSize="10"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <StackPanel Grid.Row="3"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right"
+                                                Spacing="7">
+                                        <Button Content="Avançado"
+                                                Click="OnCreateCoordinateMapAdvancedClick" />
+                                        <Button x:Name="CreateRealMapAreaButton"
+                                                Content="Criar + reconstruir"
+                                                IsEnabled="False"
+                                                Click="OnCreateRealMapAreaClick" />
+                                    </StackPanel>
+                                </Grid>
+                            </ScrollViewer>
+                        </TabViewItem>
+
+                        <TabViewItem Header="4 · Progresso">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Margin="4,8,10,12"
+                                            Spacing="10">
+                                    <TextBlock Text="Acompanhe a geração"
+                                               FontSize="14"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="Esta página concentra andamento, cancelamento, resultado e mensagens de erro para não comprimir o mapa e as configurações."
+                                               FontSize="10"
+                                               TextWrapping="Wrap"
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                    <controls:RealWorldGenerationPanel
+                                        x:Name="RealWorldGenerationStatusPanel"
+                                        Visibility="Collapsed" />
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabViewItem>
+                    </TabView>
 
                     <Border x:Name="RealMapAreaResizeGrip"
+                            Grid.RowSpan="2"
                             Width="30"
                             Height="30"
                             Margin="0,0,-7,-7"
