@@ -43,10 +43,14 @@ public sealed class MapStudioRealWorldMapPipeline
     private readonly MapStudioGoogleElevationSurfaceClient
         _elevationClient;
 
+    private readonly MapStudioOpenMeteoElevationSurfaceClient
+        _openMeteoElevationClient;
+
     public MapStudioRealWorldMapPipeline()
         : this(
             new MapStudioOverpassSceneClient(),
-            new MapStudioGoogleElevationSurfaceClient())
+            new MapStudioGoogleElevationSurfaceClient(),
+            new MapStudioOpenMeteoElevationSurfaceClient())
     {
     }
 
@@ -54,13 +58,25 @@ public sealed class MapStudioRealWorldMapPipeline
         MapStudioOverpassSceneClient sceneClient)
         : this(
             sceneClient,
-            new MapStudioGoogleElevationSurfaceClient())
+            new MapStudioGoogleElevationSurfaceClient(),
+            new MapStudioOpenMeteoElevationSurfaceClient())
     {
     }
 
     public MapStudioRealWorldMapPipeline(
         MapStudioOverpassSceneClient sceneClient,
         MapStudioGoogleElevationSurfaceClient elevationClient)
+        : this(
+            sceneClient,
+            elevationClient,
+            new MapStudioOpenMeteoElevationSurfaceClient())
+    {
+    }
+
+    public MapStudioRealWorldMapPipeline(
+        MapStudioOverpassSceneClient sceneClient,
+        MapStudioGoogleElevationSurfaceClient elevationClient,
+        MapStudioOpenMeteoElevationSurfaceClient openMeteoElevationClient)
     {
         ArgumentNullException.ThrowIfNull(
             sceneClient);
@@ -68,11 +84,17 @@ public sealed class MapStudioRealWorldMapPipeline
         ArgumentNullException.ThrowIfNull(
             elevationClient);
 
+        ArgumentNullException.ThrowIfNull(
+            openMeteoElevationClient);
+
         _sceneClient =
             sceneClient;
 
         _elevationClient =
             elevationClient;
+
+        _openMeteoElevationClient =
+            openMeteoElevationClient;
     }
 
     public async Task<MapStudioRealWorldMapPipelineResult>
@@ -126,6 +148,86 @@ public sealed class MapStudioRealWorldMapPipeline
             await _elevationClient
                 .DownloadAsync(
                     googleElevationApiKey,
+                    south,
+                    west,
+                    north,
+                    east,
+                    elevationRows,
+                    elevationColumns,
+                    elevationProgress,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
+        return await RunAsync(
+                omsiRoot,
+                mapDirectory,
+                south,
+                west,
+                north,
+                east,
+                anchor,
+                catalog.SceneryObjects,
+                streetFurnitureEvidence,
+                progress,
+                cancellationToken,
+                elevation)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<MapStudioRealWorldMapPipelineResult>
+        RunAutoIndexedWithOpenMeteoElevationAsync(
+            string omsiRoot,
+            string mapDirectory,
+            double south,
+            double west,
+            double north,
+            double east,
+            MapStudioGeographicAnchor anchor,
+            string openMeteoApiKey,
+            int elevationRows = 17,
+            int elevationColumns = 17,
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MapStudioSceneEvidence>>?
+                streetFurnitureEvidence = null,
+            IProgress<MapStudioRealWorldMapPipelineProgress>?
+                progress = null,
+            IProgress<OmsiAssetIndexProgress>?
+                assetIndexProgress = null,
+            IProgress<MapStudioElevationDownloadProgress>?
+                elevationProgress = null,
+            CancellationToken cancellationToken = default)
+    {
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .IndexingAssets,
+                "Atualizando biblioteca de assets OMSI..."));
+
+        var catalog =
+            await new MapStudioRealWorldAssetCatalogLoader()
+                .LoadAsync(
+                    omsiRoot,
+                    assetIndexProgress,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .DownloadingElevation,
+                "Baixando grade Open-Meteo/Copernicus..."));
+
+        var elevation =
+            await _openMeteoElevationClient
+                .DownloadAsync(
+                    openMeteoApiKey,
                     south,
                     west,
                     north,
