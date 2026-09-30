@@ -3363,18 +3363,27 @@
                                             Click="OnSaveRealMapOpenMeteoKeyClick" />
                                 </Grid>
 
-                                <StackPanel Orientation="Horizontal"
-                                            Spacing="12">
-                                    <CheckBox x:Name="RealMapApplyElevationCheckBox"
-                                              Content="Aplicar elevação automaticamente"
-                                              IsChecked="False" />
-                                    <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
-                                              Content="Referência visual no terreno"
-                                              IsChecked="True" />
-                                    <CheckBox x:Name="RealMapUseBuildingVisualEvidenceCheckBox"
-                                              Content="Refinar prédios com imagens locais + IA"
-                                              ToolTipService.ToolTip="Opcional. Usa PNG/JPG/WEBP em .mapstudio\references\buildings\&lt;id OSM&gt; com o provedor de IA configurado. Prefixos aerial-/satellite- contam como evidência aérea; street-/facade- como nível da rua."
-                                              IsChecked="False" />
+                                <StackPanel Spacing="4">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="12">
+                                        <CheckBox x:Name="RealMapApplyElevationCheckBox"
+                                                  Content="Aplicar elevação automaticamente"
+                                                  IsChecked="False" />
+                                        <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
+                                                  Content="Referência visual no terreno"
+                                                  IsChecked="True" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="12">
+                                        <CheckBox x:Name="RealMapUseBuildingVisualEvidenceCheckBox"
+                                                  Content="Imagens locais + IA"
+                                                  ToolTipService.ToolTip="Opcional. Usa PNG/JPG/WEBP em .mapstudio\references\buildings\&lt;id OSM&gt; com o provedor de IA configurado."
+                                                  IsChecked="False" />
+                                        <CheckBox x:Name="RealMapUseOpenAerialMapEvidenceCheckBox"
+                                                  Content="OpenAerialMap + IA para telhados"
+                                                  ToolTipService.ToolTip="Opcional. Procura ortofotos OpenAerialMap com licença CC BY 4.0 e boa resolução. A vista aérea só refina informações visíveis de telhado; a origem fica registrada no manifest do asset."
+                                                  IsChecked="False" />
+                                    </StackPanel>
                                 </StackPanel>
 
                                 <Grid ColumnSpacing="7">
