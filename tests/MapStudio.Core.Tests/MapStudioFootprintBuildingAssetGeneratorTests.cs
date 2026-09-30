@@ -364,6 +364,27 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
                 (byte)98,
                 facadePixel.B);
 
+            var facadeWindowPixel =
+                ReadBmpPixel(
+                    await File.ReadAllBytesAsync(
+                        facadePath),
+                    128,
+                    128,
+                    16,
+                    30);
+
+            Assert.Equal(
+                (byte)76,
+                facadeWindowPixel.R);
+
+            Assert.Equal(
+                (byte)108,
+                facadeWindowPixel.G);
+
+            Assert.Equal(
+                (byte)126,
+                facadeWindowPixel.B);
+
             var roofPixel =
                 ReadBmpPixel(
                     await File.ReadAllBytesAsync(
