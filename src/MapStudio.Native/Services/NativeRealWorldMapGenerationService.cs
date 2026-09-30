@@ -58,13 +58,15 @@ public sealed class NativeRealWorldMapGenerationService
                 assetIndexProgress = null,
             IProgress<MapStudioElevationDownloadProgress>?
                 elevationProgress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool useSavedGoogleElevation = true)
     {
         var googleKey =
             NativeMapCredentialStore
                 .TryGetGoogleMapsApiKey();
 
         if (
+            useSavedGoogleElevation &&
             !string.IsNullOrWhiteSpace(
                 googleKey))
         {
