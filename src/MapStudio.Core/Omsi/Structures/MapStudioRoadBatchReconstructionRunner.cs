@@ -495,8 +495,8 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                         -1,
                                         -1,
                                         placement.LocalX,
-                                        placement.LocalZ,
                                         placement.StartHeight,
+                                        placement.LocalZ,
                                         placement.Rotation,
                                         placement.Segment
                                             .LengthMeters,
