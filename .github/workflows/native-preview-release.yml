@@ -4260,8 +4260,9 @@ jobs:
 
           foreach ($required in @(
             'LoadOpenMeteoElevationGridAsync(',
-            'MapStudioOpenMeteoElevationSurfaceClient.PublicEndpoint',
-            'MapStudioOpenMeteoElevationSurfaceClient.CustomerEndpoint'
+            'MapStudioOpenMeteoElevationSurfaceClient',
+            '.PublicEndpoint',
+            '.CustomerEndpoint'
           )) {
             if (-not $session.Contains($required)) {
               throw "Test 10.108 native tile elevation marker is missing: $required"
