@@ -19,6 +19,7 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
               </node>
               <node id="3" lat="-23.5502" lon="-46.6302">
                 <tag k="traffic_sign" v="BR:R-1"/>
+                <tag k="direction" v="90"/>
               </node>
               <node id="4" lat="-23.5503" lon="-46.6303">
                 <tag k="highway" v="bus_stop"/>
@@ -59,6 +60,17 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
             point =>
                 point.Kind ==
                 MapStudioOsmStreetFurnitureKind.BusShelter);
+
+        var sign =
+            Assert.Single(
+                result.Points,
+                point =>
+                    point.Kind ==
+                    MapStudioOsmStreetFurnitureKind.TrafficSign);
+
+        Assert.Equal(
+            90,
+            sign.DirectionDegrees);
     }
 
     [Fact]
