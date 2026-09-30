@@ -28063,15 +28063,41 @@ setTimeout(postBounds, 250);
 
     private void OnCloseRealMapAreaWindowClick(
         object sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
+        if (
+            RealWorldGenerationStatusPanel
+                .ViewModel
+                .IsBusy)
+        {
+            StatusText.Text =
+                "A reconstrução está em andamento. Use Cancelar no painel de geração antes de fechar a janela.";
+
+            return;
+        }
+
         RealMapAreaWindow.Visibility =
             Visibility.Collapsed;
+    }
 
     private void OnToggleRealMapAreaMinimizeClick(
         object sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
+        if (
+            RealWorldGenerationStatusPanel
+                .ViewModel
+                .IsBusy)
+        {
+            StatusText.Text =
+                "A reconstrução está em andamento. O painel precisa permanecer visível para permitir cancelamento.";
+
+            return;
+        }
+
         SetRealMapAreaMinimized(
             !_realMapAreaWindowMinimized);
+    }
 
     private void SetRealMapAreaMinimized(
         bool minimized)
