@@ -50,7 +50,8 @@ public sealed partial class RealWorldGenerationPanel :
             double east,
             MapStudioGeographicAnchor anchor,
             CancellationToken cancellationToken = default,
-            bool useSavedGoogleElevation = true) =>
+            bool useSavedGoogleElevation = true,
+            bool useSavedOpenMeteoElevation = false) =>
         ViewModel.StartAsync(
             omsiRoot,
             mapDirectory,
@@ -60,7 +61,8 @@ public sealed partial class RealWorldGenerationPanel :
             east,
             anchor,
             cancellationToken,
-            useSavedGoogleElevation);
+            useSavedGoogleElevation,
+            useSavedOpenMeteoElevation);
 
     public bool Cancel() =>
         ViewModel.Cancel();
