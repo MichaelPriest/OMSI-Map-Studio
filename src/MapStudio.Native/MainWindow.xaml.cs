@@ -27098,7 +27098,7 @@ public sealed partial class MainWindow : Window
         {
             RealMapAreaWindow.Width =
                 Math.Min(
-                    860,
+                    800,
                     Math.Max(
                         360,
                         WorkspaceGrid.ActualWidth -
@@ -27106,7 +27106,7 @@ public sealed partial class MainWindow : Window
 
             RealMapAreaWindow.Height =
                 Math.Min(
-                    640,
+                    600,
                     Math.Max(
                         320,
                         WorkspaceGrid.ActualHeight -
