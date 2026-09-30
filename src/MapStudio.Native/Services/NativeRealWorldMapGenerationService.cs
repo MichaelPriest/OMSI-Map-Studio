@@ -9,7 +9,8 @@ namespace MapStudio.Native.Services;
 public enum NativeRealWorldElevationMode
 {
     None,
-    Google
+    Google,
+    OpenMeteo
 }
 
 public sealed record NativeRealWorldMapGenerationResult(
@@ -59,7 +60,8 @@ public sealed class NativeRealWorldMapGenerationService
             IProgress<MapStudioElevationDownloadProgress>?
                 elevationProgress = null,
             CancellationToken cancellationToken = default,
-            bool useSavedGoogleElevation = true)
+            bool useSavedGoogleElevation = true,
+            bool useSavedOpenMeteoElevation = false)
     {
         var googleKey =
             NativeMapCredentialStore
@@ -93,6 +95,40 @@ public sealed class NativeRealWorldMapGenerationService
             return new NativeRealWorldMapGenerationResult(
                 pipeline,
                 NativeRealWorldElevationMode.Google);
+        }
+
+        var openMeteoKey =
+            NativeMapCredentialStore
+                .TryGetOpenMeteoApiKey();
+
+        if (
+            useSavedOpenMeteoElevation &&
+            !string.IsNullOrWhiteSpace(
+                openMeteoKey))
+        {
+            var pipeline =
+                await _pipeline
+                    .RunAutoIndexedWithOpenMeteoElevationAsync(
+                        omsiRoot,
+                        mapDirectory,
+                        south,
+                        west,
+                        north,
+                        east,
+                        anchor,
+                        openMeteoKey,
+                        elevationRows,
+                        elevationColumns,
+                        streetFurnitureEvidence,
+                        progress,
+                        assetIndexProgress,
+                        elevationProgress,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            return new NativeRealWorldMapGenerationResult(
+                pipeline,
+                NativeRealWorldElevationMode.OpenMeteo);
         }
 
         var withoutElevation =
