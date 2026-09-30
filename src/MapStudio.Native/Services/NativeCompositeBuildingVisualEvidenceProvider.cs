@@ -35,6 +35,8 @@ public sealed class NativeCompositeBuildingVisualEvidenceProvider :
                 MapStudioProjectedBuildingFootprint>
                 buildings,
             MapStudioGeographicAnchor anchor,
+            IProgress<MapStudioBuildingVisualEvidenceProgress>?
+                progress = null,
             CancellationToken cancellationToken =
                 default)
     {
@@ -70,6 +72,7 @@ public sealed class NativeCompositeBuildingVisualEvidenceProvider :
                         remaining.Values
                             .ToArray(),
                         anchor,
+                        progress,
                         cancellationToken)
                     .ConfigureAwait(false);
 
