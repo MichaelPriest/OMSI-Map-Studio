@@ -18,7 +18,11 @@ public sealed record MapStudioOsmBuildingFootprint(
     string? RoofShape,
     double? RoofHeightMeters,
     string? Street,
-    string? HouseNumber);
+    string? HouseNumber,
+    string? FacadeMaterial = null,
+    string? FacadeColour = null,
+    string? RoofMaterial = null,
+    string? RoofColour = null);
 
 public sealed record MapStudioOsmBuildingImportResult(
     IReadOnlyList<MapStudioOsmBuildingFootprint> Buildings,
@@ -271,7 +275,19 @@ public sealed class MapStudioOsmBuildingImporter
                     tags.GetValueOrDefault(
                         "addr:street"),
                     tags.GetValueOrDefault(
-                        "addr:housenumber")));
+                        "addr:housenumber"),
+                    tags.GetValueOrDefault(
+                        "building:material"),
+                    tags.GetValueOrDefault(
+                        "building:colour") ??
+                    tags.GetValueOrDefault(
+                        "building:color"),
+                    tags.GetValueOrDefault(
+                        "roof:material"),
+                    tags.GetValueOrDefault(
+                        "roof:colour") ??
+                    tags.GetValueOrDefault(
+                        "roof:color")));
         }
 
         buildings.AddRange(
