@@ -99,11 +99,10 @@ public sealed class MapStudioRealWorldRoadPipelineTests
             {
                 var spline =
                     Assert.Single(
-                        tileContent.Splines
-                            .Where(
-                                item =>
-                                    item.SplineId ==
-                                    placement.SplineId));
+                        tileContent.Splines,
+                        item =>
+                            item.SplineId ==
+                            placement.SplineId);
 
                 Assert.Equal(
                     placement.LocalX,
