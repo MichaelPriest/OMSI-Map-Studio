@@ -28375,7 +28375,7 @@ setTimeout(postBounds, 250);
                     2);
 
             NativeStartupDiagnostics.Write(
-                $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode} fullReconstruction={fullReconstruction} elevationRequested={applyElevation} elevationProvider={elevationProviderIndex}");
+                $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode} fullReconstruction={fullReconstruction} elevationRequested={applyElevation} elevationProvider={elevationProviderIndex} localVisualEvidence={RealMapUseBuildingVisualEvidenceCheckBox.IsChecked == true} openAerialMapEvidence={RealMapUseOpenAerialMapEvidenceCheckBox.IsChecked == true}");
 
             if (
                 applyElevation &&
@@ -28464,6 +28464,10 @@ setTimeout(postBounds, 250);
                                     1,
                             useBuildingVisualEvidence:
                                 RealMapUseBuildingVisualEvidenceCheckBox
+                                    .IsChecked ==
+                                true,
+                            useOpenAerialMapEvidence:
+                                RealMapUseOpenAerialMapEvidenceCheckBox
                                     .IsChecked ==
                                 true);
                 }
