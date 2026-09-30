@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.103: WinUI real-world generation ViewModel preview.
+# Test 10.104: WinUI real-world generation panel preview.
 
 on:
   push:
@@ -13,6 +13,8 @@ on:
       - "src/MapStudio.Native/MainWindow.xaml"
       - "src/MapStudio.Native/MainWindow.xaml.cs"
       - "src/MapStudio.Native/Controls/NativeViewport.xaml.cs"
+      - "src/MapStudio.Native/Controls/RealWorldGenerationPanel.xaml"
+      - "src/MapStudio.Native/Controls/RealWorldGenerationPanel.xaml.cs"
       - "src/MapStudio.Native/Services/NativeMapCredentialStore.cs"
       - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationService.cs"
       - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationController.cs"
@@ -180,6 +182,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.102-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.103-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.103-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.104-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.104-native.md"
   workflow_dispatch:
 
 permissions:
@@ -190,8 +194,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.103-native
-  TAG: v0.2.0-alpha.5-test.10.103-native
+  VERSION: 0.2.0-alpha.5-test.10.104-native
+  TAG: v0.2.0-alpha.5-test.10.104-native
 
 jobs:
   build-native-preview:
@@ -4008,6 +4012,39 @@ jobs:
 
           Write-Host "Verified WinUI-bindable real-world generation state and progress."
 
+      - name: Verify test 10.104 real-world generation panel
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/Controls/RealWorldGenerationPanel.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/Controls/RealWorldGenerationPanel.xaml.cs -Raw
+
+          foreach ($required in @(
+            'StatusText',
+            'ElevationProgressBar',
+            'CancelButton',
+            'SummaryText',
+            'BackupText'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.104 panel XAML marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RealWorldGenerationViewModel',
+            'StartAsync',
+            'Cancel()',
+            'Reset()',
+            'DispatcherQueue',
+            'SessionBackupDirectory'
+          )) {
+            if (-not $code.Contains($required)) {
+              throw "Test 10.104 panel code marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified reusable WinUI real-world generation progress panel."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4162,11 +4199,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.103-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.104-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.103-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.104-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
