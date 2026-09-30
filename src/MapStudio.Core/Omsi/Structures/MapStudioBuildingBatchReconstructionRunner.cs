@@ -1,3 +1,4 @@
+using MapStudio.Core.AI;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Scene;
