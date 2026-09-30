@@ -104,6 +104,45 @@ public sealed class MapStudioVegetationAssetSuggesterTests
     }
 
     [Fact]
+    public void SuggestReturnsNullWhenOnlyWrongVegetationKindExists()
+    {
+        var assets =
+            new[]
+            {
+                new OmsiAssetIndexEntry(
+                    @"Sceneryobjects\Vegetation\hedge_bush.sco",
+                    OmsiAssetKind.SceneryObject,
+                    1,
+                    1)
+            };
+
+        var points =
+            new[]
+            {
+                new MapStudioProjectedVegetationPoint(
+                    "tree-1",
+                    new MapStudioRoadPoint(
+                        0,
+                        0),
+                    MapStudioOsmVegetationKind.Tree,
+                    "Tipuana tipu",
+                    "Tipuana",
+                    "broadleaved",
+                    null)
+            };
+
+        var result =
+            new MapStudioVegetationAssetSuggester()
+                .Suggest(
+                    assets,
+                    points,
+                    MapStudioOsmVegetationKind.Tree);
+
+        Assert.Null(
+            result);
+    }
+
+    [Fact]
     public void SuggestReturnsNullWithoutVegetationAssets()
     {
         var assets =
