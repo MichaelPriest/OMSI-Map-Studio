@@ -24,10 +24,15 @@ public sealed class MapStudioRealWorldScenePipeline
     private readonly MapStudioOverpassSceneClient
         _sceneClient;
 
+    private readonly MapStudioLayeredOsmSceneClient?
+        _layeredSceneClient;
+
     public MapStudioRealWorldScenePipeline()
         : this(
             new MapStudioOverpassSceneClient())
     {
+        _layeredSceneClient =
+            new MapStudioLayeredOsmSceneClient();
     }
 
     public MapStudioRealWorldScenePipeline(
@@ -73,15 +78,44 @@ public sealed class MapStudioRealWorldScenePipeline
                     .DownloadingOpenStreetMap,
                 "Baixando vias e cenário real do OpenStreetMap..."));
 
+        var osmProgress =
+            progress is null
+                ? null
+                : new Progress<
+                    MapStudioOverpassSceneDownloadProgress>(
+                        update =>
+                            progress.Report(
+                                new MapStudioRealWorldScenePipelineProgress(
+                                    MapStudioRealWorldScenePipelineStage
+                                        .DownloadingOpenStreetMap,
+                                    update.Message)));
+
         var download =
-            await _sceneClient
-                .DownloadAsync(
-                    south,
-                    west,
-                    north,
-                    east,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            _layeredSceneClient is null
+                ? await _sceneClient
+                    .DownloadAsync(
+                        south,
+                        west,
+                        north,
+                        east,
+                        cancellationToken,
+                        osmProgress)
+                    .ConfigureAwait(false)
+                : await _layeredSceneClient
+                    .DownloadAsync(
+                        south,
+                        west,
+                        north,
+                        east,
+                        Path.Combine(
+                            Path.GetFullPath(
+                                omsiRoot),
+                            ".mapstudio",
+                            "cache",
+                            "osm"),
+                        cancellationToken,
+                        osmProgress)
+                    .ConfigureAwait(false);
 
         cancellationToken
             .ThrowIfCancellationRequested();
