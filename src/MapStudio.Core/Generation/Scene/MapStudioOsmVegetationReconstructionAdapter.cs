@@ -54,6 +54,31 @@ public sealed class MapStudioOsmVegetationReconstructionAdapter
             .ToArray();
     }
 
+    public IReadOnlyList<MapStudioSceneFeatureCandidate>
+        BuildAreaCandidates(
+            IReadOnlyList<MapStudioGeoVegetationArea> areas)
+    {
+        ArgumentNullException.ThrowIfNull(areas);
+
+        return areas
+            .Select(
+                area =>
+                    new MapStudioSceneFeatureCandidate(
+                        area.Id,
+                        area.Kind ==
+                            MapStudioOsmVegetationAreaKind.Forest
+                                ? MapStudioSceneFeatureKind.Tree
+                                : MapStudioSceneFeatureKind.Shrub,
+                        [
+                            new MapStudioSceneEvidence(
+                                MapStudioSceneEvidenceSource.Osm,
+                                ResolveAreaConfidence(area),
+                                area.Id,
+                                BuildAreaNotes(area))
+                        ]))
+            .ToArray();
+    }
+
     private static double ResolvePointConfidence(
         MapStudioGeoVegetationPoint point)
     {
@@ -95,12 +120,12 @@ public sealed class MapStudioOsmVegetationReconstructionAdapter
         var confidence =
             line.Kind ==
                 MapStudioOsmVegetationLineKind.TreeRow
-                    ? 0.82
-                    : 0.78;
+                    ? 0.94
+                    : 0.92;
 
         if (line.Points.Count >= 3)
         {
-            confidence += 0.04;
+            confidence += 0.02;
         }
 
         if (!string.IsNullOrWhiteSpace(line.Species))
@@ -122,6 +147,67 @@ public sealed class MapStudioOsmVegetationReconstructionAdapter
             confidence,
             0.0,
             0.97);
+    }
+
+    private static double ResolveAreaConfidence(
+        MapStudioGeoVegetationArea area)
+    {
+        var confidence =
+            area.Kind ==
+                MapStudioOsmVegetationAreaKind.Forest
+                    ? 0.96
+                    : 0.94;
+
+        if (area.Points.Count >= 4)
+        {
+            confidence += 0.01;
+        }
+
+        if (!string.IsNullOrWhiteSpace(area.Species))
+        {
+            confidence += 0.02;
+        }
+
+        if (!string.IsNullOrWhiteSpace(area.Genus))
+        {
+            confidence += 0.01;
+        }
+
+        return Math.Clamp(
+            confidence,
+            0.0,
+            0.99);
+    }
+
+    private static string BuildAreaNotes(
+        MapStudioGeoVegetationArea area)
+    {
+        var parts =
+            new List<string>
+            {
+                area.Kind ==
+                    MapStudioOsmVegetationAreaKind.Forest
+                        ? "forest"
+                        : "scrub",
+                "polygon"
+            };
+
+        if (!string.IsNullOrWhiteSpace(area.Species))
+        {
+            parts.Add("species");
+        }
+
+        if (!string.IsNullOrWhiteSpace(area.Genus))
+        {
+            parts.Add("genus");
+        }
+
+        if (!string.IsNullOrWhiteSpace(area.LeafType))
+        {
+            parts.Add("leaf_type");
+        }
+
+        return string.Join(",", parts);
     }
 
     private static string BuildPointNotes(
