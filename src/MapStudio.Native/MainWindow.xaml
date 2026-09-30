@@ -3371,6 +3371,10 @@
                                     <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
                                               Content="Referência visual no terreno"
                                               IsChecked="True" />
+                                    <CheckBox x:Name="RealMapUseBuildingVisualEvidenceCheckBox"
+                                              Content="Refinar prédios com imagens locais + IA"
+                                              ToolTipService.ToolTip="Opcional. Usa PNG/JPG/WEBP em .mapstudio\references\buildings\&lt;id OSM&gt; com o provedor de IA configurado. Prefixos aerial-/satellite- contam como evidência aérea; street-/facade- como nível da rua."
+                                              IsChecked="False" />
                                 </StackPanel>
 
                                 <Grid ColumnSpacing="7">
