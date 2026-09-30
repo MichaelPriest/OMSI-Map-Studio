@@ -311,10 +311,10 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                                 UserNotes:
                                     "OpenAerialMap orthophoto / aerial imagery only. " +
                                     "The OSM footprint is authoritative. " +
-                                    "Infer roofType and roofMaterial only when clearly visible. " +
+                                    "Infer roofType, roofMaterial and roofColour only when clearly visible. " +
                                     "Set widthMeters, heightMeters, depthMeters, floorCount, roofHeightMeters, " +
                                     "windowsPerFloor, doorCount, typicalWindowWidthMeters, " +
-                                    "typicalWindowHeightMeters and facadeMaterial to null or unknown. " +
+                                    "typicalWindowHeightMeters, facadeMaterial and facadeColour to null or unknown. " +
                                     "Do not infer facade details from a nadir aerial view."))
                         .ConfigureAwait(false);
             }
@@ -347,6 +347,8 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                     Openings =
                         null,
                     FacadeMaterial =
+                        null,
+                    FacadeColour =
                         null,
                     ArchitecturalStyle =
                         null,
