@@ -231,7 +231,8 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                         x,
                         y,
                         facadeBase,
-                        facadeMaterial),
+                        facadeMaterial,
+                        building),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -462,29 +463,117 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
             int x,
             int y,
             MapStudioGeneratedRgb baseColor,
-            string material)
+            string material,
+            MapStudioProjectedBuildingFootprint building)
     {
-        var floorBand =
-            y %
-                32 <=
-            2;
+        var floorCount =
+            Math.Clamp(
+                building.FloorCount,
+                1,
+                24);
 
-        var window =
-            y %
-                32 >=
-                9 &&
-            y %
-                32 <=
-                22 &&
+        var floorHeightPixels =
+            128.0 /
+            floorCount;
+
+        var floorIndex =
+            Math.Clamp(
+                (int)Math.Floor(
+                    y /
+                    floorHeightPixels),
+                0,
+                floorCount -
+                    1);
+
+        var floorLocal =
+            Math.Clamp(
+                (
+                    y -
+                    floorIndex *
+                        floorHeightPixels
+                ) /
+                floorHeightPixels,
+                0,
+                1);
+
+        var type =
+            building.BuildingType
+                .Trim()
+                .ToLowerInvariant();
+
+        var isGroundFloor =
+            floorIndex ==
+            floorCount -
+                1;
+
+        var floorBand =
+            floorLocal <=
+                0.045 ||
+            floorLocal >=
+                0.965;
+
+        var bayX =
             x %
-                32 >=
+            32;
+
+        var standardWindow =
+            floorLocal >=
+                0.22 &&
+            floorLocal <=
+                0.72 &&
+            bayX >=
                 8 &&
-            x %
-                32 <=
+            bayX <=
                 23;
 
-        if (window)
+        var commercialGroundWindow =
+            isGroundFloor &&
+            type is
+                "commercial" or
+                "retail" or
+                "office" &&
+            floorLocal >=
+                0.14 &&
+            floorLocal <=
+                0.82 &&
+            x %
+                64 >=
+                5 &&
+            x %
+                64 <=
+                58;
+
+        var industrialWindow =
+            type is
+                "industrial" or
+                "warehouse" &&
+            floorLocal >=
+                0.28 &&
+            floorLocal <=
+                0.55 &&
+            x %
+                48 >=
+                7 &&
+            x %
+                48 <=
+                40;
+
+        if (
+            commercialGroundWindow ||
+            industrialWindow ||
+            standardWindow)
         {
+            if (
+                commercialGroundWindow &&
+                x %
+                    16 <=
+                    1)
+            {
+                return ScaleColor(
+                    baseColor,
+                    0.58);
+            }
+
             return material.Contains(
                 "glass",
                 StringComparison.Ordinal)
@@ -492,10 +581,15 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     70,
                     119,
                     145)
-                : new MapStudioGeneratedRgb(
-                    76,
-                    108,
-                    126);
+                : commercialGroundWindow
+                    ? new MapStudioGeneratedRgb(
+                        65,
+                        101,
+                        122)
+                    : new MapStudioGeneratedRgb(
+                        76,
+                        108,
+                        126);
         }
 
         if (
@@ -515,8 +609,8 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     x +
                     (
                         row %
-                            2
-                            == 0
+                            2 ==
+                            0
                             ? 0
                             : 8
                     )
@@ -561,6 +655,23 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
             return ScaleColor(
                 baseColor,
                 0.80);
+        }
+
+        if (
+            isGroundFloor &&
+            type is
+                "house" or
+                "detached" or
+                "semidetached_house" &&
+            x is >=
+                54 and <=
+                73 &&
+            floorLocal >=
+                0.18)
+        {
+            return ScaleColor(
+                baseColor,
+                0.48);
         }
 
         var noise =
