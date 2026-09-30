@@ -26,6 +26,10 @@ public sealed class MapStudioOsmBuildingImporterTests
                 <tag k="height" v="22 m" />
                 <tag k="roof:shape" v="hipped" />
                 <tag k="roof:height" v="2.4" />
+                <tag k="building:material" v="brick" />
+                <tag k="building:colour" v="#d09070" />
+                <tag k="roof:material" v="roof_tiles" />
+                <tag k="roof:colour" v="#804020" />
                 <tag k="name" v="Edifício Teste" />
                 <tag k="addr:street" v="Rua Exemplo" />
                 <tag k="addr:housenumber" v="123" />
@@ -81,6 +85,22 @@ public sealed class MapStudioOsmBuildingImporterTests
         Assert.Equal(
             "123",
             building.HouseNumber);
+
+        Assert.Equal(
+            "brick",
+            building.FacadeMaterial);
+
+        Assert.Equal(
+            "#d09070",
+            building.FacadeColour);
+
+        Assert.Equal(
+            "roof_tiles",
+            building.RoofMaterial);
+
+        Assert.Equal(
+            "#804020",
+            building.RoofColour);
 
         Assert.Equal(
             0,
@@ -193,6 +213,10 @@ public sealed class MapStudioOsmBuildingImporterTests
                 <tag k="building:levels" v="4" />
                 <tag k="roof:shape" v="hipped" />
                 <tag k="roof:height" v="1.5" />
+                <tag k="building:material" v="concrete" />
+                <tag k="building:color" v="grey" />
+                <tag k="roof:material" v="metal" />
+                <tag k="roof:color" v="silver" />
                 <tag k="name" v="Edifício Relação" />
               </relation>
             </osm>
@@ -234,6 +258,22 @@ public sealed class MapStudioOsmBuildingImporterTests
         Assert.Equal(
             "Edifício Relação",
             building.Name);
+
+        Assert.Equal(
+            "concrete",
+            building.FacadeMaterial);
+
+        Assert.Equal(
+            "grey",
+            building.FacadeColour);
+
+        Assert.Equal(
+            "metal",
+            building.RoofMaterial);
+
+        Assert.Equal(
+            "silver",
+            building.RoofColour);
 
         Assert.Equal(
             0,
