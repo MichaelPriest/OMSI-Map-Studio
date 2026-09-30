@@ -190,6 +190,7 @@ public sealed class RealWorldGenerationViewModel :
             : $"{Summary.TotalPlacedElements} elemento(s) · " +
               $"{Summary.RoadSplines} via(s) · " +
               $"{Summary.Junctions} junction(s) · " +
+              $"{Summary.RoadStructures} estrutura(s) viária(s) · " +
               $"{Summary.SceneObjects} objeto(s) · " +
               $"{Summary.ReviewItems} revisão(ões)";
 
