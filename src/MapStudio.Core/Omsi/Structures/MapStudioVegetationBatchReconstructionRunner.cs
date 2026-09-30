@@ -154,9 +154,7 @@ public sealed class MapStudioVegetationBatchReconstructionRunner
                     sceneryPath,
                     point.Position,
                     HeightMeters:
-                        elevation?.SampleRelativeHeightOrDefault(
-                            anchor,
-                            point.Position) ?? 0,
+                        0,
                     Rotation:
                         ResolveStableRotation(
                             point.Id)));
