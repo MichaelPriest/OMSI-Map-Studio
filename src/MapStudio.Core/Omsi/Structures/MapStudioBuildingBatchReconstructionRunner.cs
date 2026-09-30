@@ -12,7 +12,8 @@ public sealed record MapStudioBuildingBatchReconstructionResult(
     IReadOnlyList<string> ReviewBuildingIds,
     IReadOnlyList<string> OutsideMapBuildingIds,
     IReadOnlyList<string> RejectedGeometryBuildingIds,
-    IReadOnlyList<string> BackupPaths)
+    IReadOnlyList<string> BackupPaths,
+    int VisualRefinedBuildingCount = 0)
 {
     public int GeneratedBuildingCount =>
         Placements.Count;
@@ -94,6 +95,9 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                 .Build(
                     candidates);
 
+        var visualRefinedBuildingCount =
+            0;
+
         if (
             visualEvidenceProvider is not null)
         {
@@ -129,6 +133,9 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
 
                 if (visualEvidence.Count > 0)
                 {
+                    visualRefinedBuildingCount =
+                        visualEvidence.Count;
+
                     var refiner =
                         new MapStudioStreetLevelBuildingRefiner();
 
@@ -203,7 +210,8 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                 reviewIds,
                 Array.Empty<string>(),
                 rejectedGeometryIds,
-                Array.Empty<string>());
+                Array.Empty<string>(),
+                visualRefinedBuildingCount);
         }
 
         var generator =
@@ -255,7 +263,8 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
             reviewIds,
             writeResult.OutsideMapIds,
             rejectedGeometryIds,
-            writeResult.BackupPaths);
+            writeResult.BackupPaths,
+            visualRefinedBuildingCount);
     }
 
     private static MapStudioProjectedBuildingFootprint
