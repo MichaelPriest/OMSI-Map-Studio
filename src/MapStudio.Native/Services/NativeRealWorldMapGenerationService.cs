@@ -62,12 +62,14 @@ public sealed class NativeRealWorldMapGenerationService
             CancellationToken cancellationToken = default,
             bool useSavedGoogleElevation = true,
             bool useSavedOpenMeteoElevation = false,
-            bool useBuildingVisualEvidence = false)
+            bool useBuildingVisualEvidence = false,
+            bool useOpenAerialMapEvidence = false)
     {
         var buildingVisualEvidenceProvider =
             CreateBuildingVisualEvidenceProvider(
                 mapDirectory,
-                useBuildingVisualEvidence);
+                useBuildingVisualEvidence,
+                useOpenAerialMapEvidence);
 
         var googleKey =
             NativeMapCredentialStore
@@ -225,13 +227,9 @@ public sealed class NativeRealWorldMapGenerationService
     private static IMapStudioBuildingVisualEvidenceProvider?
         CreateBuildingVisualEvidenceProvider(
             string mapDirectory,
-            bool enabled)
+            bool useLocalReferences,
+            bool useOpenAerialMap)
     {
-        if (!enabled)
-        {
-            return null;
-        }
-
         var referenceRoot =
             Path.Combine(
                 Path.GetFullPath(
@@ -240,10 +238,11 @@ public sealed class NativeRealWorldMapGenerationService
                 "references",
                 "buildings");
 
-        if (
-            !Directory.Exists(
-                referenceRoot) ||
-            !Directory
+        var hasLocalReferences =
+            useLocalReferences &&
+            Directory.Exists(
+                referenceRoot) &&
+            Directory
                 .EnumerateFiles(
                     referenceRoot,
                     "*.*",
@@ -256,7 +255,11 @@ public sealed class NativeRealWorldMapGenerationService
                                 ".png" or
                                 ".jpg" or
                                 ".jpeg" or
-                                ".webp"))
+                                ".webp");
+
+        if (
+            !hasLocalReferences &&
+            !useOpenAerialMap)
         {
             return null;
         }
@@ -287,8 +290,34 @@ public sealed class NativeRealWorldMapGenerationService
                 "buildingVisualEvidenceAiCapabilityRequired");
         }
 
-        return new NativeBuildingVisualEvidenceProvider(
-            mapDirectory,
-            provider);
+        var providers =
+            new List<
+                IMapStudioBuildingVisualEvidenceProvider>();
+
+        if (hasLocalReferences)
+        {
+            providers.Add(
+                new NativeBuildingVisualEvidenceProvider(
+                    mapDirectory,
+                    provider));
+        }
+
+        if (useOpenAerialMap)
+        {
+            providers.Add(
+                new NativeOpenAerialMapBuildingVisualEvidenceProvider(
+                    provider));
+        }
+
+        return providers.Count switch
+        {
+            0 =>
+                null,
+            1 =>
+                providers[0],
+            _ =>
+                new NativeCompositeBuildingVisualEvidenceProvider(
+                    providers)
+        };
     }
 }
