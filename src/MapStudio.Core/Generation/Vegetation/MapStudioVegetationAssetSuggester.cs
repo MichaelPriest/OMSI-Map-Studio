@@ -58,6 +58,10 @@ public sealed class MapStudioVegetationAssetSuggester
                                 metadataTokens,
                                 kind)
                     ))
+            .Where(
+                item =>
+                    item.Score >
+                    0)
             .OrderByDescending(
                 item =>
                     item.Score)
@@ -67,8 +71,10 @@ public sealed class MapStudioVegetationAssetSuggester
                         .RelativePath,
                 StringComparer
                     .CurrentCultureIgnoreCase)
-            .First()
-            .Asset;
+            .Select(
+                item =>
+                    item.Asset)
+            .FirstOrDefault();
     }
 
     private static IReadOnlyDictionary<string, int>
