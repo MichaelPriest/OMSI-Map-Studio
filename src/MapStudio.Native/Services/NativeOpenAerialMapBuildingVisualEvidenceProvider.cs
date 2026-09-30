@@ -191,7 +191,7 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                 MapStudioAiImageReference>(
                     StringComparer.Ordinal);
 
-        var analyzedCount =
+        var attemptedCount =
             0;
 
         foreach (var target in targets)
@@ -200,7 +200,7 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                 .ThrowIfCancellationRequested();
 
             if (
-                analyzedCount >=
+                attemptedCount >=
                 MaximumBuildingsPerRun)
             {
                 break;
@@ -220,6 +220,8 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
             {
                 continue;
             }
+
+            attemptedCount++;
 
             var zoom =
                 ResolveZoom(
@@ -366,7 +368,6 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                             attribution)
                     ]);
 
-            analyzedCount++;
         }
 
         return results;
