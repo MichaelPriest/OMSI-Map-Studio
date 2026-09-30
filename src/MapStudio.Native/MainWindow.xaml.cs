@@ -28319,13 +28319,51 @@ setTimeout(postBounds, 250);
             var postCreateWarnings =
                 new List<string>();
 
-            if (
+            var selectedRoadImportMode =
+                RealMapRoadImportModeBox
+                    .SelectedIndex;
+
+            var roadImportMode =
+                selectedRoadImportMode <
+                    0
+                    ? 2
+                    : Math.Clamp(
+                        selectedRoadImportMode,
+                        0,
+                        2);
+
+            var fullReconstruction =
+                roadImportMode ==
+                2;
+
+            var applyElevation =
                 RealMapApplyElevationCheckBox
                     .IsChecked ==
-                true)
+                true;
+
+            var elevationProviderIndex =
+                Math.Clamp(
+                    RealMapElevationProviderBox
+                        .SelectedIndex,
+                    0,
+                    2);
+
+            NativeStartupDiagnostics.Write(
+                $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode} fullReconstruction={fullReconstruction} elevationRequested={applyElevation} elevationProvider={elevationProviderIndex}");
+
+            if (
+                applyElevation &&
+                (
+                    !fullReconstruction ||
+                    elevationProviderIndex ==
+                        1
+                ))
             {
                 try
                 {
+                    creationStage =
+                        "aplicação da elevação inicial";
+
                     await ApplyRealMapAreaElevationAsync(
                         finalSnapshot);
                 }
@@ -28333,6 +28371,146 @@ setTimeout(postBounds, 250);
                 {
                     postCreateWarnings.Add(
                         $"elevação: {exception.Message}");
+                }
+            }
+
+            if (fullReconstruction)
+            {
+                var georeference =
+                    await _session
+                        .LoadMapGeoreferenceAsync()
+                    ?? throw new InvalidDataException(
+                        "Mapa real sem georreferência para reconstrução automática.");
+
+                var anchorGeo =
+                    new MapStudioGeographicAnchor(
+                        georeference.Latitude,
+                        georeference.Longitude,
+                        OmsiTileGrid.GetOriginX(
+                                georeference.AnchorTileX) +
+                            georeference.AnchorX,
+                        OmsiTileGrid.GetOriginZ(
+                                georeference.AnchorTileY) +
+                            georeference.AnchorY);
+
+                var omsiRoot =
+                    _session.OmsiRootPath
+                    ?? throw new InvalidOperationException(
+                        "OMSI root indisponível para reconstrução automática.");
+
+                RealWorldGenerationStatusPanel.Visibility =
+                    Visibility.Visible;
+
+                if (
+                    !RealWorldGenerationStatusPanel
+                        .ViewModel
+                        .IsBusy)
+                {
+                    RealWorldGenerationStatusPanel
+                        .Reset();
+                }
+
+                creationStage =
+                    "reconstrução unificada do cenário real";
+
+                StatusText.Text =
+                    "Reconstruindo mapa real: assets, elevação, vias, junctions, prédios, vegetação e mobiliário...";
+
+                NativeStartupDiagnostics.Write(
+                    $"RealMap unified reconstruction begin map={created.DirectoryPath} south={_realMapSouth:F6} west={_realMapWest:F6} north={_realMapNorth:F6} east={_realMapEast:F6}");
+
+                EndLoading();
+
+                try
+                {
+                    await RealWorldGenerationStatusPanel
+                        .StartAsync(
+                            omsiRoot,
+                            created.DirectoryPath,
+                            _realMapSouth,
+                            _realMapWest,
+                            _realMapNorth,
+                            _realMapEast,
+                            anchorGeo,
+                            useSavedGoogleElevation:
+                                applyElevation &&
+                                elevationProviderIndex ==
+                                    2);
+                }
+                catch (OperationCanceledException)
+                {
+                    NativeStartupDiagnostics.Write(
+                        "RealMap unified reconstruction cancelled; reloading rolled-back map.");
+
+                    creationStage =
+                        "recarregamento após cancelamento";
+
+                    finalSnapshot =
+                        await _session
+                            .OpenMapAsync(
+                                created.DirectoryPath,
+                                loadFullMap:
+                                    true);
+
+                    await ApplyMapSnapshotAsync(
+                        finalSnapshot,
+                        focusActiveTile:
+                            false);
+
+                    Viewport.SetTopView();
+                    Viewport.FitScene();
+
+                    UpdateContentRootSummary();
+
+                    StatusText.Text =
+                        "Geração automática cancelada. O pipeline restaurou o backup da sessão.";
+
+                    return;
+                }
+
+                creationStage =
+                    "recarregamento do mapa reconstruído";
+
+                finalSnapshot =
+                    await _session
+                        .OpenMapAsync(
+                            created.DirectoryPath,
+                            loadFullMap:
+                                true);
+
+                await ApplyMapSnapshotAsync(
+                    finalSnapshot,
+                    focusActiveTile:
+                        false);
+
+                Viewport.SetTopView();
+                Viewport.FitScene();
+
+                UpdateContentRootSummary();
+
+                NativeStartupDiagnostics.Write(
+                    "RealMap unified reconstruction completed and reloaded into native viewport.");
+            }
+            else if (roadImportMode > 0)
+            {
+                try
+                {
+                    await PrepareOsmRoadsForRealMapAreaAsync(
+                        _realMapSouth,
+                        _realMapWest,
+                        _realMapNorth,
+                        _realMapEast,
+                        generateAutomatically:
+                            false);
+                }
+                catch (Exception exception)
+                {
+                    NativeStartupDiagnostics.Write(
+                        "RealMap OSM guide import failed: " +
+                        exception);
+
+                    postCreateWarnings.Add(
+                        $"vias OSM: {exception.Message}");
                 }
             }
 
@@ -28352,47 +28530,10 @@ setTimeout(postBounds, 250);
                 }
             }
 
-            RealMapAreaWindow.Visibility =
-                Visibility.Collapsed;
-
-            var selectedRoadImportMode =
-                RealMapRoadImportModeBox
-                    .SelectedIndex;
-
-            var roadImportMode =
-                selectedRoadImportMode <
-                    0
-                    ? 2
-                    : Math.Clamp(
-                        selectedRoadImportMode,
-                        0,
-                        2);
-
-            NativeStartupDiagnostics.Write(
-                $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode}");
-
-            if (roadImportMode > 0)
+            if (!fullReconstruction)
             {
-                try
-                {
-                    await PrepareOsmRoadsForRealMapAreaAsync(
-                        _realMapSouth,
-                        _realMapWest,
-                        _realMapNorth,
-                        _realMapEast,
-                        generateAutomatically:
-                            roadImportMode ==
-                            2);
-                }
-                catch (Exception exception)
-                {
-                    NativeStartupDiagnostics.Write(
-                        "RealMap automatic OSM roads failed: " +
-                        exception);
-
-                    postCreateWarnings.Add(
-                        $"vias OSM: {exception.Message}");
-                }
+                RealMapAreaWindow.Visibility =
+                    Visibility.Collapsed;
             }
 
             if (
@@ -28421,11 +28562,29 @@ setTimeout(postBounds, 250);
                 RestoreAutomaticRealMapEditorState();
             }
 
+            var completionPrefix =
+                fullReconstruction
+                    ? "Mapa real reconstruído"
+                    : "Mapa real criado";
+
+            var generationSummary =
+                fullReconstruction
+                    ? RealWorldGenerationStatusPanel
+                        .ViewModel
+                        .SummaryText
+                    : string.Empty;
+
             StatusText.Text =
                 postCreateWarnings.Count ==
                     0
-                    ? $"Mapa real criado: {displayName} · {totalTiles} tiles · {centerLatitude:F6}, {centerLongitude:F6}."
-                    : $"Mapa real criado: {displayName} · {totalTiles} tiles · {centerLatitude:F6}, {centerLongitude:F6} · " +
+                    ? $"{completionPrefix}: {displayName} · {totalTiles} tiles · {centerLatitude:F6}, {centerLongitude:F6}" +
+                      (
+                          string.IsNullOrWhiteSpace(
+                              generationSummary)
+                              ? "."
+                              : $" · {generationSummary}."
+                      )
+                    : $"{completionPrefix}: {displayName} · {totalTiles} tiles · {centerLatitude:F6}, {centerLongitude:F6} · " +
                       $"atenção: {postCreateWarnings.Count} etapa(s) opcional(is) falharam: {string.Join(" | ", postCreateWarnings)}.";
         }
         catch (Exception exception)
