@@ -3,6 +3,7 @@ using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
+using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Structures;
 using Xunit;
 
@@ -104,6 +105,7 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
                   <node id="30" lat="-23.55004" lon="-46.62996">
                     <tag k="traffic_sign" v="BR:R-1"/>
                     <tag k="ref" v="BR:R-1"/>
+                    <tag k="direction" v="0"/>
                   </node>
                   <node id="40" lat="-23.55006" lon="-46.62994">
                     <tag k="highway" v="bus_stop"/>
@@ -221,6 +223,25 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
                     .FindSections(
                         "object")
                     .Count());
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        firstTile);
+
+            var trafficSign =
+                Assert.Single(
+                    content.Objects,
+                    item =>
+                        item.SceneryObjectPath
+                            .Contains(
+                                "traffic_sign_BR_R_1.sco",
+                                StringComparison.OrdinalIgnoreCase));
+
+            Assert.InRange(
+                trafficSign.Rotation,
+                179.999,
+                180.001);
 
             Assert.Equal(
                 originalSecondTile,
