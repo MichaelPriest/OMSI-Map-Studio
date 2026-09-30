@@ -142,7 +142,9 @@ public sealed class MapStudioOsmBuildingReconstructionAdapterTests
                         "tile",
                         "residential",
                         null,
-                        0.94));
+                        0.94,
+                        "#d8c6a0",
+                        "#7a4b35"));
 
         Assert.Equal(
             building.Points,
@@ -175,6 +177,14 @@ public sealed class MapStudioOsmBuildingReconstructionAdapterTests
         Assert.Equal(
             "tile",
             refined.RoofMaterial);
+
+        Assert.Equal(
+            "#d8c6a0",
+            refined.FacadeColour);
+
+        Assert.Equal(
+            "#7a4b35",
+            refined.RoofColour);
     }
 
     [Fact]
