@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.117: keep installer bootstrap bounded and add official OSM bbox fallback after one rotated Overpass attempt.
+# Test 10.118: split OSM acquisition into resumable layers with endpoint health/cooldown and persistent chunk cache.
 
 on:
   push:
@@ -80,6 +80,7 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioLayeredOsmSceneClientTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadGraphBuilderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
@@ -205,6 +206,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.116-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.117-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.117-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.118-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.118-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -217,8 +220,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.117-native
-  TAG: v0.2.0-alpha.5-test.10.117-native
+  VERSION: 0.2.0-alpha.5-test.10.118-native
+  TAG: v0.2.0-alpha.5-test.10.118-native
 
 jobs:
   build-native-preview:
@@ -4700,6 +4703,63 @@ jobs:
 
           Write-Host "Verified one rotated Overpass attempt per block plus official OSM bbox fallback with tile-margin-aware chunk sizing."
 
+      - name: Verify test 10.118 layered resumable OSM acquisition
+        shell: pwsh
+        run: |
+          $layered = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioLayeredOsmSceneClient.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $scenePipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldScenePipeline.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioLayeredOsmSceneClientTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOsmSceneLayer',
+            '"Vias"',
+            '"Prédios"',
+            '"Infraestrutura"',
+            '"Vegetação"',
+            '"Mobiliário"',
+            'MaximumOverpassAttemptsPerChunk',
+            'RetryAfter',
+            'MarkEndpointRateLimited',
+            'CacheSchemaVersion',
+            'SHA256.HashData',
+            'cache local validado',
+            'FormatBytes',
+            'OpenStreetMap →'
+          )) {
+            if (-not $layered.Contains($required)) {
+              throw "Test 10.118 layered OSM marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioLayeredOsmSceneClient',
+            '".mapstudio"',
+            '"cache"',
+            '"osm"'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.118 transactional pipeline marker is missing: $required"
+            }
+          }
+
+          if (-not $scenePipeline.Contains('MapStudioLayeredOsmSceneClient')) {
+            throw "Test 10.118 scene-only pipeline is not routed through layered acquisition."
+          }
+
+          foreach ($required in @(
+            'DownloaderSeparatesHeavySceneCategoriesIntoFiveLayerQueries',
+            'DownloaderHonorsRetryAfterByCoolingRateLimitedEndpoint',
+            'DownloaderReusesValidatedLayerChunksFromPersistentCache',
+            'DownloaderFailureNamesLayerAndChunk'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.118 regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified layered OSM acquisition, Retry-After cooldown, persistent resumable cache, diagnostics, and transactional routing."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4892,11 +4952,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.117-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.118-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.117-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.118-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
