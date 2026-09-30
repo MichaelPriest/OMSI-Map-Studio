@@ -4675,7 +4675,7 @@ jobs:
 
           foreach ($required in @(
             'TargetChunkSpanMeters',
-            '300.0',
+            '320.0',
             'TimeSpan.FromSeconds(12)',
             'DefaultDirectMapEndpoint',
             'https://api.openstreetmap.org/api/0.6/map',
@@ -4698,7 +4698,7 @@ jobs:
             }
           }
 
-          Write-Host "Verified one rotated Overpass attempt per block plus official OSM bbox fallback."
+          Write-Host "Verified one rotated Overpass attempt per block plus official OSM bbox fallback with tile-margin-aware chunk sizing."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64

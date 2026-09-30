@@ -28,7 +28,7 @@ public sealed class MapStudioOverpassSceneClient
         6_378_137.0;
 
     private const double TargetChunkSpanMeters =
-        300.0;
+        320.0;
 
     private const int MaximumChunksPerAxis =
         6;
