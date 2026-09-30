@@ -722,6 +722,245 @@ public sealed class MapStudioRealWorldRoadPipelineTests
     }
 
     [Fact]
+    public async Task FullMapPipelineExpandsThinSelectionToPhysicalTileCoverage()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-full-map-physical-coverage-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            string? query =
+                null;
+
+            using var httpClient =
+                new HttpClient(
+                    new DelegateHandler(
+                        request =>
+                        {
+                            query =
+                                ReadQuery(
+                                    request);
+
+                            return XmlResponse(
+                                FullSceneXml);
+                        }))
+                {
+                    Timeout =
+                        TimeSpan.FromSeconds(5)
+                };
+
+            var client =
+                new MapStudioOverpassSceneClient(
+                    httpClient,
+                    [
+                        new Uri(
+                            "https://scene.test/api/interpreter")
+                    ]);
+
+            var result =
+                await new MapStudioRealWorldMapPipeline(
+                        client)
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        -23.55001,
+                        -46.63001,
+                        -23.54999,
+                        -46.62999,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            150,
+                            150),
+                        Array.Empty<
+                            OmsiAssetIndexEntry>());
+
+            Assert.NotNull(
+                query);
+
+            var marker =
+                "way[\"highway\"](";
+
+            var start =
+                query!.IndexOf(
+                    marker,
+                    StringComparison.Ordinal);
+
+            Assert.True(
+                start >= 0);
+
+            start +=
+                marker.Length;
+
+            var end =
+                query.IndexOf(
+                    ");",
+                    start,
+                    StringComparison.Ordinal);
+
+            Assert.True(
+                end >
+                start);
+
+            var parts =
+                query[start..end]
+                    .Split(
+                        ',',
+                        StringSplitOptions
+                            .TrimEntries);
+
+            Assert.Equal(
+                4,
+                parts.Length);
+
+            var south =
+                double.Parse(
+                    parts[0],
+                    System.Globalization
+                        .CultureInfo
+                        .InvariantCulture);
+
+            var west =
+                double.Parse(
+                    parts[1],
+                    System.Globalization
+                        .CultureInfo
+                        .InvariantCulture);
+
+            var north =
+                double.Parse(
+                    parts[2],
+                    System.Globalization
+                        .CultureInfo
+                        .InvariantCulture);
+
+            var east =
+                double.Parse(
+                    parts[3],
+                    System.Globalization
+                        .CultureInfo
+                        .InvariantCulture);
+
+            Assert.True(
+                north -
+                    south >
+                0.002);
+
+            Assert.True(
+                east -
+                    west >
+                0.002);
+
+            Assert.True(
+                result.PlacedElementCount >
+                0);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task FullMapPipelineRejectsZeroPlacementSuccessAndRestoresTile()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-full-map-zero-placement-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            var original =
+                await File.ReadAllBytesAsync(
+                    tilePath);
+
+            using var httpClient =
+                new HttpClient(
+                    new DelegateHandler(
+                        _ =>
+                            XmlResponse(
+                                """
+                                <osm version="0.6">
+                                  <node id="1" lat="-23.55000" lon="-46.63000"/>
+                                </osm>
+                                """)))
+                {
+                    Timeout =
+                        TimeSpan.FromSeconds(5)
+                };
+
+            var exception =
+                await Assert.ThrowsAsync<
+                    InvalidDataException>(
+                    () =>
+                        new MapStudioRealWorldMapPipeline(
+                                new MapStudioOverpassSceneClient(
+                                    httpClient,
+                                    [
+                                        new Uri(
+                                            "https://scene.test/api/interpreter")
+                                    ]))
+                            .RunAsync(
+                                root,
+                                mapDirectory,
+                                -23.551,
+                                -46.631,
+                                -23.549,
+                                -46.629,
+                                new MapStudioGeographicAnchor(
+                                    -23.55000,
+                                    -46.63000,
+                                    150,
+                                    150),
+                                Array.Empty<
+                                    OmsiAssetIndexEntry>()));
+
+            Assert.Contains(
+                "nenhuma via",
+                exception.Message,
+                StringComparison
+                    .OrdinalIgnoreCase);
+
+            Assert.Equal(
+                original,
+                await File.ReadAllBytesAsync(
+                    tilePath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void SplineBatchInserterAppendsMultipleSplinesInOnePass()
     {
         var document =
@@ -846,6 +1085,28 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                 OmsiAssetKind.SceneryObject,
                 1,
                 1));
+    }
+
+    private static string ReadQuery(
+        HttpRequestMessage request)
+    {
+        var body =
+            request.Content!
+                .ReadAsStringAsync()
+                .GetAwaiter()
+                .GetResult();
+
+        var encoded =
+            body.StartsWith(
+                "data=",
+                StringComparison.Ordinal)
+                ? body[5..]
+                : body;
+
+        return Uri.UnescapeDataString(
+            encoded.Replace(
+                '+',
+                ' '));
     }
 
     private static HttpResponseMessage XmlResponse(

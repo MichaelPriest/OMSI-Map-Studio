@@ -14,6 +14,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Spacing="2">
@@ -28,9 +29,17 @@
                         Opacity="0.68" />
                 </StackPanel>
 
+                <ProgressRing
+                    x:Name="StageProgressRing"
+                    Grid.Column="1"
+                    Width="24"
+                    Height="24"
+                    IsActive="False"
+                    VerticalAlignment="Center" />
+
                 <Button
                     x:Name="CancelButton"
-                    Grid.Column="1"
+                    Grid.Column="2"
                     Content="Cancelar"
                     IsEnabled="False"
                     Click="OnCancelClick" />

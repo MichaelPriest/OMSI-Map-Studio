@@ -3530,38 +3530,94 @@
                   Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
                   Visibility="Collapsed"
                   Canvas.ZIndex="120">
-                <Border Width="360"
-                        MaxWidth="480"
-                        Padding="24,20"
+                <Border Width="420"
+                        MaxWidth="520"
+                        Padding="26,22"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
                         BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                         BorderThickness="1"
-                        CornerRadius="14">
-                    <StackPanel Spacing="10"
+                        CornerRadius="16">
+                    <StackPanel Spacing="11"
                                 HorizontalAlignment="Stretch">
-                        <ProgressRing x:Name="LoadingProgressRing"
-                                      Width="48"
-                                      Height="48"
-                                      IsActive="False"
-                                      HorizontalAlignment="Center" />
+                        <Grid Width="78"
+                              Height="78"
+                              HorizontalAlignment="Center">
+                            <Ellipse Width="74"
+                                     Height="74"
+                                     Opacity="0.22"
+                                     Fill="{ThemeResource MapStudioAccentSurfaceBrush}" />
+                            <ProgressRing x:Name="LoadingProgressRing"
+                                          Width="58"
+                                          Height="58"
+                                          IsActive="False"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                        </Grid>
+
                         <TextBlock x:Name="LoadingTitleText"
                                    Text="Carregando..."
-                                   FontSize="17"
+                                   FontSize="18"
                                    FontWeight="SemiBold"
                                    TextAlignment="Center"
                                    Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+
+                        <Border Padding="9,5"
+                                HorizontalAlignment="Center"
+                                Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                                CornerRadius="10">
+                            <TextBlock x:Name="LoadingStageText"
+                                       Text="Preparando"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                        </Border>
+
                         <TextBlock x:Name="LoadingDetailText"
                                    Text="Preparando o editor nativo"
+                                   MaxHeight="110"
                                    FontSize="12"
                                    TextAlignment="Center"
                                    TextWrapping="Wrap"
                                    Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+
                         <ProgressBar x:Name="LoadingProgressBar"
-                                     Height="3"
-                                     Margin="0,4,0,0"
+                                     Height="5"
+                                     Margin="0,5,0,0"
+                                     Minimum="0"
+                                     Maximum="100"
                                      IsIndeterminate="True" />
+
+                        <Grid>
+                            <TextBlock Text="Processando · não feche o aplicativo"
+                                       FontSize="10"
+                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                            <TextBlock x:Name="LoadingPercentText"
+                                       HorizontalAlignment="Right"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Spacing="5">
+                            <Ellipse Width="6" Height="6"
+                                     Fill="{ThemeResource MapStudioAccentBrush}" />
+                            <Ellipse Width="6" Height="6"
+                                     Opacity="0.65"
+                                     Fill="{ThemeResource MapStudioAccentBrush}" />
+                            <Ellipse Width="6" Height="6"
+                                     Opacity="0.35"
+                                     Fill="{ThemeResource MapStudioAccentBrush}" />
+                        </StackPanel>
+
+                        <Button x:Name="LoadingCancelButton"
+                                HorizontalAlignment="Center"
+                                Content="Cancelar geração"
+                                Visibility="Collapsed"
+                                Click="OnLoadingCancelClick" />
                     </StackPanel>
                 </Border>
             </Grid>

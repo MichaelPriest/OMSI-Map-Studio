@@ -22533,23 +22533,21 @@ public sealed partial class MainWindow : Window
     {
         _loadingOperationDepth++;
 
-        LoadingTitleText.Text =
-            title;
+        LoadingCancelButton.Visibility =
+            Visibility.Collapsed;
 
-        LoadingDetailText.Text =
-            detail ??
-            string.Empty;
-
-        LoadingDetailText.Visibility =
-            string.IsNullOrWhiteSpace(
-                detail)
-                ? Visibility.Collapsed
-                : Visibility.Visible;
-
-        LoadingProgressRing.IsActive =
+        LoadingCancelButton.IsEnabled =
             true;
 
-        LoadingProgressBar.IsIndeterminate =
+        UpdateLoading(
+            title,
+            detail,
+            progress:
+                null,
+            stage:
+                "Preparando");
+
+        LoadingProgressRing.IsActive =
             true;
 
         LoadingOverlay.Visibility =
@@ -22558,7 +22556,9 @@ public sealed partial class MainWindow : Window
 
     private void UpdateLoading(
         string title,
-        string? detail = null)
+        string? detail = null,
+        double? progress = null,
+        string? stage = null)
     {
         if (_loadingOperationDepth <=
             0)
@@ -22569,6 +22569,12 @@ public sealed partial class MainWindow : Window
         LoadingTitleText.Text =
             title;
 
+        LoadingStageText.Text =
+            string.IsNullOrWhiteSpace(
+                stage)
+                ? "Processando"
+                : stage;
+
         LoadingDetailText.Text =
             detail ??
             string.Empty;
@@ -22578,6 +22584,65 @@ public sealed partial class MainWindow : Window
                 detail)
                 ? Visibility.Collapsed
                 : Visibility.Visible;
+
+        if (
+            progress is { } fraction &&
+            double.IsFinite(
+                fraction))
+        {
+            var normalized =
+                Math.Clamp(
+                    fraction,
+                    0,
+                    1);
+
+            LoadingProgressBar.IsIndeterminate =
+                false;
+
+            LoadingProgressBar.Value =
+                normalized *
+                100.0;
+
+            LoadingPercentText.Text =
+                $"{normalized * 100.0:0}%";
+        }
+        else
+        {
+            LoadingProgressBar.IsIndeterminate =
+                true;
+
+            LoadingPercentText.Text =
+                string.Empty;
+        }
+    }
+
+    private void OnLoadingCancelClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !RealWorldGenerationStatusPanel
+                .ViewModel
+                .IsBusy)
+        {
+            return;
+        }
+
+        if (
+            RealWorldGenerationStatusPanel
+                .Cancel())
+        {
+            LoadingCancelButton.IsEnabled =
+                false;
+
+            UpdateLoading(
+                "Cancelando geração",
+                "Interrompendo downloads e restaurando o backup da sessão...",
+                progress:
+                    null,
+                stage:
+                    "Cancelamento / rollback");
+        }
     }
 
     private void EndLoading()
@@ -22602,6 +22667,21 @@ public sealed partial class MainWindow : Window
 
         LoadingProgressBar.IsIndeterminate =
             false;
+
+        LoadingProgressBar.Value =
+            0;
+
+        LoadingPercentText.Text =
+            string.Empty;
+
+        LoadingStageText.Text =
+            "Preparando";
+
+        LoadingCancelButton.Visibility =
+            Visibility.Collapsed;
+
+        LoadingCancelButton.IsEnabled =
+            true;
 
         LoadingOverlay.Visibility =
             Visibility.Collapsed;
@@ -28360,7 +28440,12 @@ setTimeout(postBounds, 250);
 
                     UpdateLoading(
                         "Criando tiles do mapa real",
-                        $"{createdCount + 1}/{totalTiles} · tile {tileX},{tileY}");
+                        $"{createdCount + 1}/{totalTiles} · tile {tileX},{tileY}",
+                        progress:
+                            (createdCount + 1) /
+                            (double)totalTiles,
+                        stage:
+                            "Tiles OMSI");
 
                     creationStage =
                         $"criação do tile {tileX},{tileY}";
@@ -28489,11 +28574,71 @@ setTimeout(postBounds, 250);
                 NativeStartupDiagnostics.Write(
                     $"RealMap unified reconstruction begin map={created.DirectoryPath} south={_realMapSouth:F6} west={_realMapWest:F6} north={_realMapNorth:F6} east={_realMapEast:F6}");
 
-                EndLoading();
+                LoadingCancelButton.Visibility =
+                    Visibility.Visible;
+
+                LoadingCancelButton.IsEnabled =
+                    true;
+
+                var generationViewModel =
+                    RealWorldGenerationStatusPanel
+                        .ViewModel;
+
+                void RefreshRealMapLoading()
+                {
+                    var progressValue =
+                        generationViewModel.State ==
+                            NativeRealWorldGenerationState.Completed
+                            ? 1.0
+                            : generationViewModel
+                                .OverallProgress;
+
+                    UpdateLoading(
+                        "Construindo mapa real",
+                        generationViewModel
+                            .StatusText,
+                        progress:
+                            progressValue,
+                        stage:
+                            string.IsNullOrWhiteSpace(
+                                generationViewModel
+                                    .OverallProgressText)
+                                ? generationViewModel
+                                    .State
+                                    .ToString()
+                                : generationViewModel
+                                    .OverallProgressText);
+                }
+
+                PropertyChangedEventHandler
+                    loadingProgressHandler =
+                        (
+                            _,
+                            _) =>
+                        {
+                            if (
+                                DispatcherQueue
+                                    .HasThreadAccess)
+                            {
+                                RefreshRealMapLoading();
+                                return;
+                            }
+
+                            DispatcherQueue
+                                .TryEnqueue(
+                                    RefreshRealMapLoading);
+                        };
+
+                generationViewModel
+                    .PropertyChanged +=
+                    loadingProgressHandler;
+
+                RefreshRealMapLoading();
 
                 try
                 {
-                    await RealWorldGenerationStatusPanel
+                    var generationSummary =
+                        await RealWorldGenerationStatusPanel
                         .StartAsync(
                             omsiRoot,
                             created.DirectoryPath,
@@ -28518,6 +28663,34 @@ setTimeout(postBounds, 250);
                                 RealMapUseOpenAerialMapEvidenceCheckBox
                                     .IsChecked ==
                                 true);
+
+                    if (
+                        generationSummary
+                            .TotalPlacedElements <=
+                        0)
+                    {
+                        throw new InvalidDataException(
+                            "A reconstrução terminou sem colocar vias, junctions, estruturas ou objetos. O mapa não será tratado como concluído.");
+                    }
+
+                    UpdateLoading(
+                        "Mapa real reconstruído",
+                        generationViewModel
+                            .SummaryText,
+                        progress:
+                            1.0,
+                        stage:
+                            "Concluído");
+                }
+                finally
+                {
+                    generationViewModel
+                        .PropertyChanged -=
+                        loadingProgressHandler;
+
+                    LoadingCancelButton.Visibility =
+                        Visibility.Collapsed;
+                }
                 }
                 catch (OperationCanceledException)
                 {

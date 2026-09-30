@@ -376,11 +376,23 @@ public sealed class MapStudioRealWorldMapPipeline
             Path.GetFullPath(
                 mapDirectory);
 
+        var osmCoverage =
+            await ResolveElevationCoverageAsync(
+                    mapRoot,
+                    anchor,
+                    south,
+                    west,
+                    north,
+                    east,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .DownloadingOpenStreetMap,
-                "Baixando vias e cenário real do OpenStreetMap..."));
+                $"Baixando OpenStreetMap para toda a cobertura física dos tiles · " +
+                $"{osmCoverage.South:F6},{osmCoverage.West:F6} → {osmCoverage.North:F6},{osmCoverage.East:F6}..."));
 
         var osmProgress =
             progress is null
@@ -397,16 +409,31 @@ public sealed class MapStudioRealWorldMapPipeline
         var download =
             await _sceneClient
                 .DownloadAsync(
-                    south,
-                    west,
-                    north,
-                    east,
+                    osmCoverage.South,
+                    osmCoverage.West,
+                    osmCoverage.North,
+                    osmCoverage.East,
                     cancellationToken,
                     osmProgress)
                 .ConfigureAwait(false);
 
         cancellationToken
             .ThrowIfCancellationRequested();
+
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .DownloadingOpenStreetMap,
+                $"OpenStreetMap recebido: {download.NodeCount} nó(s), {download.WayCount} via(s)/polígono(s), {download.RelationCount} relação(ões) · {download.SuccessfulChunkCount} bloco(s)."));
+
+        if (
+            download.NodeCount == 0 &&
+            download.WayCount == 0 &&
+            download.RelationCount == 0)
+        {
+            throw new InvalidDataException(
+                "OpenStreetMap não retornou nenhum elemento para a cobertura física dos tiles. A reconstrução não será marcada como concluída.");
+        }
 
         var snapshot =
             await CreateSnapshotAsync(
@@ -500,18 +527,30 @@ public sealed class MapStudioRealWorldMapPipeline
                         buildingVisualEvidenceProgress)
                     .ConfigureAwait(false);
 
+            var result =
+                new MapStudioRealWorldMapPipelineResult(
+                    download,
+                    roads,
+                    scene,
+                    snapshot.BackupRoot,
+                    elevationResult);
+
+            if (result.PlacedElementCount <= 0)
+            {
+                throw new InvalidDataException(
+                    $"OpenStreetMap retornou dados ({download.NodeCount} nó(s), {download.WayCount} via(s)/polígono(s), {download.RelationCount} relação(ões)), " +
+                    "mas nenhuma via, junction, estrutura ou objeto pôde ser colocado dentro dos tiles criados. " +
+                    $"Vias ignoradas={roads.IgnoredWayCount}, segmentos fora do mapa={roads.SkippedOutsideMapSegmentCount}, referências de nó ausentes={roads.MissingNodeReferenceCount}, itens para revisão={scene.ReviewCount}. " +
+                    "A sessão foi considerada incompleta e será restaurada.");
+            }
+
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
                         .Completed,
                     $"Mapa real concluído: {roads.PlacedSplineCount} spline(s) de via, {roads.GeneratedJunctionCount} junction(s), {roads.GeneratedStructureCount} estrutura(s) viária(s) e {scene.PlacedObjectCount} objeto(s) de cenário."));
 
-            return new MapStudioRealWorldMapPipelineResult(
-                download,
-                roads,
-                scene,
-                snapshot.BackupRoot,
-                elevationResult);
+            return result;
         }
         catch (Exception original)
         {

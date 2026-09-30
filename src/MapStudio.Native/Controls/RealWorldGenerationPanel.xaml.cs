@@ -125,6 +125,14 @@ public sealed partial class RealWorldGenerationPanel :
         CancelButton.IsEnabled =
             ViewModel.CanCancel;
 
+        StageProgressRing.IsActive =
+            ViewModel.IsBusy;
+
+        StageProgressRing.Visibility =
+            ViewModel.IsBusy
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
         OverallProgressPanel.Visibility =
             ViewModel.State ==
                 NativeRealWorldGenerationState.Idle
