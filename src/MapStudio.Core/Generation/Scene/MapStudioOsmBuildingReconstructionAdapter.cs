@@ -316,7 +316,17 @@ public sealed class MapStudioStreetLevelBuildingRefiner
                 string.IsNullOrWhiteSpace(
                     normalized.RoofMaterial)
                     ? building.RoofMaterial
-                    : normalized.RoofMaterial.Trim()
+                    : normalized.RoofMaterial.Trim(),
+            FacadeColour =
+                string.IsNullOrWhiteSpace(
+                    normalized.FacadeColour)
+                    ? building.FacadeColour
+                    : normalized.FacadeColour.Trim(),
+            RoofColour =
+                string.IsNullOrWhiteSpace(
+                    normalized.RoofColour)
+                    ? building.RoofColour
+                    : normalized.RoofColour.Trim()
         };
     }
 }
