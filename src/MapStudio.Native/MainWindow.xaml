@@ -3345,14 +3345,14 @@
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnRealMapElevationProviderChanged">
                                         <ComboBoxItem Content="Nenhuma" />
-                                        <ComboBoxItem Content="Open-Meteo / Copernicus GLO-90 · chave do usuário" />
+                                        <ComboBoxItem Content="Open-Meteo / Copernicus GLO-90 · gratuito sem chave" />
                                         <ComboBoxItem Content="Google Elevation · chave do usuário" />
                                     </ComboBox>
 
                                     <PasswordBox x:Name="RealMapOpenMeteoKeyBox"
                                                  Grid.Column="1"
-                                                 Header="Chave Open-Meteo"
-                                                 PlaceholderText="API key"
+                                                 Header="Chave Open-Meteo comercial (opcional)"
+                                                 PlaceholderText="Deixe vazio para usar gratuito"
                                                  Visibility="Collapsed" />
 
                                     <Button x:Name="SaveRealMapOpenMeteoKeyButton"
@@ -3413,7 +3413,7 @@
                                 x:Name="RealWorldGenerationStatusPanel"
                                 Margin="0,4,0,0"
                                 Visibility="Collapsed" />
-                            <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos. Open-Meteo/Copernicus e Google usam credenciais do próprio usuário; nenhuma chave privada é distribuída pelo Map Studio."
+                            <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos. Open-Meteo/Copernicus funciona pelo endpoint público sem chave; chave comercial é opcional. Google Elevation usa credencial do próprio usuário."
                                        FontSize="9.5"
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource MapStudioTextMutedBrush}" />
