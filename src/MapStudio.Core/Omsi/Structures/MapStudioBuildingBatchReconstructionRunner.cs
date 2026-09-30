@@ -248,9 +248,7 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                     asset.SceneryObjectPath,
                     asset.WorldCenter,
                     HeightMeters:
-                        elevation?.SampleRelativeHeightOrDefault(
-                            anchor,
-                            asset.WorldCenter) ?? 0));
+                        0));
         }
 
         var writeResult =
