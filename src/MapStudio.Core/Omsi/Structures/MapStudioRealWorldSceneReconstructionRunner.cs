@@ -42,7 +42,9 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
             CancellationToken cancellationToken = default,
             MapStudioGeoreferencedElevationSurface? elevation = null,
             IMapStudioBuildingVisualEvidenceProvider?
-                buildingVisualEvidenceProvider = null)
+                buildingVisualEvidenceProvider = null,
+            IProgress<MapStudioBuildingVisualEvidenceProgress>?
+                buildingVisualEvidenceProgress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -84,7 +86,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         anchor,
                         cancellationToken,
                         elevation,
-                        buildingVisualEvidenceProvider)
+                        buildingVisualEvidenceProvider,
+                        buildingVisualEvidenceProgress)
                     .ConfigureAwait(false);
 
             var vegetation =
