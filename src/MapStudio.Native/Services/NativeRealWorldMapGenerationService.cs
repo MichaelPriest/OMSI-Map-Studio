@@ -111,9 +111,7 @@ public sealed class NativeRealWorldMapGenerationService
                 .TryGetOpenMeteoApiKey();
 
         if (
-            useSavedOpenMeteoElevation &&
-            !string.IsNullOrWhiteSpace(
-                openMeteoKey))
+            useSavedOpenMeteoElevation)
         {
             var pipeline =
                 await _pipeline
