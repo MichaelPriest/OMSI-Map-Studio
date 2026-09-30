@@ -26,7 +26,11 @@ public sealed class MapStudioOsmBuildingProjectorTests
                 "hipped",
                 2,
                 "Rua Teste",
-                "10");
+                "10",
+                "brick",
+                "#c08060",
+                "roof_tiles",
+                "#804020");
 
         var result =
             new MapStudioOsmBuildingProjector()
@@ -62,6 +66,22 @@ public sealed class MapStudioOsmBuildingProjectorTests
         Assert.Equal(
             2,
             building.RoofHeightMeters);
+
+        Assert.Equal(
+            "brick",
+            building.FacadeMaterial);
+
+        Assert.Equal(
+            "#c08060",
+            building.FacadeColour);
+
+        Assert.Equal(
+            "roof_tiles",
+            building.RoofMaterial);
+
+        Assert.Equal(
+            "#804020",
+            building.RoofColour);
 
         Assert.InRange(
             building.Center.X,
