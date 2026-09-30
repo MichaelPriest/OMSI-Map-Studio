@@ -42,6 +42,26 @@
                 TextWrapping="Wrap" />
 
             <StackPanel
+                x:Name="OverallProgressPanel"
+                Spacing="5"
+                Visibility="Collapsed">
+                <Grid>
+                    <TextBlock
+                        Text="Progresso geral"
+                        FontWeight="SemiBold" />
+                    <TextBlock
+                        x:Name="OverallProgressText"
+                        HorizontalAlignment="Right"
+                        Opacity="0.72" />
+                </Grid>
+                <ProgressBar
+                    x:Name="OverallProgressBar"
+                    Minimum="0"
+                    Maximum="100"
+                    Value="0" />
+            </StackPanel>
+
+            <StackPanel
                 x:Name="AssetIndexPanel"
                 Spacing="5"
                 Visibility="Collapsed">
