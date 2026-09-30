@@ -78,18 +78,6 @@ public sealed class MapStudioRealWorldScenePipeline
                     .DownloadingOpenStreetMap,
                 "Baixando vias e cenário real do OpenStreetMap..."));
 
-        var osmProgress =
-            progress is null
-                ? null
-                : new Progress<
-                    MapStudioOverpassSceneDownloadProgress>(
-                        update =>
-                            progress.Report(
-                                new MapStudioRealWorldScenePipelineProgress(
-                                    MapStudioRealWorldScenePipelineStage
-                                        .DownloadingOpenStreetMap,
-                                    update.Message)));
-
         var download =
             _layeredSceneClient is null
                 ? await _sceneClient
@@ -98,8 +86,7 @@ public sealed class MapStudioRealWorldScenePipeline
                         west,
                         north,
                         east,
-                        cancellationToken,
-                        osmProgress)
+                        cancellationToken)
                     .ConfigureAwait(false)
                 : await _layeredSceneClient
                     .DownloadAsync(
@@ -114,7 +101,16 @@ public sealed class MapStudioRealWorldScenePipeline
                             "cache",
                             "osm"),
                         cancellationToken,
-                        osmProgress)
+                        progress is null
+                            ? null
+                            : new Progress<
+                                MapStudioOverpassSceneDownloadProgress>(
+                                    update =>
+                                        progress.Report(
+                                            new MapStudioRealWorldScenePipelineProgress(
+                                                MapStudioRealWorldScenePipelineStage
+                                                    .DownloadingOpenStreetMap,
+                                                update.Message))))
                     .ConfigureAwait(false);
 
         cancellationToken
