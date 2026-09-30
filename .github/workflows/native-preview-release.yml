@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.111: remove the global OSM deadline and lock multi-tile placement bounds.
+# Test 10.112: publish the final OSM/placement fix with release-tag integrity protection.
 
 on:
   push:
@@ -193,6 +193,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.110-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.111-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.111-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.112-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.112-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -205,8 +207,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.111-native
-  TAG: v0.2.0-alpha.5-test.10.111-native
+  VERSION: 0.2.0-alpha.5-test.10.112-native
+  TAG: v0.2.0-alpha.5-test.10.112-native
 
 jobs:
   build-native-preview:
@@ -4652,11 +4654,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.111-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.112-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.111-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.112-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -4686,6 +4688,12 @@ jobs:
 
           gh release view "$env:TAG" *> $null
           if ($LASTEXITCODE -eq 0) {
+            $tagRef = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$env:TAG" | ConvertFrom-Json
+            $tagSha = [string]$tagRef.object.sha
+            if ($tagSha -ne $env:GITHUB_SHA) {
+              throw "Refusing to clobber release $env:TAG because tag SHA $tagSha differs from workflow SHA $env:GITHUB_SHA."
+            }
+
             gh release upload "$env:TAG" $setup $setupHash $zip $zipHash $ptManual $enManual --clobber
           }
           else {
