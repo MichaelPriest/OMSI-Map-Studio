@@ -280,7 +280,11 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
                     MapStudioBuildingRoofType.Gable,
                     2,
                     "Rua Teste",
-                    "1");
+                    "1",
+                    "brick",
+                    "#c08060",
+                    "roof_tiles",
+                    "#804020");
 
             var result =
                 await new MapStudioFootprintBuildingAssetGenerator()
@@ -319,19 +323,93 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
                         string.IsNullOrWhiteSpace(
                             material.TextureName)));
 
-            Assert.True(
-                File.Exists(
-                    Path.Combine(
-                        result.ObjectDirectory,
-                        "Texture",
-                        "ms_osm_facade.bmp")));
+            var facadePath =
+                Path.Combine(
+                    result.ObjectDirectory,
+                    "Texture",
+                    "ms_osm_facade.bmp");
+
+            var roofPath =
+                Path.Combine(
+                    result.ObjectDirectory,
+                    "Texture",
+                    "ms_osm_roof.bmp");
 
             Assert.True(
                 File.Exists(
+                    facadePath));
+
+            Assert.True(
+                File.Exists(
+                    roofPath));
+
+            var facadePixel =
+                ReadBmpPixel(
+                    await File.ReadAllBytesAsync(
+                        facadePath),
+                    128,
+                    128,
+                    2,
+                    4);
+
+            Assert.Equal(
+                (byte)194,
+                facadePixel.R);
+
+            Assert.Equal(
+                (byte)130,
+                facadePixel.G);
+
+            Assert.Equal(
+                (byte)98,
+                facadePixel.B);
+
+            var roofPixel =
+                ReadBmpPixel(
+                    await File.ReadAllBytesAsync(
+                        roofPath),
+                    128,
+                    128,
+                    2,
+                    2);
+
+            Assert.Equal(
+                (byte)130,
+                roofPixel.R);
+
+            Assert.Equal(
+                (byte)66,
+                roofPixel.G);
+
+            Assert.Equal(
+                (byte)34,
+                roofPixel.B);
+
+            var manifest =
+                await File.ReadAllTextAsync(
                     Path.Combine(
                         result.ObjectDirectory,
-                        "Texture",
-                        "ms_osm_roof.bmp")));
+                        "mapstudio-osm-building.txt"));
+
+            Assert.Contains(
+                "FacadeMaterial=brick",
+                manifest,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "FacadeColour=#c08060",
+                manifest,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "RoofMaterial=roof_tiles",
+                manifest,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "RoofColour=#804020",
+                manifest,
+                StringComparison.Ordinal);
         }
         finally
         {
@@ -344,6 +422,43 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
                     recursive: true);
             }
         }
+    }
+
+    private static (
+        byte R,
+        byte G,
+        byte B)
+        ReadBmpPixel(
+            byte[] bytes,
+            int width,
+            int height,
+            int x,
+            int y)
+    {
+        var rowStride =
+            (
+                width *
+                    3 +
+                3
+            ) &
+            ~3;
+
+        var targetY =
+            height -
+            1 -
+            y;
+
+        var offset =
+            54 +
+            targetY *
+                rowStride +
+            x *
+                3;
+
+        return (
+            bytes[offset + 2],
+            bytes[offset + 1],
+            bytes[offset]);
     }
 
     [Fact]
