@@ -958,6 +958,41 @@ public sealed class MapStudioLayeredOsmSceneClient
                 Array.Empty<string>());
         }
 
+        var endpointKey =
+            GetEndpointKey(
+                _directMapEndpoint);
+
+        var directHealth =
+            _endpointHealth
+                .GetOrAdd(
+                    endpointKey,
+                    _ =>
+                        new EndpointHealth())
+                .Snapshot();
+
+        if (
+            directHealth.CooldownUntil >
+                DateTimeOffset.UtcNow)
+        {
+            var remaining =
+                directHealth.CooldownUntil -
+                DateTimeOffset.UtcNow;
+
+            var message =
+                $"{_directMapEndpoint.Host}: fallback OSM API em cooldown por mais {Math.Max(1, remaining.TotalSeconds):0}s";
+
+            onStatus(
+                $"OpenStreetMap → {layer.DisplayName} → bloco {chunkLabel}/{primaryTotal} → {message}");
+
+            return new ChunkFetchResult(
+                null,
+                null,
+                0,
+                message,
+                false,
+                Array.Empty<string>());
+        }
+
         onAttempt(
             new AttemptUpdate(
                 _directMapEndpoint,
@@ -974,9 +1009,8 @@ public sealed class MapStudioLayeredOsmSceneClient
 
         if (result.Document is not null)
         {
-            var endpointKey =
-                GetEndpointKey(
-                    _directMapEndpoint);
+            MarkEndpointSuccess(
+                endpointKey);
 
             WriteDiagnostic(
                 $"osm layer={layer.Slug} chunk={chunkLabel}/{primaryTotal} endpoint={_directMapEndpoint.Host} direct-map status=200 elapsedMs={result.Elapsed.TotalMilliseconds:0} bytes={result.ByteCount}");
@@ -991,6 +1025,30 @@ public sealed class MapStudioLayeredOsmSceneClient
                 null,
                 false,
                 Array.Empty<string>());
+        }
+
+        if (result.StatusCode == 429)
+        {
+            var retryAfter =
+                result.RetryAfter ??
+                TimeSpan.FromSeconds(30);
+
+            MarkEndpointRateLimited(
+                endpointKey,
+                retryAfter);
+
+            onStatus(
+                $"OpenStreetMap → {layer.DisplayName} → bloco {chunkLabel}/{primaryTotal} → fallback {_directMapEndpoint.Host} respondeu 429 · Retry-After {retryAfter.TotalSeconds:0}s · servidor em cooldown");
+        }
+        else if (result.TransportFailure)
+        {
+            MarkEndpointTransportFailure(
+                endpointKey);
+        }
+        else
+        {
+            MarkEndpointFailure(
+                endpointKey);
         }
 
         WriteDiagnostic(
