@@ -24,7 +24,8 @@ public sealed record MapStudioGeoStreetFurniturePoint(
     string? Name,
     string? Operator,
     string? Reference,
-    string? ShelterType);
+    string? ShelterType,
+    double? DirectionDegrees = null);
 
 public sealed record MapStudioOsmStreetFurnitureImportResult(
     IReadOnlyList<MapStudioGeoStreetFurniturePoint> Points,
@@ -137,7 +138,9 @@ public sealed class MapStudioOsmStreetFurnitureImporter
                     Clean(
                         tags.GetValueOrDefault("ref")),
                     Clean(
-                        tags.GetValueOrDefault("shelter_type"))));
+                        tags.GetValueOrDefault("shelter_type")),
+                    ParseDirection(
+                        tags.GetValueOrDefault("direction"))));
         }
 
         return new MapStudioOsmStreetFurnitureImportResult(
@@ -321,6 +324,92 @@ public sealed class MapStudioOsmStreetFurnitureImporter
                 group =>
                     group.Last().Value,
                 StringComparer.OrdinalIgnoreCase);
+
+    private static double? ParseDirection(
+        string? value)
+    {
+        var normalized =
+            Clean(
+                value)
+                ?.ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(
+                normalized))
+        {
+            return null;
+        }
+
+        if (
+            double.TryParse(
+                normalized,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var numeric) &&
+            double.IsFinite(
+                numeric))
+        {
+            return NormalizeDegrees(
+                numeric);
+        }
+
+        var bearing =
+            normalized switch
+            {
+                "n" or "north" =>
+                    0.0,
+                "nne" =>
+                    22.5,
+                "ne" or "northeast" =>
+                    45.0,
+                "ene" =>
+                    67.5,
+                "e" or "east" =>
+                    90.0,
+                "ese" =>
+                    112.5,
+                "se" or "southeast" =>
+                    135.0,
+                "sse" =>
+                    157.5,
+                "s" or "south" =>
+                    180.0,
+                "ssw" =>
+                    202.5,
+                "sw" or "southwest" =>
+                    225.0,
+                "wsw" =>
+                    247.5,
+                "w" or "west" =>
+                    270.0,
+                "wnw" =>
+                    292.5,
+                "nw" or "northwest" =>
+                    315.0,
+                "nnw" =>
+                    337.5,
+                _ =>
+                    double.NaN
+            };
+
+        return double.IsFinite(
+                bearing)
+            ? bearing
+            : null;
+    }
+
+    private static double NormalizeDegrees(
+        double degrees)
+    {
+        var normalized =
+            degrees %
+            360.0;
+
+        return normalized <
+            0
+                ? normalized +
+                    360.0
+                : normalized;
+    }
 
     private static string? Clean(
         string? value)
