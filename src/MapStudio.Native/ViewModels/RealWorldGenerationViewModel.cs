@@ -284,7 +284,8 @@ public sealed class RealWorldGenerationViewModel :
             CancellationToken cancellationToken = default,
             bool useSavedGoogleElevation = true,
             bool useSavedOpenMeteoElevation = false,
-            bool useBuildingVisualEvidence = false)
+            bool useBuildingVisualEvidence = false,
+            bool useOpenAerialMapEvidence = false)
     {
         if (IsBusy)
         {
@@ -333,7 +334,8 @@ public sealed class RealWorldGenerationViewModel :
                         cancellationToken,
                         useSavedGoogleElevation,
                         useSavedOpenMeteoElevation,
-                        useBuildingVisualEvidence);
+                        useBuildingVisualEvidence,
+                        useOpenAerialMapEvidence);
 
             Summary =
                 summary;
