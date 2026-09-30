@@ -92,7 +92,8 @@ public sealed class NativeRealWorldMapGenerationController :
             MapStudioGeographicAnchor anchor,
             IProgress<NativeRealWorldGenerationProgress>?
                 progress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool useSavedGoogleElevation = true)
     {
         CancellationTokenSource linked;
 
@@ -181,7 +182,9 @@ public sealed class NativeRealWorldMapGenerationController :
                         elevationProgress:
                             elevationProgress,
                         cancellationToken:
-                            linked.Token)
+                            linked.Token,
+                        useSavedGoogleElevation:
+                            useSavedGoogleElevation)
                     .ConfigureAwait(false);
 
             var summary =
