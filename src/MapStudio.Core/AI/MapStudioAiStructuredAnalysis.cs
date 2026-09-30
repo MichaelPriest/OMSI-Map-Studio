@@ -15,8 +15,9 @@ internal static class MapStudioAiStructuredAnalysis
             "Use meters. Fields: widthMeters, heightMeters, depthMeters, " +
             "floorCount, roofType, roofHeightMeters, windowsPerFloor, " +
             "doorCount, typicalWindowWidthMeters, typicalWindowHeightMeters, " +
-            "facadeMaterial, roofMaterial, architecturalStyle, notes, confidence. " +
+            "facadeMaterial, facadeColour, roofMaterial, roofColour, architecturalStyle, notes, confidence. " +
             "roofType: unknown|flat|gable|hip|shed|mansard|dome|custom. " +
+            "When a facade or roof colour is clearly visible, return facadeColour/roofColour as #RRGGBB; otherwise null. " +
             "confidence must be 0..1.";
 
         if (
@@ -107,7 +108,13 @@ internal static class MapStudioAiStructuredAnalysis
             GetDouble(
                 root,
                 "confidence") ??
-            0)
+            0,
+            GetString(
+                root,
+                "facadeColour"),
+            GetString(
+                root,
+                "roofColour"))
             .Normalize();
     }
 
