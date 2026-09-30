@@ -169,9 +169,7 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
                     assetPath,
                     position,
                     HeightMeters:
-                        elevation?.SampleRelativeHeightOrDefault(
-                            anchor,
-                            position) ?? 0,
+                        0,
                     Rotation:
                         ResolvePlacementRotation(
                             point)));
