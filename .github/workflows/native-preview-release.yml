@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.101: native real-world pipeline bridge preview.
+# Test 10.102: native real-world generation session preview.
 
 on:
   push:
@@ -15,6 +15,7 @@ on:
       - "src/MapStudio.Native/Controls/NativeViewport.xaml.cs"
       - "src/MapStudio.Native/Services/NativeMapCredentialStore.cs"
       - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationService.cs"
+      - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationController.cs"
       - "src/MapStudio.Native/Services/OmsiNativeSession.cs"
       - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
       - "src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs"
@@ -174,6 +175,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.100-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.101-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.101-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.102-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.102-native.md"
   workflow_dispatch:
 
 permissions:
@@ -184,8 +187,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.101-native
-  TAG: v0.2.0-alpha.5-test.10.101-native
+  VERSION: 0.2.0-alpha.5-test.10.102-native
+  TAG: v0.2.0-alpha.5-test.10.102-native
 
 jobs:
   build-native-preview:
@@ -3954,6 +3957,30 @@ jobs:
 
           Write-Host "Verified native PasswordVault-backed real-world pipeline bridge."
 
+      - name: Verify test 10.102 native real-world generation session
+        shell: pwsh
+        run: |
+          $controller = Get-Content src/MapStudio.Native/Services/NativeRealWorldMapGenerationController.cs -Raw
+
+          foreach ($required in @(
+            'NativeRealWorldMapGenerationController',
+            'NativeRealWorldGenerationState',
+            'NativeRealWorldGenerationProgress',
+            'NativeRealWorldGenerationSummary',
+            'realWorldGenerationAlreadyRunning',
+            'MapStudioRealWorldMapPipelineStage',
+            'OmsiAssetIndexProgress',
+            'MapStudioElevationDownloadProgress',
+            'Cancel()',
+            'SessionBackupDirectory'
+          )) {
+            if (-not $controller.Contains($required)) {
+              throw "Test 10.102 native session marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified native generation state, progress, cancellation and result summary."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4108,11 +4135,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.101-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.102-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.101-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.102-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
