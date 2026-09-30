@@ -40,7 +40,9 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
             CancellationToken cancellationToken = default,
             MapStudioGeoreferencedElevationSurface? elevation = null,
             IMapStudioBuildingVisualEvidenceProvider?
-                visualEvidenceProvider = null)
+                visualEvidenceProvider = null,
+            IProgress<MapStudioBuildingVisualEvidenceProgress>?
+                visualEvidenceProgress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -121,6 +123,7 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                         .AnalyzeAsync(
                             targets,
                             anchor,
+                            visualEvidenceProgress,
                             cancellationToken)
                         .ConfigureAwait(false);
 
