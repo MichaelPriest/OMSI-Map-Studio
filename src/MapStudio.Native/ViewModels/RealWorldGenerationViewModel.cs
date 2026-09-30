@@ -192,7 +192,20 @@ public sealed class RealWorldGenerationViewModel :
               $"{Summary.Junctions} junction(s) · " +
               $"{Summary.RoadStructures} estrutura(s) viária(s) · " +
               $"{Summary.SceneObjects} objeto(s) · " +
-              $"{Summary.ReviewItems} revisão(ões)";
+              $"{Summary.ReviewItems} revisão(ões) · " +
+              $"elevação {FormatElevationMode(Summary.ElevationMode)}";
+
+    private static string FormatElevationMode(
+        NativeRealWorldElevationMode mode) =>
+        mode switch
+        {
+            NativeRealWorldElevationMode.Google =>
+                "Google",
+            NativeRealWorldElevationMode.OpenMeteo =>
+                "Open-Meteo/Copernicus",
+            _ =>
+                "sem DEM"
+        };
 
     public bool IsBusy =>
         State is
