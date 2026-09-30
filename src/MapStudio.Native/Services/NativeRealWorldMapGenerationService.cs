@@ -130,7 +130,8 @@ public sealed class NativeRealWorldMapGenerationService
                         progress,
                         assetIndexProgress,
                         elevationProgress,
-                        cancellationToken)
+                        cancellationToken,
+                        buildingVisualEvidenceProvider)
                     .ConfigureAwait(false);
 
             return new NativeRealWorldMapGenerationResult(
