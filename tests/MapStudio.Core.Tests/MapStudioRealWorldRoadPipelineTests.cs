@@ -366,6 +366,98 @@ public sealed class MapStudioRealWorldRoadPipelineTests
             Assert.True(
                 tunnelSecond.GradientStart >
                 0);
+
+            Assert.NotNull(
+                result.StructurePlacements);
+
+            var structures =
+                result.StructurePlacements!;
+
+            var bridgePiers =
+                structures
+                    .Where(
+                        placement =>
+                            placement.Id.StartsWith(
+                                "osm-bridge-pier-",
+                                StringComparison.Ordinal))
+                    .ToArray();
+
+            var tunnelPortals =
+                structures
+                    .Where(
+                        placement =>
+                            placement.Id.StartsWith(
+                                "osm-tunnel-portal-",
+                                StringComparison.Ordinal))
+                    .ToArray();
+
+            Assert.NotEmpty(
+                bridgePiers);
+
+            Assert.Equal(
+                2,
+                tunnelPortals.Length);
+
+            Assert.Equal(
+                structures.Count,
+                result.GeneratedStructureCount);
+
+            Assert.All(
+                bridgePiers,
+                placement =>
+                {
+                    Assert.Contains(
+                        "MS_BridgePier_",
+                        placement.SceneryObjectPath,
+                        StringComparison.OrdinalIgnoreCase);
+
+                    Assert.True(
+                        File.Exists(
+                            Path.Combine(
+                                root,
+                                placement.SceneryObjectPath
+                                    .Replace(
+                                        '\\',
+                                        Path.DirectorySeparatorChar))));
+                });
+
+            Assert.All(
+                tunnelPortals,
+                placement =>
+                {
+                    Assert.Contains(
+                        "MS_TunnelPortal_",
+                        placement.SceneryObjectPath,
+                        StringComparison.OrdinalIgnoreCase);
+
+                    Assert.True(
+                        File.Exists(
+                            Path.Combine(
+                                root,
+                                placement.SceneryObjectPath
+                                    .Replace(
+                                        '\\',
+                                        Path.DirectorySeparatorChar))));
+                });
+
+            Assert.Equal(
+                structures.Count,
+                content.Objects.Count);
+
+            Assert.Contains(
+                content.Objects,
+                item =>
+                    item.SceneryObjectPath.Contains(
+                        "MS_BridgePier_",
+                        StringComparison.OrdinalIgnoreCase));
+
+            Assert.Equal(
+                2,
+                content.Objects.Count(
+                    item =>
+                        item.SceneryObjectPath.Contains(
+                            "MS_TunnelPortal_",
+                            StringComparison.OrdinalIgnoreCase)));
         }
         finally
         {
