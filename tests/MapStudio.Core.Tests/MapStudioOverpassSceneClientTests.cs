@@ -375,6 +375,169 @@ public sealed class MapStudioOverpassSceneClientTests
     }
 
     [Fact]
+    public async Task DownloaderSkipsTransportDeadEndpointsDuringSubdivisionRecovery()
+    {
+        var counts =
+            new ConcurrentDictionary<string, int>(
+                StringComparer.OrdinalIgnoreCase);
+
+        using var httpClient =
+            new HttpClient(
+                new DelegateHandler(
+                    request =>
+                    {
+                        var host =
+                            request.RequestUri!.Host;
+
+                        counts.AddOrUpdate(
+                            host,
+                            1,
+                            (
+                                _,
+                                count) =>
+                                count + 1);
+
+                        if (
+                            host is
+                                "dead-one.test" or
+                                "dead-two.test")
+                        {
+                            throw new HttpRequestException(
+                                "transport unavailable");
+                        }
+
+                        return counts[host] == 1
+                            ? new HttpResponseMessage(
+                                HttpStatusCode
+                                    .GatewayTimeout)
+                            : XmlResponse(
+                                SampleSceneOsm);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(5)
+            };
+
+        var result =
+            await new MapStudioOverpassSceneClient(
+                    httpClient,
+                    [
+                        new Uri(
+                            "https://dead-one.test/api/interpreter"),
+                        new Uri(
+                            "https://dead-two.test/api/interpreter"),
+                        new Uri(
+                            "https://busy.test/api/interpreter")
+                    ])
+                .DownloadAsync(
+                    -23.551,
+                    -46.634,
+                    -23.549,
+                    -46.632);
+
+        Assert.Equal(
+            1,
+            counts["dead-one.test"]);
+
+        Assert.Equal(
+            1,
+            counts["dead-two.test"]);
+
+        Assert.Equal(
+            5,
+            counts["busy.test"]);
+
+        Assert.Equal(
+            4,
+            result.SuccessfulChunkCount);
+
+        Assert.Equal(
+            0,
+            result.FailedChunkCount);
+    }
+
+    [Fact]
+    public async Task DownloaderReportsLiveEndpointAttemptBeforeRequestCompletes()
+    {
+        var requestStarted =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+        var releaseRequest =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+        using var httpClient =
+            new HttpClient(
+                new AsyncDelegateHandler(
+                    async (
+                        _,
+                        cancellationToken) =>
+                    {
+                        requestStarted
+                            .TrySetResult(
+                                true);
+
+                        await releaseRequest
+                            .Task
+                            .WaitAsync(
+                                cancellationToken);
+
+                        return XmlResponse(
+                            SampleSceneOsm);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(5)
+            };
+
+        var updates =
+            new ConcurrentQueue<
+                MapStudioOverpassSceneDownloadProgress>();
+
+        var client =
+            new MapStudioOverpassSceneClient(
+                httpClient,
+                [
+                    new Uri(
+                        "https://scene.test/api/interpreter")
+                ]);
+
+        var downloadTask =
+            client.DownloadAsync(
+                -23.551,
+                -46.634,
+                -23.549,
+                -46.632,
+                CancellationToken.None,
+                new InlineProgress<
+                    MapStudioOverpassSceneDownloadProgress>(
+                        updates.Enqueue));
+
+        await requestStarted
+            .Task
+            .WaitAsync(
+                TimeSpan.FromSeconds(2));
+
+        Assert.Contains(
+            updates,
+            update =>
+                update.Message.Contains(
+                    "tentando scene.test",
+                    StringComparison.OrdinalIgnoreCase) &&
+                update.RequestAttemptCount >
+                    0);
+
+        releaseRequest
+            .TrySetResult(
+                true);
+
+        await downloadTask;
+    }
+
+    [Fact]
     public async Task DownloaderRecoversFailedParentBySubdivision()
     {
         var requestCount =

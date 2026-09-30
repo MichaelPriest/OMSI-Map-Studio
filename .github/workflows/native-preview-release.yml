@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.113: split real-map creation into responsive wizard pages and diversify Overpass fallback.
+# Test 10.114: prevent apparent OSM download hangs with endpoint health inheritance and live attempts.
 
 on:
   push:
@@ -197,6 +197,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.112-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.113-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.113-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.114-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.114-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -209,8 +211,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.113-native
-  TAG: v0.2.0-alpha.5-test.10.113-native
+  VERSION: 0.2.0-alpha.5-test.10.114-native
+  TAG: v0.2.0-alpha.5-test.10.114-native
 
 jobs:
   build-native-preview:
@@ -4477,7 +4479,7 @@ jobs:
           foreach ($required in @(
             'EndpointAttemptTimeout',
             'TargetChunkSpanMeters',
-            '750.0',
+            '500.0',
             'MaximumConcurrentChunkRequests',
             'MapStudioOverpassSceneDownloadProgress',
             'Task',
@@ -4546,6 +4548,39 @@ jobs:
           }
 
           Write-Host "Verified responsive real-map wizard, readable progress panel, and diversified Overpass endpoints."
+
+      - name: Verify test 10.114 non-blocking Overpass recovery
+        shell: pwsh
+        run: |
+          $overpass = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOverpassSceneClient.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassSceneClientTests.cs -Raw
+
+          foreach ($required in @(
+            'TargetChunkSpanMeters',
+            '500.0',
+            'EndpointConnectTimeout',
+            'ConnectTimeout',
+            'ResponseHeadersRead',
+            'UnavailableEndpoints',
+            'CanRecoverBySubdivision',
+            'Nenhum endpoint Overpass saudável permaneceu',
+            'tentando {endpoint.Host}'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Test 10.114 Overpass anti-stall marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'DownloaderSkipsTransportDeadEndpointsDuringSubdivisionRecovery',
+            'DownloaderReportsLiveEndpointAttemptBeforeRequestCompletes'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.114 Overpass regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified inherited endpoint health, connection timeout, live attempt progress, and smaller OSM chunks."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -4701,11 +4736,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.113-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.114-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.113-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.114-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

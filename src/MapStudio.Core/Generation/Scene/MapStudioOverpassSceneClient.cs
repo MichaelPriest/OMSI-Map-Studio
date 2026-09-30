@@ -28,7 +28,7 @@ public sealed class MapStudioOverpassSceneClient
         6_378_137.0;
 
     private const double TargetChunkSpanMeters =
-        750.0;
+        500.0;
 
     private const int MaximumChunksPerAxis =
         6;
@@ -42,6 +42,10 @@ public sealed class MapStudioOverpassSceneClient
     private static readonly TimeSpan
         EndpointAttemptTimeout =
             TimeSpan.FromSeconds(20);
+
+    private static readonly TimeSpan
+        EndpointConnectTimeout =
+            TimeSpan.FromSeconds(8);
 
     private static readonly HttpClient
         SharedHttpClient =
@@ -230,7 +234,9 @@ public sealed class MapStudioOverpassSceneClient
         var chunkTasks =
             primaryChunks
                 .Select(
-                    async bounds =>
+                    async (
+                        bounds,
+                        index) =>
                     {
                         cancellationToken
                             .ThrowIfCancellationRequested();
@@ -240,6 +246,34 @@ public sealed class MapStudioOverpassSceneClient
                                     bounds,
                                     depth: 0,
                                     requestConcurrency,
+                                    unavailableEndpoints:
+                                        Array.Empty<string>(),
+                                    onAttempt:
+                                        (
+                                            endpoint,
+                                            endpointAttempt,
+                                            endpointTotal) =>
+                                        {
+                                            var liveAttempts =
+                                                System.Threading.Interlocked
+                                                    .Increment(
+                                                        ref reportedRequestAttempts);
+
+                                            progress?.Report(
+                                                new MapStudioOverpassSceneDownloadProgress(
+                                                    System.Threading.Volatile
+                                                        .Read(
+                                                            ref completedPrimaryChunks),
+                                                    primaryChunks.Count,
+                                                    System.Threading.Volatile
+                                                        .Read(
+                                                            ref reportedSuccessfulLeafChunks),
+                                                    System.Threading.Volatile
+                                                        .Read(
+                                                            ref reportedFailedLeafChunks),
+                                                    liveAttempts,
+                                                    $"OpenStreetMap: bloco {index + 1}/{primaryChunks.Count} · tentando {endpoint.Host} ({endpointAttempt}/{endpointTotal})..."));
+                                        },
                                     cancellationToken)
                                 .ConfigureAwait(false);
 
@@ -261,10 +295,9 @@ public sealed class MapStudioOverpassSceneClient
                                     result.FailedChunkCount);
 
                         var attempts =
-                            System.Threading.Interlocked
-                                .Add(
-                                    ref reportedRequestAttempts,
-                                    result.RequestAttemptCount);
+                            System.Threading.Volatile
+                                .Read(
+                                    ref reportedRequestAttempts);
 
                         progress?.Report(
                             new MapStudioOverpassSceneDownloadProgress(
@@ -373,6 +406,8 @@ public sealed class MapStudioOverpassSceneClient
             Bounds bounds,
             int depth,
             SemaphoreSlim requestConcurrency,
+            IReadOnlyCollection<string> unavailableEndpoints,
+            Action<Uri, int, int>? onAttempt,
             CancellationToken cancellationToken)
     {
         WriteDiagnostic(
@@ -382,6 +417,8 @@ public sealed class MapStudioOverpassSceneClient
             await TryDownloadChunkAsync(
                     bounds,
                     requestConcurrency,
+                    unavailableEndpoints,
+                    onAttempt,
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -398,7 +435,10 @@ public sealed class MapStudioOverpassSceneClient
                 Array.Empty<string>());
         }
 
-        if (depth >= MaximumRecoveryDepth)
+        if (
+            !fetched.CanRecoverBySubdivision ||
+            depth >= MaximumRecoveryDepth)
+
         {
             WriteDiagnostic(
                 $"scene recovery exhausted depth={depth}");
@@ -494,6 +534,8 @@ public sealed class MapStudioOverpassSceneClient
                                     child,
                                     depth + 1,
                                     requestConcurrency,
+                                    fetched.UnavailableEndpoints,
+                                    onAttempt,
                                     cancellationToken)))
                 .ConfigureAwait(false);
 
@@ -533,6 +575,8 @@ public sealed class MapStudioOverpassSceneClient
         TryDownloadChunkAsync(
             Bounds bounds,
             SemaphoreSlim requestConcurrency,
+            IReadOnlyCollection<string> inheritedUnavailableEndpoints,
+            Action<Uri, int, int>? onAttempt,
             CancellationToken cancellationToken)
     {
         var query =
@@ -540,6 +584,14 @@ public sealed class MapStudioOverpassSceneClient
 
         var errors =
             new List<string>();
+
+        var unavailableEndpoints =
+            new HashSet<string>(
+                inheritedUnavailableEndpoints,
+                StringComparer.OrdinalIgnoreCase);
+
+        var canRecoverBySubdivision =
+            false;
 
         var attemptCount =
             0;
@@ -568,7 +620,27 @@ public sealed class MapStudioOverpassSceneClient
                     ) %
                     _endpoints.Count];
 
+            var endpointKey =
+                endpoint.GetLeftPart(
+                    UriPartial.Authority);
+
+            if (
+                unavailableEndpoints
+                    .Contains(
+                        endpointKey))
+            {
+                continue;
+            }
+
             attemptCount++;
+
+            onAttempt?.Invoke(
+                endpoint,
+                attemptCount,
+                Math.Max(
+                    1,
+                    _endpoints.Count -
+                        unavailableEndpoints.Count));
 
             await requestConcurrency
                 .WaitAsync(
@@ -592,18 +664,44 @@ public sealed class MapStudioOverpassSceneClient
                             ["data"] = query
                         });
 
+                using var request =
+                    new HttpRequestMessage(
+                        HttpMethod.Post,
+                        endpoint)
+                    {
+                        Content =
+                            content
+                    };
+
                 using var response =
                     await _httpClient
-                        .PostAsync(
-                            endpoint,
-                            content,
+                        .SendAsync(
+                            request,
+                            HttpCompletionOption
+                                .ResponseHeadersRead,
                             attemptCancellation.Token)
                         .ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    var statusCode =
+                        (int)response.StatusCode;
+
+                    if (
+                        statusCode is
+                            408 or
+                            429 or
+                            500 or
+                            502 or
+                            503 or
+                            504)
+                    {
+                        canRecoverBySubdivision =
+                            true;
+                    }
+
                     errors.Add(
-                        $"{endpoint.Host}: HTTP {(int)response.StatusCode}");
+                        $"{endpoint.Host}: HTTP {statusCode}");
 
                     continue;
                 }
@@ -629,11 +727,11 @@ public sealed class MapStudioOverpassSceneClient
 
                     return new ChunkFetchResult(
                         document,
-                        endpoint
-                            .GetLeftPart(
-                                UriPartial.Authority),
+                        endpointKey,
                         attemptCount,
-                        null);
+                        null,
+                        canRecoverBySubdivision,
+                        unavailableEndpoints.ToArray());
                 }
                 catch (
                     Exception exception)
@@ -658,6 +756,9 @@ public sealed class MapStudioOverpassSceneClient
                     throw;
                 }
 
+                unavailableEndpoints.Add(
+                    endpointKey);
+
                 errors.Add(
                     exception is TaskCanceledException &&
                     attemptCancellation.IsCancellationRequested
@@ -675,9 +776,13 @@ public sealed class MapStudioOverpassSceneClient
             null,
             null,
             attemptCount,
-            string.Join(
-                " / ",
-                errors));
+            errors.Count == 0
+                ? "Nenhum endpoint Overpass saudável permaneceu para este bloco."
+                : string.Join(
+                    " / ",
+                    errors),
+            canRecoverBySubdivision,
+            unavailableEndpoints.ToArray());
     }
 
     private static string BuildQuery(
@@ -863,8 +968,28 @@ public sealed class MapStudioOverpassSceneClient
 
     private static HttpClient CreateSharedHttpClient()
     {
+        var handler =
+            new SocketsHttpHandler
+            {
+                ConnectTimeout =
+                    EndpointConnectTimeout,
+                MaxConnectionsPerServer =
+                    MaximumConcurrentChunkRequests,
+                PooledConnectionLifetime =
+                    TimeSpan.FromMinutes(5),
+                PooledConnectionIdleTimeout =
+                    TimeSpan.FromMinutes(2),
+                AutomaticDecompression =
+                    System.Net.DecompressionMethods.GZip |
+                    System.Net.DecompressionMethods.Deflate |
+                    System.Net.DecompressionMethods.Brotli
+            };
+
         var client =
-            new HttpClient
+            new HttpClient(
+                handler,
+                disposeHandler:
+                    true)
             {
                 Timeout =
                     System.Threading.Timeout
@@ -875,6 +1000,11 @@ public sealed class MapStudioOverpassSceneClient
             .UserAgent
             .ParseAdd(
                 "OMSI-Map-Studio/real-world-scene");
+
+        client.DefaultRequestHeaders
+            .Accept
+            .ParseAdd(
+                "application/xml,text/xml;q=0.9,*/*;q=0.1");
 
         return client;
     }
@@ -893,7 +1023,9 @@ public sealed class MapStudioOverpassSceneClient
         XDocument? Document,
         string? Endpoint,
         int RequestAttemptCount,
-        string? Error);
+        string? Error,
+        bool CanRecoverBySubdivision,
+        IReadOnlyList<string> UnavailableEndpoints);
 
     private sealed record RecoveryResult(
         IReadOnlyList<XDocument> Documents,
