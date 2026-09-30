@@ -112,15 +112,18 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                     .ToHashSet(
                         StringComparer.Ordinal);
 
-            if (initialReviewIds.Count > 0)
+            var targets =
+                projected
+                    .Where(
+                        building =>
+                            initialReviewIds.Contains(
+                                building.Id) ||
+                            NeedsVisualAppearanceRefinement(
+                                building))
+                    .ToArray();
+
+            if (targets.Length > 0)
             {
-                var targets =
-                    projected
-                        .Where(
-                            building =>
-                                initialReviewIds.Contains(
-                                    building.Id))
-                        .ToArray();
 
                 var visualEvidence =
                     await visualEvidenceProvider
@@ -266,6 +269,19 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
             writeResult.BackupPaths,
             visualRefinedBuildingCount);
     }
+
+    private static bool NeedsVisualAppearanceRefinement(
+        MapStudioProjectedBuildingFootprint building) =>
+        building.RoofType ==
+            MapStudioBuildingRoofType.Unknown ||
+        string.IsNullOrWhiteSpace(
+            building.FacadeMaterial) ||
+        string.IsNullOrWhiteSpace(
+            building.FacadeColour) ||
+        string.IsNullOrWhiteSpace(
+            building.RoofMaterial) ||
+        string.IsNullOrWhiteSpace(
+            building.RoofColour);
 
     private static MapStudioProjectedBuildingFootprint
         AttachVisualAttribution(
