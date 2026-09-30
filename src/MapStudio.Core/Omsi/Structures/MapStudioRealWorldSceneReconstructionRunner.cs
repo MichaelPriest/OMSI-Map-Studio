@@ -40,7 +40,9 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                 IReadOnlyList<MapStudioSceneEvidence>>?
                 streetFurnitureEvidence = null,
             CancellationToken cancellationToken = default,
-            MapStudioGeoreferencedElevationSurface? elevation = null)
+            MapStudioGeoreferencedElevationSurface? elevation = null,
+            IMapStudioBuildingVisualEvidenceProvider?
+                buildingVisualEvidenceProvider = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -81,7 +83,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         osmXml,
                         anchor,
                         cancellationToken,
-                        elevation)
+                        elevation,
+                        buildingVisualEvidenceProvider)
                     .ConfigureAwait(false);
 
             var vegetation =
