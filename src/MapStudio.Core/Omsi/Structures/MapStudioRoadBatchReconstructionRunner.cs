@@ -60,6 +60,14 @@ public sealed record MapStudioRoadBatchReconstructionResult(
 
 public sealed class MapStudioRoadBatchReconstructionRunner
 {
+    private const double
+        MinimumLayerVerticalSeparationMeters =
+            4.8;
+
+    private const double
+        MaximumLayerRampGradient =
+            0.08;
+
     public async Task<MapStudioRoadBatchReconstructionResult>
         RunAsync(
             string omsiRoot,
@@ -130,6 +138,51 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             new MapStudioRoadGraphBuilder()
                 .Build(
                     traces);
+
+        var nodeById =
+            graph.Nodes.ToDictionary(
+                node =>
+                    node.Id);
+
+        var segmentsByNode =
+            graph.Segments
+                .SelectMany(
+                    segment =>
+                        new[]
+                        {
+                            (
+                                NodeId:
+                                    segment.FromNodeId,
+                                Segment:
+                                    segment
+                            ),
+                            (
+                                NodeId:
+                                    segment.ToNodeId,
+                                Segment:
+                                    segment
+                            )
+                        })
+                .GroupBy(
+                    item =>
+                        item.NodeId)
+                .ToDictionary(
+                    group =>
+                        group.Key,
+                    group =>
+                        group
+                            .Select(
+                                item =>
+                                    item.Segment)
+                            .ToArray());
+
+        var structuralElevations =
+            BuildStructuralEndpointElevations(
+                graph.Segments,
+                nodeById,
+                segmentsByNode,
+                anchor,
+                elevation);
 
         var roadKit =
             await new MapStudioRoadKitGenerator()
@@ -259,25 +312,49 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     segment.Start,
                     segment.End);
 
+            var (
+                placementBridge,
+                placementTunnel
+            ) =
+                ResolvePlacementStructure(
+                    segment);
+
             var splinePath =
                 MapStudioStandardRoadCatalog
                     .ResolvePlacementRelativePath(
                         segment.ProfileId,
-                        segment.Bridge,
-                        segment.Tunnel);
+                        placementBridge,
+                        placementTunnel);
 
-            var startHeight =
-                elevation?.SampleRelativeHeightOrDefault(
-                    anchor,
-                    segment.Start) ??
-                0;
+            double startHeight;
+            double endHeight;
 
-            var endHeight =
-                elevation?.SampleRelativeHeightOrDefault(
-                    anchor,
-                    segment.End,
-                    startHeight) ??
-                startHeight;
+            if (
+                structuralElevations.TryGetValue(
+                    segment.Id,
+                    out var structural))
+            {
+                startHeight =
+                    structural.StartHeight;
+
+                endHeight =
+                    structural.EndHeight;
+            }
+            else
+            {
+                startHeight =
+                    SampleTerrainHeight(
+                        elevation,
+                        anchor,
+                        segment.Start);
+
+                endHeight =
+                    SampleTerrainHeight(
+                        elevation,
+                        anchor,
+                        segment.End,
+                        startHeight);
+            }
 
             var gradientPercent =
                 ResolveGradientPercent(
@@ -578,13 +655,31 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                 var structureKind =
                     connected.All(
                         item =>
-                            item.Segment.Bridge)
+                            ResolvePlacementStructure(
+                                item.Segment)
+                                .Bridge)
                         ? MapStudioJunctionStructureKind.Bridge
                         : connected.All(
                             item =>
-                                item.Segment.Tunnel)
+                                ResolvePlacementStructure(
+                                    item.Segment)
+                                    .Tunnel)
                             ? MapStudioJunctionStructureKind.Tunnel
                             : MapStudioJunctionStructureKind.Ground;
+
+                var junctionHeight =
+                    ResolveJunctionPlacementHeight(
+                        junction.NodeId,
+                        junction.Position,
+                        connected
+                            .Select(
+                                item =>
+                                    item.Segment)
+                            .ToArray(),
+                        structureKind,
+                        structuralElevations,
+                        anchor,
+                        elevation);
 
                 var asset =
                     await junctionGenerator
@@ -606,9 +701,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         asset.SceneryObjectPath,
                         junction.Position,
                         HeightMeters:
-                            elevation?.SampleRelativeHeightOrDefault(
-                                anchor,
-                                junction.Position) ?? 0));
+                            junctionHeight));
             }
 
             if (junctionRequests.Count > 0)
@@ -662,8 +755,12 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             placement.Rotation,
                             placement.Segment.LengthMeters,
                             placement.SplinePath,
-                            placement.Segment.Bridge,
-                            placement.Segment.Tunnel))
+                            ResolvePlacementStructure(
+                                placement.Segment)
+                                .Bridge,
+                            ResolvePlacementStructure(
+                                placement.Segment)
+                                .Tunnel))
                 .ToArray(),
             junctionWrite.Placements,
             graph.Junctions.Count,
@@ -673,6 +770,562 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             backupPaths,
             roadKit);
     }
+
+    private static IReadOnlyDictionary<
+        int,
+        StructuralEndpointElevation>
+        BuildStructuralEndpointElevations(
+            IReadOnlyList<MapStudioRoadGraphSegment>
+                segments,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphNode>
+                nodeById,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphSegment[]>
+                segmentsByNode,
+            MapStudioGeographicAnchor anchor,
+            MapStudioGeoreferencedElevationSurface?
+                elevation)
+    {
+        var result =
+            new Dictionary<
+                int,
+                StructuralEndpointElevation>();
+
+        foreach (
+            var traceGroup in
+                segments
+                    .GroupBy(
+                        segment =>
+                            segment.TraceId,
+                        StringComparer
+                            .OrdinalIgnoreCase))
+        {
+            var ordered =
+                traceGroup
+                    .OrderBy(
+                        segment =>
+                            segment.Id)
+                    .ToArray();
+
+            for (
+                var index = 0;
+                index <
+                    ordered.Length;)
+            {
+                if (!IsStructuralSegment(
+                    ordered[index]))
+                {
+                    index++;
+
+                    continue;
+                }
+
+                var runStart =
+                    index;
+
+                var runEnd =
+                    index;
+
+                while (
+                    runEnd + 1 <
+                        ordered.Length &&
+                    ordered[runEnd]
+                        .ToNodeId ==
+                    ordered[
+                        runEnd +
+                        1]
+                        .FromNodeId &&
+                    HasCompatibleGradeSeparation(
+                        ordered[runEnd],
+                        ordered[
+                            runEnd +
+                            1]) &&
+                    IsStructuralSegment(
+                        ordered[
+                            runEnd +
+                            1]))
+                {
+                    runEnd++;
+                }
+
+                var first =
+                    ordered[
+                        runStart];
+
+                var last =
+                    ordered[
+                        runEnd];
+
+                var startHeight =
+                    SampleTerrainHeight(
+                        elevation,
+                        anchor,
+                        first.Start);
+
+                var endHeight =
+                    SampleTerrainHeight(
+                        elevation,
+                        anchor,
+                        last.End,
+                        startHeight);
+
+                startHeight +=
+                    ResolveStructuralJunctionBoundaryOffset(
+                        first.FromNodeId,
+                        first,
+                        nodeById,
+                        segmentsByNode);
+
+                endHeight +=
+                    ResolveStructuralJunctionBoundaryOffset(
+                        last.ToNodeId,
+                        last,
+                        nodeById,
+                        segmentsByNode);
+
+                var totalLength =
+                    0.0;
+
+                for (
+                    var runIndex =
+                        runStart;
+                    runIndex <=
+                        runEnd;
+                    runIndex++)
+                {
+                    totalLength +=
+                        Math.Max(
+                            0,
+                            ordered[
+                                runIndex]
+                                .LengthMeters);
+                }
+
+                if (
+                    totalLength <=
+                    0.0001)
+                {
+                    index =
+                        runEnd +
+                        1;
+
+                    continue;
+                }
+
+                var layerDirection =
+                    ResolveLayerVerticalDirection(
+                        first);
+
+                var targetSeparation =
+                    ResolveLayerTargetSeparationMeters(
+                        first);
+
+                var traveled =
+                    0.0;
+
+                for (
+                    var runIndex =
+                        runStart;
+                    runIndex <=
+                        runEnd;
+                    runIndex++)
+                {
+                    var segment =
+                        ordered[
+                            runIndex];
+
+                    var segmentStartHeight =
+                        LerpHeight(
+                            startHeight,
+                            endHeight,
+                            traveled /
+                            totalLength);
+
+                    segmentStartHeight +=
+                        ResolveLayerClearanceOffset(
+                            elevation,
+                            anchor,
+                            segment.Start,
+                            segmentStartHeight,
+                            traveled,
+                            totalLength,
+                            layerDirection,
+                            targetSeparation);
+
+                    traveled +=
+                        Math.Max(
+                            0,
+                            segment.LengthMeters);
+
+                    var segmentEndHeight =
+                        LerpHeight(
+                            startHeight,
+                            endHeight,
+                            traveled /
+                            totalLength);
+
+                    segmentEndHeight +=
+                        ResolveLayerClearanceOffset(
+                            elevation,
+                            anchor,
+                            segment.End,
+                            segmentEndHeight,
+                            traveled,
+                            totalLength,
+                            layerDirection,
+                            targetSeparation);
+
+                    result[
+                        segment.Id] =
+                        new StructuralEndpointElevation(
+                            segmentStartHeight,
+                            segmentEndHeight);
+                }
+
+                index =
+                    runEnd +
+                    1;
+            }
+        }
+
+        return result;
+    }
+
+    private static double ResolveJunctionPlacementHeight(
+        int nodeId,
+        MapStudioRoadPoint position,
+        IReadOnlyList<MapStudioRoadGraphSegment>
+            connected,
+        MapStudioJunctionStructureKind
+            structureKind,
+        IReadOnlyDictionary<
+            int,
+            StructuralEndpointElevation>
+            structuralElevations,
+        MapStudioGeographicAnchor anchor,
+        MapStudioGeoreferencedElevationSurface?
+            elevation)
+    {
+        if (
+            structureKind !=
+                MapStudioJunctionStructureKind
+                    .Ground)
+        {
+            var heights =
+                new List<double>(
+                    connected.Count);
+
+            foreach (var segment in connected)
+            {
+                if (
+                    !structuralElevations.TryGetValue(
+                        segment.Id,
+                        out var structural))
+                {
+                    continue;
+                }
+
+                heights.Add(
+                    segment.FromNodeId ==
+                        nodeId
+                        ? structural.StartHeight
+                        : structural.EndHeight);
+            }
+
+            if (
+                heights.Count ==
+                    connected.Count &&
+                heights.Count >
+                    0)
+            {
+                return heights.Average();
+            }
+        }
+
+        return SampleTerrainHeight(
+            elevation,
+            anchor,
+            position);
+    }
+
+    private static double SampleTerrainHeight(
+        MapStudioGeoreferencedElevationSurface?
+            elevation,
+        MapStudioGeographicAnchor anchor,
+        MapStudioRoadPoint point,
+        double fallback = 0) =>
+        elevation?.SampleRelativeHeightOrDefault(
+            anchor,
+            point,
+            fallback) ??
+        fallback;
+
+    private static bool IsStructuralSegment(
+        MapStudioRoadGraphSegment segment)
+    {
+        var structure =
+            ResolvePlacementStructure(
+                segment);
+
+        return structure.Bridge ||
+            structure.Tunnel ||
+            (segment.Layer ?? 0) !=
+                0;
+    }
+
+    private static bool HasCompatibleGradeSeparation(
+        MapStudioRoadGraphSegment left,
+        MapStudioRoadGraphSegment right)
+    {
+        var leftStructure =
+            ResolvePlacementStructure(
+                left);
+
+        var rightStructure =
+            ResolvePlacementStructure(
+                right);
+
+        return leftStructure ==
+                rightStructure &&
+            ResolveEffectiveStructuralLayer(
+                left) ==
+            ResolveEffectiveStructuralLayer(
+                right);
+    }
+
+    private static int ResolveEffectiveStructuralLayer(
+        MapStudioRoadGraphSegment segment)
+    {
+        if (
+            segment.Layer is
+                { } layer &&
+            layer !=
+                0)
+        {
+            return layer;
+        }
+
+        var structure =
+            ResolvePlacementStructure(
+                segment);
+
+        if (structure.Bridge)
+        {
+            return 1;
+        }
+
+        if (structure.Tunnel)
+        {
+            return -1;
+        }
+
+        return 0;
+    }
+
+    private static double
+        ResolveStructuralJunctionBoundaryOffset(
+            int nodeId,
+            MapStudioRoadGraphSegment segment,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphNode>
+                nodeById,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphSegment[]>
+                segmentsByNode)
+    {
+        if (
+            !IsStructuralSegment(
+                segment) ||
+            !nodeById.TryGetValue(
+                nodeId,
+                out var node) ||
+            !node.IsJunction ||
+            !segmentsByNode.TryGetValue(
+                nodeId,
+                out var incident) ||
+            incident.Length <
+                3 ||
+            incident.Any(
+                candidate =>
+                    !IsStructuralSegment(
+                        candidate) ||
+                    !HasCompatibleGradeSeparation(
+                        segment,
+                        candidate)))
+        {
+            return 0;
+        }
+
+        return ResolveLayerVerticalDirection(
+                segment) *
+            ResolveLayerTargetSeparationMeters(
+                segment);
+    }
+
+    private static (
+        bool Bridge,
+        bool Tunnel)
+        ResolvePlacementStructure(
+            MapStudioRoadGraphSegment segment)
+    {
+        if (
+            segment.Bridge !=
+            segment.Tunnel)
+        {
+            return
+                (
+                    segment.Bridge,
+                    segment.Tunnel
+                );
+        }
+
+        var layer =
+            segment.Layer ??
+            0;
+
+        return layer switch
+        {
+            > 0 =>
+                (
+                    true,
+                    false
+                ),
+            < 0 =>
+                (
+                    false,
+                    true
+                ),
+            _ =>
+                (
+                    false,
+                    false
+                )
+        };
+    }
+
+    private static int ResolveLayerVerticalDirection(
+        MapStudioRoadGraphSegment segment)
+    {
+        var structure =
+            ResolvePlacementStructure(
+                segment);
+
+        if (structure.Bridge)
+        {
+            return 1;
+        }
+
+        if (structure.Tunnel)
+        {
+            return -1;
+        }
+
+        return Math.Sign(
+            segment.Layer ??
+            0);
+    }
+
+    private static double
+        ResolveLayerTargetSeparationMeters(
+            MapStudioRoadGraphSegment segment)
+    {
+        var layer =
+            Math.Abs(
+                ResolveEffectiveStructuralLayer(
+                    segment));
+
+        return layer ==
+                0
+            ? 0
+            : MinimumLayerVerticalSeparationMeters *
+                layer;
+    }
+
+    private static double ResolveLayerClearanceOffset(
+        MapStudioGeoreferencedElevationSurface?
+            elevation,
+        MapStudioGeographicAnchor anchor,
+        MapStudioRoadPoint point,
+        double baselineHeight,
+        double traveled,
+        double totalLength,
+        int direction,
+        double targetSeparation)
+    {
+        if (
+            direction ==
+                0 ||
+            targetSeparation <=
+                0 ||
+            traveled <=
+                0.0001 ||
+            traveled >=
+                totalLength -
+                    0.0001)
+        {
+            return 0;
+        }
+
+        var terrainHeight =
+            SampleTerrainHeight(
+                elevation,
+                anchor,
+                point,
+                baselineHeight);
+
+        var currentSeparation =
+            direction *
+            (
+                baselineHeight -
+                terrainHeight
+            );
+
+        var needed =
+            Math.Max(
+                0,
+                targetSeparation -
+                    currentSeparation);
+
+        if (
+            needed <=
+            0.0001)
+        {
+            return 0;
+        }
+
+        var rampCapacity =
+            Math.Min(
+                traveled,
+                totalLength -
+                    traveled) *
+            MaximumLayerRampGradient;
+
+        return direction *
+            Math.Min(
+                needed,
+                Math.Max(
+                    0,
+                    rampCapacity));
+    }
+
+    private static double LerpHeight(
+        double start,
+        double end,
+        double amount) =>
+        start +
+        (
+            end -
+            start
+        ) *
+        Math.Clamp(
+            amount,
+            0,
+            1);
 
     private static MapStudioStandardRoadProfile?
         ResolveProfile(
@@ -734,6 +1387,11 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         int Y,
         string Path,
         OmsiConfigDocument Document);
+
+    private readonly record struct
+        StructuralEndpointElevation(
+            double StartHeight,
+            double EndHeight);
 
     private sealed record PlannedSpline(
         MapStudioRoadGraphSegment Segment,
