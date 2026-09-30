@@ -2668,22 +2668,50 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
         "[mesh]\r\nbuilding.o3d\r\n";
 
     private static string BuildManifest(
-        MapStudioProjectedBuildingFootprint building) =>
-        $"OMSI Map Studio OSM Building\n" +
-        $"Id={building.Id}\n" +
-        $"Name={building.Name}\n" +
-        $"Type={building.BuildingType}\n" +
-        $"Floors={building.FloorCount}\n" +
-        $"WallHeight={building.WallHeightMeters:0.###}\n" +
-        $"Roof={building.RoofType}\n" +
-        $"RoofHeight={building.RoofHeightMeters:0.###}\n" +
-        $"FacadeMaterial={building.FacadeMaterial}\n" +
-        $"FacadeColour={building.FacadeColour}\n" +
-        $"RoofMaterial={building.RoofMaterial}\n" +
-        $"RoofColour={building.RoofColour}\n" +
-        $"FootprintPoints={building.Points.Count}\n" +
-        $"Street={building.Street}\n" +
-        $"HouseNumber={building.HouseNumber}\n";
+        MapStudioProjectedBuildingFootprint building)
+    {
+        var text =
+            $"OMSI Map Studio OSM Building\n" +
+            $"Id={building.Id}\n" +
+            $"Name={building.Name}\n" +
+            $"Type={building.BuildingType}\n" +
+            $"Floors={building.FloorCount}\n" +
+            $"WallHeight={building.WallHeightMeters:0.###}\n" +
+            $"Roof={building.RoofType}\n" +
+            $"RoofHeight={building.RoofHeightMeters:0.###}\n" +
+            $"FacadeMaterial={building.FacadeMaterial}\n" +
+            $"FacadeColour={building.FacadeColour}\n" +
+            $"RoofMaterial={building.RoofMaterial}\n" +
+            $"RoofColour={building.RoofColour}\n" +
+            $"FootprintPoints={building.Points.Count}\n" +
+            $"Street={building.Street}\n" +
+            $"HouseNumber={building.HouseNumber}\n";
+
+        foreach (
+            var attribution in
+                building.SourceAttributions ??
+                Array.Empty<string>())
+        {
+            text +=
+                "SourceAttribution=" +
+                NormalizeManifestValue(
+                    attribution) +
+                "\n";
+        }
+
+        return text;
+    }
+
+    private static string NormalizeManifestValue(
+        string value) =>
+        value
+            .Replace(
+                '\r',
+                ' ')
+            .Replace(
+                '\n',
+                ' ')
+            .Trim();
 
     private static string SanitizeName(
         string value)
