@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.110: fix real-world DEM coverage and OMSI object/spline axis semantics.
+# Test 10.111: remove the global OSM deadline and lock multi-tile placement bounds.
 
 on:
   push:
@@ -191,6 +191,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.109-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.110-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.110-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.111-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.111-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -203,8 +205,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.110-native
-  TAG: v0.2.0-alpha.5-test.10.110-native
+  VERSION: 0.2.0-alpha.5-test.10.111-native
+  TAG: v0.2.0-alpha.5-test.10.111-native
 
 jobs:
   build-native-preview:
@@ -4456,6 +4458,46 @@ jobs:
 
           Write-Host "Verified complete DEM coverage and OMSI object/spline coordinate semantics."
 
+      - name: Verify test 10.111 OSM request bounds and multi-tile placement
+        shell: pwsh
+        run: |
+          $overpass = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOverpassSceneClient.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $overpassTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassSceneClientTests.cs -Raw
+          $placementTests = Get-Content tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs -Raw
+
+          if ($overpass.Contains('MaximumDownloadDuration') -or $overpass.Contains('budgetCancellation')) {
+            throw "Test 10.111 must not restore a global OpenStreetMap download deadline."
+          }
+
+          foreach ($required in @(
+            'EndpointAttemptTimeout',
+            'TargetChunkSpanMeters',
+            '750.0',
+            'MaximumConcurrentChunkRequests',
+            'MapStudioOverpassSceneDownloadProgress',
+            'Task',
+            'WhenAll'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Test 10.111 Overpass architecture marker is missing: $required"
+            }
+          }
+
+          if (-not $pipeline.Contains('osmProgress')) {
+            throw "Test 10.111 must surface per-chunk OpenStreetMap progress through the real-world pipeline."
+          }
+
+          if (-not $overpassTests.Contains('DownloaderProcessesPrimaryChunksConcurrentlyAndReportsProgress')) {
+            throw "Test 10.111 Overpass concurrency/progress regression is missing."
+          }
+
+          if (-not $placementTests.Contains('WriteKeepsMultiTilePlacementsInsidePhysicalMapBounds')) {
+            throw "Test 10.111 multi-tile placement regression is missing."
+          }
+
+          Write-Host "Verified per-request Overpass timeout architecture and multi-tile placement bounds."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4610,11 +4652,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.110-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.111-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.110-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.111-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
