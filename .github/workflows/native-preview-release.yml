@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.119: keep layered acquisition and filter roads to drivable classes with endpoint geometry validation.
+# Test 10.120: make road Level/Lower/Raise affect selected splines and preserve placement elevation through snap.
 
 on:
   push:
@@ -210,6 +210,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.118-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.119-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.119-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.120-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.120-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -222,8 +224,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.119-native
-  TAG: v0.2.0-alpha.5-test.10.119-native
+  VERSION: 0.2.0-alpha.5-test.10.120-native
+  TAG: v0.2.0-alpha.5-test.10.120-native
 
 jobs:
   build-native-preview:
@@ -4832,6 +4834,59 @@ jobs:
 
           Write-Host "Verified motor-only OSM roads, service/path filtering, bus exceptions, and spline endpoint geometry guard."
 
+      - name: Verify test 10.120 road elevation toolbar and snap preservation
+        shell: pwsh
+        run: |
+          $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $math = Get-Content src/MapStudio.Renderer/Viewport/NativeSplinePlacementMath.cs -Raw
+          $mathTests = Get-Content tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs -Raw
+
+          foreach ($required in @(
+            'ShiftSelectedRoadElevation',
+            'LevelSelectedRoadAtCurrentHeight',
+            '!Viewport.IsSplinePlacementActive',
+            '_selectionInfo =',
+            'updatedSelection',
+            'RoadElevationText.Text'
+          )) {
+            if (-not $window.Contains($required)) {
+              throw "Test 10.120 selected-road elevation marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RefreshSplinePlacementElevationPreview',
+            'SetSplinePlacementElevationOffset',
+            'SetSplinePlacementElevationMode',
+            'snappedPoint',
+            'terrainHeightAtSnap',
+            '0.25f',
+            'endSnap ='
+          )) {
+            if (-not $runtime.Contains($required)) {
+              throw "Test 10.120 placement/snap elevation marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ResolveRoadEndpointHeight',
+            'NativeRoadElevationMode.Elevate',
+            'NativeRoadElevationMode.Level',
+            'NativeRoadElevationMode.Lower',
+            'NativeRoadElevationMode.FollowTerrain'
+          )) {
+            if (-not $math.Contains($required)) {
+              throw "Test 10.120 elevation math marker is missing: $required"
+            }
+          }
+
+          if (-not $mathTests.Contains('RoadElevationModesUseStartHeightForRampsAndLeveling')) {
+            throw "Test 10.120 elevation math regression is missing."
+          }
+
+          Write-Host "Verified selected spline Level/Lower/Raise, live placement elevation refresh, and snap height preservation."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5024,11 +5079,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.119-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.120-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.119-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.120-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
