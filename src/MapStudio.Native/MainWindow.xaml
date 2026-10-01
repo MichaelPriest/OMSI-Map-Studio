@@ -4719,8 +4719,7 @@
 
                     <Button x:Name="ToolValidationButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            Visibility="Collapsed"
-                            ToolTipService.ToolTip="Validação do mapa"
+                            ToolTipService.ToolTip="Validação do mapa · dependências, TTData, links e estrutura"
                             Click="OnToolValidationClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
