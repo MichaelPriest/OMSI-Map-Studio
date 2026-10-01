@@ -56,7 +56,13 @@ public sealed class MapStudioLayeredOsmSceneClientTests
             captured,
             query =>
                 query.Contains(
-                    "way[\"highway\"]",
+                    "way[\"highway\"~",
+                    StringComparison.Ordinal) &&
+                query.Contains(
+                    "motorway",
+                    StringComparison.Ordinal) &&
+                query.Contains(
+                    "busway",
                     StringComparison.Ordinal) &&
                 !query.Contains(
                     "way[\"building\"]",
@@ -97,7 +103,7 @@ public sealed class MapStudioLayeredOsmSceneClientTests
             captured,
             query =>
                 query.Contains(
-                    "way[\"highway\"]",
+                    "way[\"highway\"~",
                     StringComparison.Ordinal) &&
                 query.Contains(
                     "way[\"building\"]",
