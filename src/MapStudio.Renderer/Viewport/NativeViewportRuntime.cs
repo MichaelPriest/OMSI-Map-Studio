@@ -1406,6 +1406,8 @@ public sealed class NativeViewportRuntime : IDisposable
                     : 0.0,
                 -100.0,
                 300.0);
+
+        RefreshSplinePlacementElevationPreview();
     }
 
     public void SetSplinePlacementElevationMode(
@@ -1415,6 +1417,136 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _splineElevationMode =
             mode;
+
+        RefreshSplinePlacementElevationPreview();
+    }
+
+    private void RefreshSplinePlacementElevationPreview()
+    {
+        if (
+            !_splinePlacementActive ||
+            Scene is null ||
+            _placementSplineAsset is null ||
+            _splineStartWorld is not
+                { } start ||
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingStart)
+        {
+            return;
+        }
+
+        var end =
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEnd
+                ? _splinePointerWorld
+                : _splineEndWorld;
+
+        if (end is not { } endPoint)
+        {
+            return;
+        }
+
+        if (
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    Scene,
+                    endPoint.X,
+                    endPoint.Z,
+                    out var terrainHeight))
+        {
+            return;
+        }
+
+        endPoint.Y =
+            NativeSplinePlacementMath
+                .ResolveRoadEndpointHeight(
+                    (float)terrainHeight,
+                    start.Y,
+                    _splineElevationMode,
+                    _splineElevationOffset);
+
+        if (
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEnd)
+        {
+            _splinePointerWorld =
+                endPoint;
+        }
+        else
+        {
+            _splineEndWorld =
+                endPoint;
+        }
+
+        NativeSplinePlacementShape?
+            shape =
+                null;
+
+        if (
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingCurve &&
+            _splinePointerWorld is
+                { } curveControl)
+        {
+            NativeSplinePlacementMath
+                .TryCreateArc(
+                    start,
+                    endPoint,
+                    curveControl,
+                    out shape);
+        }
+        else if (
+            _splineEasyRoadEnabled &&
+            !_splinePlacementIsHeight)
+        {
+            NativeSplinePlacementMath
+                .TryCreateArcFromOffset(
+                    start,
+                    endPoint,
+                    _splineEasyRoadCurveOffset,
+                    out shape);
+        }
+        else
+        {
+            NativeSplinePlacementMath
+                .TryCreateStraight(
+                    start,
+                    endPoint,
+                    out shape);
+        }
+
+        _splinePlacementShape =
+            shape;
+
+        if (shape is null)
+        {
+            MapRenderer
+                .SetPlacementPreview(
+                    null,
+                    Matrix4x4.Identity);
+
+            RenderInitialFrame();
+            return;
+        }
+
+        var geometry =
+            new NativeSplinePlacementGeometryBuilder()
+                .Build(
+                    _placementSplineAsset,
+                    shape);
+
+        MapRenderer
+            .SetPlacementPreview(
+                geometry.IsRenderable
+                    ? geometry
+                    : null,
+                Matrix4x4.Identity);
+
+        RenderInitialFrame();
     }
 
     public void SetSplinePlacementHeightMode(
@@ -1922,8 +2054,61 @@ public sealed class NativeViewportRuntime : IDisposable
 
                 if (endSnap is not null)
                 {
-                    point =
+                    var snappedPoint =
                         endSnap.WorldPoint;
+
+                    if (
+                        _splineElevationMode ==
+                            NativeRoadElevationMode
+                                .FollowTerrain ||
+                        _splineStartWorld is not
+                            { } snapStart)
+                    {
+                        point =
+                            snappedPoint;
+                    }
+                    else
+                    {
+                        var terrainHeightAtSnap =
+                            point.Y;
+
+                        if (
+                            NativeTerrainSampler
+                                .TryGetHeightAtWorldPoint(
+                                    Scene,
+                                    snappedPoint.X,
+                                    snappedPoint.Z,
+                                    out var sampledHeight))
+                        {
+                            terrainHeightAtSnap =
+                                (float)
+                                    sampledHeight;
+                        }
+
+                        point =
+                            new Vector3(
+                                snappedPoint.X,
+                                NativeSplinePlacementMath
+                                    .ResolveRoadEndpointHeight(
+                                        terrainHeightAtSnap,
+                                        snapStart.Y,
+                                        _splineElevationMode,
+                                        _splineElevationOffset),
+                                snappedPoint.Z);
+
+                        if (
+                            Math.Abs(
+                                point.Y -
+                                snappedPoint.Y) >
+                            0.25f)
+                        {
+                            // Keep horizontal snap, but do not create
+                            // an invalid Previous/Next connection across
+                            // a vertical gap chosen by the elevation mode.
+                            endSnap =
+                                null;
+                        }
+                    }
                 }
             }
 
