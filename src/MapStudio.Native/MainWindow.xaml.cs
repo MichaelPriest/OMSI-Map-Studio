@@ -8541,16 +8541,6 @@ public sealed partial class MainWindow : Window
         }
 
         if (
-            _session.CurrentMap.Map
-                .UsesWorldCoordinates)
-        {
-            StatusText.Text =
-                "Cópia de objeto em mapa com worldcoordinates ainda não está habilitada no host nativo.";
-
-            return;
-        }
-
-        if (
             Viewport.IsSceneryPlacementActive ||
             Viewport.IsSplinePlacementActive)
         {
@@ -8603,16 +8593,6 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 "Duplicar grupo: abra um mapa antes de duplicar itens.";
-
-            return;
-        }
-
-        if (
-            snapshot.Map
-                .UsesWorldCoordinates)
-        {
-            StatusText.Text =
-                "Duplicar grupo em mapa com worldcoordinates ainda não está habilitado no host nativo.";
 
             return;
         }
@@ -8926,16 +8906,6 @@ public sealed partial class MainWindow : Window
 
             return;
         }
-        if (
-            _session.CurrentMap.Map
-                .UsesWorldCoordinates)
-        {
-            StatusText.Text =
-                "Cópia de spline em mapa com worldcoordinates ainda não está habilitada no host nativo.";
-
-            return;
-        }
-
         if (
             Viewport.IsSceneryPlacementActive ||
             Viewport.IsSplinePlacementActive)
