@@ -5288,19 +5288,15 @@ jobs:
           $trackTests = Get-Content tests/MapStudio.Core.Tests/OmsiTimetableTrackWriterTests.cs -Raw
           $trafficTests = Get-Content tests/MapStudio.Core.Tests/OmsiSceneryTrafficLightPatcherTests.cs -Raw
 
-          $routes = @(
-            @{ Panel = 'SelectionContextPanel'; Marker = 'Click="OnToolValidationClick"'; Name = 'Selection -> Validate' },
-            @{ Panel = 'ObjectContextPanel'; Marker = 'Click="OnToolUtilitiesClick"'; Name = 'Objects -> Utilities' },
-            @{ Panel = 'RoadContextPanel'; Marker = 'Click="OnCreateTunnelClick"'; Name = 'Roads -> Tunnel creator' },
-            @{ Panel = 'TransportContextPanel'; Marker = 'Click="OnToolTransitAssetsClick"'; Name = 'Transport -> Transit assets' }
+          $visibleRoutes = @(
+            @{ Pattern = '<Button[\s\S]*?Content="Validar mapa"[\s\S]*?Click="OnToolValidationClick"\s*/>'; Name = 'Selection -> Validate' },
+            @{ Pattern = '<Button[\s\S]*?Content="Infraestrutura"[\s\S]*?Click="OnToolUtilitiesClick"\s*/>'; Name = 'Objects -> Utilities' },
+            @{ Pattern = '<MenuFlyoutItem[\s\S]*?Text="Criador de túnel"[\s\S]*?Click="OnCreateTunnelClick"\s*/>'; Name = 'Roads -> Tunnel creator' },
+            @{ Pattern = '<Button[\s\S]*?Content="Paradas e terminais"[\s\S]*?Click="OnToolTransitAssetsClick"\s*/>'; Name = 'Transport -> Transit assets' }
           )
 
-          foreach ($route in $routes) {
-            $panel = [regex]::Match(
-              $xaml,
-              ('<StackPanel\s+x:Name="' + [regex]::Escape($route.Panel) + '"[\s\S]*?</StackPanel>'))
-
-            if (-not $panel.Success -or -not $panel.Value.Contains($route.Marker)) {
+          foreach ($route in $visibleRoutes) {
+            if ($xaml -notmatch $route.Pattern) {
               throw "Test 10.126 visible manual route is missing: $($route.Name)"
             }
           }
