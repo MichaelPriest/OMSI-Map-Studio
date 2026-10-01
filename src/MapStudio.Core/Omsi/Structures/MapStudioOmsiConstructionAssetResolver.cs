@@ -58,6 +58,18 @@ public static class MapStudioOmsiConstructionAssetClassifier
                 libraryGroup is
                     OmsiAssetLibraryGroup.Roads or
                     OmsiAssetLibraryGroup.Other &&
+                !ContainsAny(
+                    normalized,
+                    "crosswalk",
+                    "zebra",
+                    "zebrastreifen",
+                    "pedestrian crossing",
+                    "ped crossing",
+                    "fussganger",
+                    "fussgaenger",
+                    "faixa pedestre",
+                    "faixa de pedestre",
+                    "travessia") &&
                 !normalized.Contains(
                     "mapstudio roadkit",
                     StringComparison.Ordinal) &&
