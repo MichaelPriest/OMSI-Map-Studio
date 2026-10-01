@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.121: reuse compatible installed OMSI roads and catalog junctions, signals and pedestrian crossings.
+# Test 10.122: hide floating F11 accelerator labels and persist the selected OMSI installation path.
 
 on:
   push:
@@ -214,8 +214,12 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.120-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.121-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.121-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.122-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.122-native.md"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs"
+      - "src/MapStudio.Core/Settings/MapStudioUserSettingsStore.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioUserSettingsStoreTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -228,8 +232,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.121-native
-  TAG: v0.2.0-alpha.5-test.10.121-native
+  VERSION: 0.2.0-alpha.5-test.10.122-native
+  TAG: v0.2.0-alpha.5-test.10.122-native
 
 jobs:
   build-native-preview:
@@ -4974,6 +4978,60 @@ jobs:
 
           Write-Host "Verified installed OMSI road reuse, construction asset catalog, traffic signals, crossings, and safe Road Kit fallback."
 
+      - name: Verify test 10.122 F11 hint suppression and saved OMSI path
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $settings = Get-Content src/MapStudio.Core/Settings/MapStudioUserSettingsStore.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioUserSettingsStoreTests.cs -Raw
+
+          if (-not $xaml.Contains('KeyboardAcceleratorPlacementMode="Hidden"')) {
+            throw "Test 10.122 must suppress floating keyboard accelerator labels."
+          }
+
+          if (-not $xaml.Contains('<KeyboardAccelerator Key="F11"')) {
+            throw "Test 10.122 must keep the F11 fullscreen accelerator functional."
+          }
+
+          foreach ($required in @(
+            'MapStudioUserSettingsStore',
+            'TryGetValidOmsiRootPath',
+            'SaveOmsiRootPath',
+            'LocalApplicationData',
+            'user-settings.json',
+            'File.Move'
+          )) {
+            if (-not $settings.Contains($required)) {
+              throw "Test 10.122 persistent settings marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            '_userSettings',
+            'ResolveOmsiRootForOpenAsync',
+            'Usar caminho salvo',
+            'Escolher outra pasta',
+            'SaveOmsiRootPath',
+            'caminho salvo nas configurações'
+          )) {
+            if (-not $window.Contains($required)) {
+              throw "Test 10.122 OMSI path UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SaveOmsiRootPathPersistsAndReloadsValidatedPath',
+            'InvalidSavedOmsiPathIsIgnored',
+            'CorruptSettingsDoNotBreakStartup'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.122 settings regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified F11 remains functional without floating accelerator text and OMSI root persists safely."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5166,11 +5224,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.121-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.122-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.121-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.122-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
