@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.126: fix real visible manual routes, Portuguese asset classification and persistence round-trip gates.
+# Test 10.127: publish the completed manual-tools audit with real visible routes and persistence round-trip gates.
 
 on:
   push:
@@ -224,6 +224,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.125-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.126-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.126-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.127-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.127-native.md"
       - "src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs"
       - "tests/MapStudio.Core.Tests/OmsiAssetLibraryClassifierTests.cs"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs"
@@ -242,8 +244,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.126-native
-  TAG: v0.2.0-alpha.5-test.10.126-native
+  VERSION: 0.2.0-alpha.5-test.10.127-native
+  TAG: v0.2.0-alpha.5-test.10.127-native
 
 jobs:
   build-native-preview:
@@ -5276,7 +5278,7 @@ jobs:
           Write-Host "Verified Validate is user-accessible and multi-step traffic/path/Route Studio tools remain wired to real writers."
 
 
-      - name: Verify test 10.126 visible manual routes and round-trip persistence
+      - name: Verify test 10.127 visible manual routes and round-trip persistence
         shell: pwsh
         run: |
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
@@ -5297,7 +5299,7 @@ jobs:
 
           foreach ($route in $visibleRoutes) {
             if ($xaml -notmatch $route.Pattern) {
-              throw "Test 10.126 visible manual route is missing: $($route.Name)"
+              throw "Test 10.127 visible manual route is missing: $($route.Name)"
             }
           }
 
@@ -5305,7 +5307,7 @@ jobs:
             $xaml,
             '<Border\s+x:Name="EditorModuleRail"[\s\S]*?</Border>')
           if (-not $moduleRail.Success -or $moduleRail.Value.Contains('Visibility="Collapsed"')) {
-            throw "Test 10.126 EditorModuleRail must remain visible."
+            throw "Test 10.127 EditorModuleRail must remain visible."
           }
 
           foreach ($required in @(
@@ -5326,7 +5328,7 @@ jobs:
             'HandleSceneryPlacementAsync'
           )) {
             if (-not $window.Contains($required)) {
-              throw "Test 10.126 manual workflow marker is missing: $required"
+              throw "Test 10.127 manual workflow marker is missing: $required"
             }
           }
 
@@ -5340,7 +5342,7 @@ jobs:
             'OmsiSceneryObjectReader'
           )) {
             if (-not $session.Contains($required)) {
-              throw "Test 10.126 save/reload marker is missing: $required"
+              throw "Test 10.127 save/reload marker is missing: $required"
             }
           }
 
@@ -5357,7 +5359,7 @@ jobs:
             '"tunel"'
           )) {
             if (-not $classifier.Contains($required)) {
-              throw "Test 10.126 Portuguese asset classifier marker is missing: $required"
+              throw "Test 10.127 Portuguese asset classifier marker is missing: $required"
             }
           }
 
@@ -5368,23 +5370,23 @@ jobs:
             'tunel_urbano.sli'
           )) {
             if (-not $classifierTests.Contains($required)) {
-              throw "Test 10.126 classifier regression case is missing: $required"
+              throw "Test 10.127 classifier regression case is missing: $required"
             }
           }
 
           if (-not $tunnelTests.Contains('OmsiSplineDefinitionReader') -or
               -not $tunnelTests.Contains('GeneratorCreatesRenderableTunnelSplineWithTrafficPaths')) {
-            throw "Test 10.126 tunnel generation round-trip test is missing."
+            throw "Test 10.127 tunnel generation round-trip test is missing."
           }
 
           if (-not $trackTests.Contains('OmsiTimetableTrackWriter') -or
               -not $trackTests.Contains('OmsiTimetableTrackReader')) {
-            throw "Test 10.126 Track write/reload test coverage is missing."
+            throw "Test 10.127 Track write/reload test coverage is missing."
           }
 
           if (-not $trafficTests.Contains('OmsiSceneryTrafficLightPatcher') -or
               -not $trafficTests.Contains('OmsiSceneryObjectReader')) {
-            throw "Test 10.126 traffic-light SCO round-trip test coverage is missing."
+            throw "Test 10.127 traffic-light SCO round-trip test coverage is missing."
           }
 
           Write-Host "Verified real visible manual routes, Portuguese asset classification and map/SLI/SCO/TTData save+reload coverage."
@@ -5581,11 +5583,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.126-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.127-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.126-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.127-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
