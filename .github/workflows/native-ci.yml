@@ -36,6 +36,64 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+
+      - name: Verify manual tools accessibility and persistence wiring
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+
+          foreach ($tool in @(
+            'ToolTunnelsButton',
+            'ToolTransitAssetsButton',
+            'ToolUtilitiesButton',
+            'ToolValidationButton'
+          )) {
+            $match = [regex]::Match(
+              $xaml,
+              ('<Button\s+x:Name="' + [regex]::Escape($tool) + '"[\s\S]*?</Button>'))
+
+            if (-not $match.Success) {
+              throw "Manual tool button is missing: $tool"
+            }
+
+            if ($match.Value.Contains('Visibility="Collapsed"')) {
+              throw "Manual tool must remain directly accessible: $tool"
+            }
+          }
+
+          foreach ($required in @(
+            'OnCreateTunnelClick',
+            'OnToolTransitAssetsClick',
+            'OnToolUtilitiesClick',
+            'OnToolValidationClick',
+            'OnEditTrackClick',
+            'OnEditTrafficProgramClick',
+            'TryFinishSceneryPlacementAtWorldPoint',
+            'HandleSceneryPlacementAsync'
+          )) {
+            if (-not $window.Contains($required)) {
+              throw "Manual tool workflow marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'InsertSceneryObjectAsync',
+            'InsertSplineAsync',
+            'UpdateTimetableTrackAsync',
+            'UpdateStationLinkAsync',
+            'UpdateTrafficLightProgramAsync',
+            'SafeFileTransaction',
+            'OmsiTimetableTrackReader',
+            'OmsiStationLinkReader',
+            'OmsiSceneryObjectReader'
+          )) {
+            if (-not $session.Contains($required)) {
+              throw "Manual persistence/reload marker is missing: $required"
+            }
+          }
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 

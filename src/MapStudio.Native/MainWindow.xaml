@@ -4514,7 +4514,6 @@
 
                     <Button x:Name="ToolTunnelsButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            Visibility="Collapsed"
                             ToolTipService.ToolTip="Criar túnel e adicionar à biblioteca de vias"
                             Click="OnCreateTunnelClick">
                         <StackPanel Spacing="3"
@@ -4571,7 +4570,6 @@
 
                     <Button x:Name="ToolTransitAssetsButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            Visibility="Collapsed"
                             ToolTipService.ToolTip="Pontos, terminais, abrigos e garagens"
                             Click="OnToolTransitAssetsClick">
                         <StackPanel Spacing="3"
@@ -4608,7 +4606,6 @@
 
                     <Button x:Name="ToolUtilitiesButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            Visibility="Collapsed"
                             ToolTipService.ToolTip="Energia, água e infraestrutura"
                             Click="OnToolUtilitiesClick">
                         <StackPanel Spacing="3"

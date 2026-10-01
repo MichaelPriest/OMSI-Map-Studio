@@ -19,7 +19,19 @@ public sealed class OmsiAssetLibraryClassifierTests
         @"Sceneryobjects\MapStudio_Props\Starter_BusStop\starter_busstop.sco",
         OmsiAssetLibraryGroup.Transit)]
     [InlineData(
+        @"Sceneryobjects\Transporte\ponto_parada_centro.sco",
+        OmsiAssetLibraryGroup.Transit)]
+    [InlineData(
+        @"Sceneryobjects\Transporte\garagem_leste.sco",
+        OmsiAssetLibraryGroup.Transit)]
+    [InlineData(
         @"Sceneryobjects\MapStudio_Props\Starter_UtilityBox\starter_utilitybox.sco",
+        OmsiAssetLibraryGroup.Utilities)]
+    [InlineData(
+        @"Sceneryobjects\Infraestrutura\caixa_energia_01.sco",
+        OmsiAssetLibraryGroup.Utilities)]
+    [InlineData(
+        @"Sceneryobjects\Saneamento\rede_esgoto_01.sco",
         OmsiAssetLibraryGroup.Utilities)]
     [InlineData(
         @"Sceneryobjects\MapStudio_Traffic\Starter_TrafficLight\starter_trafficlight.sco",
@@ -51,6 +63,9 @@ public sealed class OmsiAssetLibraryClassifierTests
     [InlineData(
         @"Splines\Paths\sidewalk.sli",
         OmsiAssetLibraryGroup.Paths)]
+    [InlineData(
+        @"Splines\Tuneis\tunel_urbano.sli",
+        OmsiAssetLibraryGroup.Bridges)]
     public void ClassifiesSplines(
         string path,
         OmsiAssetLibraryGroup expected)
@@ -104,6 +119,15 @@ public sealed class OmsiAssetLibraryClassifierTests
     [InlineData(
         @"Sceneryobjects\MapStudio_Props\Starter_UtilityBox\starter_utilitybox.sco",
         "Infraestrutura")]
+    [InlineData(
+        @"Sceneryobjects\Transporte\abrigo_parada_centro.sco",
+        "Pontos / abrigos")]
+    [InlineData(
+        @"Sceneryobjects\Infraestrutura\agua_esgoto.sco",
+        "Água / saneamento")]
+    [InlineData(
+        @"Splines\Tuneis\tunel_urbano.sli",
+        "Túneis")]
     [InlineData(
         @"Splines\Roads\avenue_4lane.sli",
         "Avenidas")]

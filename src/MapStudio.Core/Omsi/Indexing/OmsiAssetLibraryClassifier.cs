@@ -220,8 +220,13 @@ public static class OmsiAssetLibraryClassifier
                 "bahnhof",
                 "station",
                 "shelter",
+                "abrigo",
                 "depot",
-                "garage"))
+                "garage",
+                "garagem",
+                "ponto",
+                "parada",
+                "estacao"))
             {
                 return OmsiAssetLibraryGroup
                     .Transit;
@@ -296,7 +301,12 @@ public static class OmsiAssetLibraryClassifier
                 "pipeline",
                 "tower",
                 "antenna",
-                "infra"))
+                "infra",
+                "infraestrutura",
+                "energia",
+                "agua",
+                "saneamento",
+                "esgoto"))
             {
                 return OmsiAssetLibraryGroup
                     .Utilities;
@@ -318,6 +328,7 @@ public static class OmsiAssetLibraryClassifier
                 "viaduct",
                 "viaduto",
                 "tunnel",
+                "tunel",
                 "elevated"))
             {
                 return OmsiAssetLibraryGroup
@@ -547,7 +558,9 @@ public static class OmsiAssetLibraryClassifier
                             "bus stop",
                             "haltestelle",
                             "shelter",
-                            "ponto")
+                            "abrigo",
+                            "ponto",
+                            "parada")
                             ? "Pontos / abrigos"
                             : "Transporte",
 
@@ -602,7 +615,9 @@ public static class OmsiAssetLibraryClassifier
                         "water",
                         "wasser",
                         "sewer",
-                        "saneamento")
+                        "agua",
+                        "saneamento",
+                        "esgoto")
                         ? "Água / saneamento"
                         : "Infraestrutura",
 
