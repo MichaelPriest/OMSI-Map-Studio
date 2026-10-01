@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.122: hide floating F11 accelerator labels and persist the selected OMSI installation path.
+# Test 10.123: guarantee loading overlay render before heavy native operations.
 
 on:
   push:
@@ -216,6 +216,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.121-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.122-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.122-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.123-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.123-native.md"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs"
       - "src/MapStudio.Core/Settings/MapStudioUserSettingsStore.cs"
@@ -232,8 +234,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.122-native
-  TAG: v0.2.0-alpha.5-test.10.122-native
+  VERSION: 0.2.0-alpha.5-test.10.123-native
+  TAG: v0.2.0-alpha.5-test.10.123-native
 
 jobs:
   build-native-preview:
@@ -5032,6 +5034,47 @@ jobs:
 
           Write-Host "Verified F11 remains functional without floating accelerator text and OMSI root persists safely."
 
+      - name: Verify test 10.123 loading overlay frame handoff
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="LoadingOverlay"',
+            'x:Name="LoadingProgressRing"',
+            'x:Name="LoadingProgressBar"',
+            'x:Name="LoadingStageText"',
+            'x:Name="LoadingPercentText"',
+            'x:Name="LoadingCancelButton"',
+            'Canvas.ZIndex="120"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.123 loading UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BeginLoadingAndRenderAsync',
+            'TimeSpan.FromMilliseconds',
+            'RefreshRealMapLoading',
+            'OverallProgressText',
+            'Criando mapa real',
+            'Carregando mapa',
+            'Atualizando biblioteca'
+          )) {
+            if (-not $window.Contains($required)) {
+              throw "Test 10.123 loading behavior marker is missing: $required"
+            }
+          }
+
+          $renderCalls = ([regex]::Matches($window, 'await BeginLoadingAndRenderAsync\(')).Count
+          if ($renderCalls -lt 7) {
+            throw "Test 10.123 expected loading frame handoff on at least 7 heavy-operation entry points; found $renderCalls."
+          }
+
+          Write-Host "Verified loading overlay remains present and yields a WinUI frame before heavy native operations."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5224,11 +5267,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.122-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.123-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.122-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.123-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
