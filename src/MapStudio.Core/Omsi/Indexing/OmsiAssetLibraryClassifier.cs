@@ -92,6 +92,25 @@ public static class OmsiAssetLibraryClassifier
                         "busstop",
                         "bus stop",
                         "haltestelle"
+                    ],
+                ["semaforo"] =
+                    [
+                        "semaforo",
+                        "semáforo",
+                        "trafficlight",
+                        "traffic light",
+                        "traffic signal",
+                        "ampel",
+                        "signalgeber"
+                    ],
+                ["faixa"] =
+                    [
+                        "faixa",
+                        "crosswalk",
+                        "zebra",
+                        "zebrastreifen",
+                        "pedestrian crossing",
+                        "travessia"
                     ]
             };
 
@@ -242,6 +261,12 @@ public static class OmsiAssetLibraryClassifier
                 "sign",
                 "schild",
                 "traffic",
+                "trafficlight",
+                "ampel",
+                "signalgeber",
+                "crosswalk",
+                "zebra",
+                "zebrastreifen",
                 "fence",
                 "zaun",
                 "bollard",
@@ -529,12 +554,27 @@ public static class OmsiAssetLibraryClassifier
             OmsiAssetLibraryGroup.StreetFurniture =>
                 ContainsAny(
                     text,
-                    "sign",
-                    "schild",
-                    "traffic",
-                    "semaforo",
-                    "placa")
-                    ? "Sinalização"
+                    "trafficlight",
+                    "traffic light",
+                    "ampel",
+                    "signalgeber",
+                    "semaforo")
+                    ? "Semáforos"
+                    : ContainsAny(
+                        text,
+                        "crosswalk",
+                        "zebra",
+                        "zebrastreifen",
+                        "travessia",
+                        "faixa pedestre")
+                        ? "Faixas de pedestres"
+                        : ContainsAny(
+                            text,
+                            "sign",
+                            "schild",
+                            "traffic",
+                            "placa")
+                            ? "Sinalização"
                     : ContainsAny(
                         text,
                         "lamp",
