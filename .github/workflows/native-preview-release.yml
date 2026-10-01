@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.120: make road Level/Lower/Raise affect selected splines and preserve placement elevation through snap.
+# Test 10.121: reuse compatible installed OMSI roads and catalog junctions, signals and pedestrian crossings.
 
 on:
   push:
@@ -212,6 +212,10 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.119-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.120-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.120-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.121-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.121-native.md"
+      - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -224,8 +228,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.120-native
-  TAG: v0.2.0-alpha.5-test.10.120-native
+  VERSION: 0.2.0-alpha.5-test.10.121-native
+  TAG: v0.2.0-alpha.5-test.10.121-native
 
 jobs:
   build-native-preview:
@@ -4894,6 +4898,82 @@ jobs:
 
           Write-Host "Verified selected spline Level/Lower/Raise, live placement elevation refresh, FollowTerrain, and snap height preservation."
 
+      - name: Verify test 10.121 installed OMSI construction assets
+        shell: pwsh
+        run: |
+          $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs -Raw
+          $catalog = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldAssetCatalogLoader.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $roads = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $osm = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioLayeredOsmSceneClient.cs -Raw
+          $furniture = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOsmStreetFurnitureImporter.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOmsiConstructionAssetCatalog',
+            'RoadSplines',
+            'JunctionObjects',
+            'TrafficSignalObjects',
+            'CrosswalkAssets',
+            'MapStudioOmsiRoadSplineResolver',
+            'TrafficPathCount',
+            'WidthMeters'
+          )) {
+            if (-not $resolver.Contains($required)) {
+              throw "Test 10.121 OMSI construction catalog marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ConstructionAssets',
+            'OmsiAssetKind.Spline'
+          )) {
+            if (-not $catalog.Contains($required)) {
+              throw "Test 10.121 asset catalog loader marker is missing: $required"
+            }
+          }
+
+          if (-not $roads.Contains('installedRoadMatches') -or
+              -not $roads.Contains('installedRoadSplines')) {
+            throw "Test 10.121 installed road spline reuse is missing."
+          }
+
+          if (-not $pipeline.Contains('Road Kit como fallback') -or
+              -not $pipeline.Contains('semáforo(s)') -or
+              -not $pipeline.Contains('cruzamento(s)')) {
+            throw "Test 10.121 construction asset progress markers are missing."
+          }
+
+          foreach ($required in @(
+            'node["highway"="traffic_signals"]',
+            'node["highway"="crossing"]',
+            'osm-layers-v2'
+          )) {
+            if (-not $osm.Contains($required.Replace('"', '\"'))) {
+              throw "Test 10.121 OSM signal/crossing marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioOsmStreetFurnitureKind.TrafficSignal',
+            'MapStudioOsmStreetFurnitureKind.Crosswalk'
+          )) {
+            if (-not $furniture.Contains($required)) {
+              throw "Test 10.121 signal/crosswalk importer marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ClassifierFindsRoadsJunctionsSignalsAndCrosswalks',
+            'ResolverSelectsCompatibleInstalledSplineByPhysicalProfile'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.121 regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified installed OMSI road reuse, construction asset catalog, traffic signals, crossings, and safe Road Kit fallback."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5086,11 +5166,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.120-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.121-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.120-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.121-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
