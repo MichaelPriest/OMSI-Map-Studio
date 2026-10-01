@@ -7,6 +7,7 @@
 
     <Grid x:Name="MainRoot"
           RequestedTheme="Default"
+          KeyboardAcceleratorPlacementMode="Hidden"
           Background="{ThemeResource MapStudioWindowBackgroundBrush}">
         <Grid.Resources>
             <ResourceDictionary>
