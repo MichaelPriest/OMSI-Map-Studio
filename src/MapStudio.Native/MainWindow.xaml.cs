@@ -10974,17 +10974,26 @@ public sealed partial class MainWindow : Window
                 -1000.0,
                 3000.0);
 
+        var updatedSelection =
+            _selectionInfo with
+            {
+                Z = target
+            };
+
         if (
             !Viewport.ApplySelectionInfo(
-                _selectionInfo with
-                {
-                    Z = target
-                }))
+                updatedSelection))
         {
             StatusText.Text =
                 "Ruas: não foi possível alterar a elevação da spline selecionada.";
             return;
         }
+
+        _selectionInfo =
+            updatedSelection;
+
+        RoadElevationText.Text =
+            $"Spline: {target:F1} m";
 
         StatusText.Text =
             $"Ruas: spline #{_selectionInfo.EntityId} deslocada verticalmente para {target:F2} m.";
@@ -11001,18 +11010,27 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var updatedSelection =
+            _selectionInfo with
+            {
+                GradientStart = 0.0,
+                GradientEnd = 0.0
+            };
+
         if (
             !Viewport.ApplySelectionInfo(
-                _selectionInfo with
-                {
-                    GradientStart = 0.0,
-                    GradientEnd = 0.0
-                }))
+                updatedSelection))
         {
             StatusText.Text =
                 "Ruas: não foi possível nivelar a spline selecionada.";
             return;
         }
+
+        _selectionInfo =
+            updatedSelection;
+
+        RoadElevationText.Text =
+            $"Spline: nível {_selectionInfo.Z:F1} m";
 
         StatusText.Text =
             $"Ruas: spline #{_selectionInfo.EntityId} nivelada na cota atual {_selectionInfo.Z:F2} m.";
@@ -11123,23 +11141,64 @@ public sealed partial class MainWindow : Window
 
     private void OnRoadElevationUpClick(
         object sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
+        var step =
+            GetRoadElevationStep();
+
+        if (
+            !Viewport.IsSplinePlacementActive &&
+            _selectionInfo?.Kind ==
+                PickingKind.Spline)
+        {
+            ShiftSelectedRoadElevation(
+                step);
+            return;
+        }
+
         AdjustRoadElevation(
-            GetRoadElevationStep());
+            step);
+    }
 
     private void OnRoadElevationDownClick(
         object sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
+        var step =
+            GetRoadElevationStep();
+
+        if (
+            !Viewport.IsSplinePlacementActive &&
+            _selectionInfo?.Kind ==
+                PickingKind.Spline)
+        {
+            ShiftSelectedRoadElevation(
+                -step);
+            return;
+        }
+
         AdjustRoadElevation(
-            -GetRoadElevationStep());
+            -step);
+    }
 
     private void OnRoadLevelElevationClick(
         object sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
+        if (
+            !Viewport.IsSplinePlacementActive &&
+            _selectionInfo?.Kind ==
+                PickingKind.Spline)
+        {
+            LevelSelectedRoadAtCurrentHeight();
+            return;
+        }
+
         ApplyRoadElevationMode(
             NativeRoadElevationMode.Level,
             0.0,
             "Ruas: Nivelar ativo · o trecho manterá a cota do ponto inicial.");
+    }
 
     private void OnRoadElevationResetClick(
         object sender,
