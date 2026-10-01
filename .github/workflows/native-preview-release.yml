@@ -4772,12 +4772,12 @@ jobs:
           $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
 
           foreach ($required in @(
-            'way["highway"~',
+            'way[\"highway\"~',
             'motorway_link',
             'living_street',
             'busway',
             'bus_guideway',
-            '["area"!="yes"]'
+            '[\"area\"!=\"yes\"]'
           )) {
             if (-not $layered.Contains($required)) {
               throw "Test 10.119 motor-road query marker is missing: $required"
