@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.126: expose hidden manual tools, fix Portuguese asset classification and enforce persistence round-trip gates.
+# Test 10.126: fix real visible manual routes, Portuguese asset classification and persistence round-trip gates.
 
 on:
   push:
@@ -5276,7 +5276,7 @@ jobs:
           Write-Host "Verified Validate is user-accessible and multi-step traffic/path/Route Studio tools remain wired to real writers."
 
 
-      - name: Verify test 10.126 hidden tools and round-trip persistence
+      - name: Verify test 10.126 visible manual routes and round-trip persistence
         shell: pwsh
         run: |
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
@@ -5288,23 +5288,28 @@ jobs:
           $trackTests = Get-Content tests/MapStudio.Core.Tests/OmsiTimetableTrackWriterTests.cs -Raw
           $trafficTests = Get-Content tests/MapStudio.Core.Tests/OmsiSceneryTrafficLightPatcherTests.cs -Raw
 
-          foreach ($tool in @(
-            'ToolTunnelsButton',
-            'ToolTransitAssetsButton',
-            'ToolUtilitiesButton',
-            'ToolValidationButton'
-          )) {
-            $match = [regex]::Match(
+          $routes = @(
+            @{ Panel = 'SelectionContextPanel'; Marker = 'Click="OnToolValidationClick"'; Name = 'Selection -> Validate' },
+            @{ Panel = 'ObjectContextPanel'; Marker = 'Click="OnToolUtilitiesClick"'; Name = 'Objects -> Utilities' },
+            @{ Panel = 'RoadContextPanel'; Marker = 'Click="OnCreateTunnelClick"'; Name = 'Roads -> Tunnel creator' },
+            @{ Panel = 'TransportContextPanel'; Marker = 'Click="OnToolTransitAssetsClick"'; Name = 'Transport -> Transit assets' }
+          )
+
+          foreach ($route in $routes) {
+            $panel = [regex]::Match(
               $xaml,
-              ('<Button\s+x:Name="' + [regex]::Escape($tool) + '"[\s\S]*?</Button>'))
+              ('<StackPanel\s+x:Name="' + [regex]::Escape($route.Panel) + '"[\s\S]*?</StackPanel>'))
 
-            if (-not $match.Success) {
-              throw "Test 10.126 manual tool button is missing: $tool"
+            if (-not $panel.Success -or -not $panel.Value.Contains($route.Marker)) {
+              throw "Test 10.126 visible manual route is missing: $($route.Name)"
             }
+          }
 
-            if ($match.Value.Contains('Visibility="Collapsed"')) {
-              throw "Test 10.126 manual tool is still permanently hidden: $tool"
-            }
+          $moduleRail = [regex]::Match(
+            $xaml,
+            '<Border\s+x:Name="EditorModuleRail"[\s\S]*?</Border>')
+          if (-not $moduleRail.Success -or $moduleRail.Value.Contains('Visibility="Collapsed"')) {
+            throw "Test 10.126 EditorModuleRail must remain visible."
           }
 
           foreach ($required in @(
@@ -5315,6 +5320,8 @@ jobs:
             'OmsiAssetLibraryGroup.Transit',
             'OnToolUtilitiesClick',
             'OmsiAssetLibraryGroup.Utilities',
+            'OnToolValidationClick',
+            'BuildValidationItemsAsync',
             'OnEditTrackClick',
             'UpdateTimetableTrackAsync',
             'OnEditTrafficProgramClick',
@@ -5384,7 +5391,7 @@ jobs:
             throw "Test 10.126 traffic-light SCO round-trip test coverage is missing."
           }
 
-          Write-Host "Verified hidden/conditional manual tools are reachable, Portuguese assets classify into the intended groups, and map/SLI/SCO/TTData flows retain save+reload coverage."
+          Write-Host "Verified real visible manual routes, Portuguese asset classification and map/SLI/SCO/TTData save+reload coverage."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64

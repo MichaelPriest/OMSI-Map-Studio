@@ -44,23 +44,28 @@ jobs:
           $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
 
-          foreach ($tool in @(
-            'ToolTunnelsButton',
-            'ToolTransitAssetsButton',
-            'ToolUtilitiesButton',
-            'ToolValidationButton'
-          )) {
-            $match = [regex]::Match(
+          $routes = @(
+            @{ Panel = 'SelectionContextPanel'; Marker = 'Click="OnToolValidationClick"'; Name = 'Selection -> Validate' },
+            @{ Panel = 'ObjectContextPanel'; Marker = 'Click="OnToolUtilitiesClick"'; Name = 'Objects -> Utilities' },
+            @{ Panel = 'RoadContextPanel'; Marker = 'Click="OnCreateTunnelClick"'; Name = 'Roads -> Tunnel creator' },
+            @{ Panel = 'TransportContextPanel'; Marker = 'Click="OnToolTransitAssetsClick"'; Name = 'Transport -> Transit assets' }
+          )
+
+          foreach ($route in $routes) {
+            $panel = [regex]::Match(
               $xaml,
-              ('<Button\s+x:Name="' + [regex]::Escape($tool) + '"[\s\S]*?</Button>'))
+              ('<StackPanel\s+x:Name="' + [regex]::Escape($route.Panel) + '"[\s\S]*?</StackPanel>'))
 
-            if (-not $match.Success) {
-              throw "Manual tool button is missing: $tool"
+            if (-not $panel.Success -or -not $panel.Value.Contains($route.Marker)) {
+              throw "Visible manual route is missing: $($route.Name)"
             }
+          }
 
-            if ($match.Value.Contains('Visibility="Collapsed"')) {
-              throw "Manual tool must remain directly accessible: $tool"
-            }
+          $moduleRail = [regex]::Match(
+            $xaml,
+            '<Border\s+x:Name="EditorModuleRail"[\s\S]*?</Border>')
+          if (-not $moduleRail.Success -or $moduleRail.Value.Contains('Visibility="Collapsed"')) {
+            throw "Editor module rail must remain visible."
           }
 
           foreach ($required in @(
