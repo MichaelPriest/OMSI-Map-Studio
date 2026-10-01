@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.118: split OSM acquisition into resumable layers with endpoint health/cooldown and persistent chunk cache.
+# Test 10.119: keep layered acquisition and filter roads to drivable classes with endpoint geometry validation.
 
 on:
   push:
@@ -208,6 +208,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.117-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.118-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.118-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.119-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.119-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -220,8 +222,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.118-native
-  TAG: v0.2.0-alpha.5-test.10.118-native
+  VERSION: 0.2.0-alpha.5-test.10.119-native
+  TAG: v0.2.0-alpha.5-test.10.119-native
 
 jobs:
   build-native-preview:
@@ -4760,6 +4762,76 @@ jobs:
 
           Write-Host "Verified layered OSM acquisition, Retry-After cooldown, persistent resumable cache, diagnostics, and transactional routing."
 
+      - name: Verify test 10.119 drivable roads and endpoint guard
+        shell: pwsh
+        run: |
+          $layered = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioLayeredOsmSceneClient.cs -Raw
+          $importer = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs -Raw
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $importerTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+
+          foreach ($required in @(
+            'way["highway"~',
+            'motorway_link',
+            'living_street',
+            'busway',
+            'bus_guideway',
+            '["area"!="yes"]'
+          )) {
+            if (-not $layered.Contains($required)) {
+              throw "Test 10.119 motor-road query marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SupportedMotorRoadHighways',
+            'IgnoredServiceKinds',
+            '"parking_aisle"',
+            '"driveway"',
+            'ShouldImportMotorRoad',
+            'busAllowed',
+            '"motor_vehicle"'
+          )) {
+            if (-not $importer.Contains($required)) {
+              throw "Test 10.119 road-import filter marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MaximumStraightSplineEndpointErrorMeters',
+            'ValidateStraightSplineEndpoint',
+            'realWorldRoadSplineEndpointMismatch',
+            '0.02'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.119 endpoint guard marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ImporterIgnoresPedestrianTracksParkingAislesAndAreaWays',
+            'ImporterKeepsMotorRoadsAndBusDesignatedAccess',
+            'ImporterRejectsExplicitMotorVehicleDenialWithoutBusException'
+          )) {
+            if (-not $importerTests.Contains($required)) {
+              throw "Test 10.119 importer regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'firstEndX',
+            'firstEndZ',
+            'secondStartX',
+            'secondStartZ'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.119 endpoint continuity regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified motor-only OSM roads, service/path filtering, bus exceptions, and spline endpoint geometry guard."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4952,11 +5024,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.118-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.119-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.118-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.119-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
