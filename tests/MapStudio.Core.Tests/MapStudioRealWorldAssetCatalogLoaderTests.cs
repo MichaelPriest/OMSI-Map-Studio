@@ -60,6 +60,13 @@ public sealed class MapStudioRealWorldAssetCatalogLoaderTests
                 2,
                 first.SceneryObjects.Count);
 
+            Assert.Single(
+                first.Splines);
+
+            Assert.Single(
+                first.ConstructionAssets
+                    .RoadSplines);
+
             Assert.Equal(
                 3,
                 first.Refresh.TotalEntries);
@@ -86,6 +93,13 @@ public sealed class MapStudioRealWorldAssetCatalogLoaderTests
             Assert.Equal(
                 2,
                 second.SceneryObjects.Count);
+
+            Assert.Single(
+                second.Splines);
+
+            Assert.Single(
+                second.ConstructionAssets
+                    .RoadSplines);
         }
         finally
         {
