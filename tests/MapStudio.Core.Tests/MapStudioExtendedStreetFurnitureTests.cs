@@ -75,6 +75,76 @@ public sealed class MapStudioExtendedStreetFurnitureTests
         Assert.Equal(expected, selected.RelativePath);
     }
 
+    [Theory]
+    [InlineData(
+        MapStudioOsmStreetFurnitureKind.StreetLight,
+        @"Sceneryobjects\Streetobjects_MC\strlt_gwg_70s_1.sco")]
+    [InlineData(
+        MapStudioOsmStreetFurnitureKind.TrafficSign,
+        @"Sceneryobjects\Verkehrszeichen_MC\VZ_vb_tempo30_m.sco")]
+    [InlineData(
+        MapStudioOsmStreetFurnitureKind.BusShelter,
+        @"Sceneryobjects\Streetobjects_RUE\Wartehaus_DDR.sco")]
+    [InlineData(
+        MapStudioOsmStreetFurnitureKind.WasteBasket,
+        @"Sceneryobjects\Streetobjects_MC\muelleinmer_alt_orange.sco")]
+    [InlineData(
+        MapStudioOsmStreetFurnitureKind.Bollard,
+        @"Sceneryobjects\Streetobjects_MC\bollard_conc_1_norm.sco")]
+    [InlineData(
+        MapStudioOsmStreetFurnitureKind.TrafficSignal,
+        @"Sceneryobjects\Verkehrszeichen_MC\Ampel_Kfz_1.sco")]
+    [InlineData(
+        MapStudioOsmStreetFurnitureKind.Crosswalk,
+        @"Sceneryobjects\Kreuz_MC\Zebra_falks.sco")]
+    public void SuggesterRecognizesOriginalOmsiFurnitureFamilies(
+        MapStudioOsmStreetFurnitureKind kind,
+        string expected)
+    {
+        var assets =
+            new[]
+            {
+                Asset(@"Sceneryobjects\StreetFurniture\traffic_light_mod.sco"),
+                Asset(@"Sceneryobjects\StreetFurniture\generic_sign.sco"),
+                Asset(@"Sceneryobjects\StreetFurniture\street_light_mod.sco"),
+                Asset(@"Sceneryobjects\Transit\busstop_shelter_mod.sco"),
+                Asset(@"Sceneryobjects\StreetFurniture\trash_bin_mod.sco"),
+                Asset(@"Sceneryobjects\StreetFurniture\bollard_mod.sco"),
+                Asset(@"Sceneryobjects\Markings\crosswalk_mod.sco"),
+                Asset(@"Sceneryobjects\Streetobjects_MC\strlt_gwg_70s_1.sco"),
+                Asset(@"Sceneryobjects\Verkehrszeichen_MC\VZ_vb_tempo30_m.sco"),
+                Asset(@"Sceneryobjects\Streetobjects_RUE\Wartehaus_DDR.sco"),
+                Asset(@"Sceneryobjects\Streetobjects_MC\muelleinmer_alt_orange.sco"),
+                Asset(@"Sceneryobjects\Streetobjects_MC\bollard_conc_1_norm.sco"),
+                Asset(@"Sceneryobjects\Verkehrszeichen_MC\Ampel_Kfz_1.sco"),
+                Asset(@"Sceneryobjects\Kreuz_MC\Zebra_falks.sco")
+            };
+
+        var selected =
+            new MapStudioStreetFurnitureAssetSuggester()
+                .Suggest(
+                    assets,
+                    new MapStudioGeoStreetFurniturePoint(
+                        "original-omsi",
+                        -23.55,
+                        -46.63,
+                        kind,
+                        "Mapped",
+                        "City",
+                        null,
+                        kind ==
+                            MapStudioOsmStreetFurnitureKind.BusShelter
+                            ? "yes"
+                            : null));
+
+        Assert.NotNull(
+            selected);
+
+        Assert.Equal(
+            expected,
+            selected.RelativePath);
+    }
+
     [Fact]
     public void AdapterMapsExtendedFurnitureToDedicatedSceneKinds()
     {

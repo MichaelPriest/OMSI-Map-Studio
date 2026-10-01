@@ -52,12 +52,28 @@ public static class MapStudioOmsiConstructionAssetClassifier
                     .Classify(
                         entry);
 
+            var originalRole =
+                MapStudioOriginalOmsiAssetCatalog
+                    .Classify(
+                        entry);
+
+            var knownNonRoadSpline =
+                originalRole is
+                    MapStudioOriginalOmsiAssetRole.InvisibleRoadSpline or
+                    MapStudioOriginalOmsiAssetRole.SidewalkSpline or
+                    MapStudioOriginalOmsiAssetRole.RailSpline;
+
             if (
                 entry.Kind ==
                     OmsiAssetKind.Spline &&
-                libraryGroup is
-                    OmsiAssetLibraryGroup.Roads or
-                    OmsiAssetLibraryGroup.Other &&
+                !knownNonRoadSpline &&
+                (
+                    originalRole ==
+                        MapStudioOriginalOmsiAssetRole.RoadSpline ||
+                    libraryGroup is
+                        OmsiAssetLibraryGroup.Roads or
+                        OmsiAssetLibraryGroup.Other
+                ) &&
                 !ContainsAny(
                     normalized,
                     "crosswalk",
@@ -84,18 +100,26 @@ public static class MapStudioOmsiConstructionAssetClassifier
             if (
                 entry.Kind ==
                     OmsiAssetKind.SceneryObject &&
-                ContainsAny(
-                    normalized,
-                    "junction",
-                    "intersection",
-                    "kreuzung",
-                    "kreuz",
-                    "einmuendung",
-                    "einmundung",
-                    "roundabout",
-                    "kreisel",
-                    "cruzamento",
-                    "rotatoria"))
+                (
+                    originalRole ==
+                        MapStudioOriginalOmsiAssetRole.JunctionObject ||
+                    (
+                        originalRole ==
+                            MapStudioOriginalOmsiAssetRole.None &&
+                        ContainsAny(
+                            normalized,
+                            "junction",
+                            "intersection",
+                            "kreuzung",
+                            "kreuz",
+                            "einmuendung",
+                            "einmundung",
+                            "roundabout",
+                            "kreisel",
+                            "cruzamento",
+                            "rotatoria")
+                    )
+                ))
             {
                 junctions.Add(
                     entry);
@@ -104,15 +128,19 @@ public static class MapStudioOmsiConstructionAssetClassifier
             if (
                 entry.Kind ==
                     OmsiAssetKind.SceneryObject &&
-                ContainsAny(
-                    normalized,
-                    "trafficlight",
-                    "traffic light",
-                    "traffic signal",
-                    "ampel",
-                    "semaforo",
-                    "signal head",
-                    "signalgeber"))
+                (
+                    originalRole ==
+                        MapStudioOriginalOmsiAssetRole.TrafficSignalObject ||
+                    ContainsAny(
+                        normalized,
+                        "trafficlight",
+                        "traffic light",
+                        "traffic signal",
+                        "ampel",
+                        "semaforo",
+                        "signal head",
+                        "signalgeber")
+                ))
             {
                 signals.Add(
                     entry);
@@ -125,18 +153,22 @@ public static class MapStudioOmsiConstructionAssetClassifier
                     entry.Kind ==
                         OmsiAssetKind.SceneryObject
                 ) &&
-                ContainsAny(
-                    normalized,
-                    "crosswalk",
-                    "zebra",
-                    "zebrastreifen",
-                    "pedestrian crossing",
-                    "ped crossing",
-                    "fussganger",
-                    "fussgaenger",
-                    "faixa pedestre",
-                    "faixa de pedestre",
-                    "travessia"))
+                (
+                    originalRole ==
+                        MapStudioOriginalOmsiAssetRole.CrosswalkObject ||
+                    ContainsAny(
+                        normalized,
+                        "crosswalk",
+                        "zebra",
+                        "zebrastreifen",
+                        "pedestrian crossing",
+                        "ped crossing",
+                        "fussganger",
+                        "fussgaenger",
+                        "faixa pedestre",
+                        "faixa de pedestre",
+                        "travessia")
+                ))
             {
                 crosswalks.Add(
                     entry);
@@ -266,15 +298,30 @@ public sealed class MapStudioOmsiRoadSplineResolver
                         item.Kind ==
                             OmsiAssetKind.Spline &&
                         !IsMapStudioGeneratedPath(
-                            item.RelativePath))
+                            item.RelativePath) &&
+                        MapStudioOriginalOmsiAssetCatalog
+                            .Classify(
+                                item) is not
+                                    (
+                                        MapStudioOriginalOmsiAssetRole
+                                            .InvisibleRoadSpline or
+                                        MapStudioOriginalOmsiAssetRole
+                                            .SidewalkSpline or
+                                        MapStudioOriginalOmsiAssetRole
+                                            .RailSpline
+                                    ))
                 .OrderBy(
                     item =>
-                        OmsiAssetLibraryClassifier
-                            .Classify(
-                                item) ==
-                            OmsiAssetLibraryGroup.Roads
+                        MapStudioOriginalOmsiAssetCatalog
+                            .IsOriginalRoadSpline(
+                                item)
                             ? 0
-                            : 1)
+                            : OmsiAssetLibraryClassifier
+                                .Classify(
+                                    item) ==
+                                OmsiAssetLibraryGroup.Roads
+                                ? 1
+                                : 2)
                 .ThenBy(
                     item =>
                         item.RelativePath,
@@ -423,7 +470,10 @@ public sealed class MapStudioOmsiRoadSplineResolver
                         .Classify(
                             entry) ==
                         OmsiAssetLibraryGroup
-                            .Roads));
+                            .Roads,
+                    MapStudioOriginalOmsiAssetCatalog
+                        .IsOriginalRoadSpline(
+                            entry)));
         }
 
         var resolved =
@@ -509,13 +559,19 @@ public sealed class MapStudioOmsiRoadSplineResolver
                         ? 0.0
                         : 0.35;
 
+                var originalOmsiBonus =
+                    candidate.OriginalOmsiRoad
+                        ? -0.5
+                        : 0.0;
+
                 var score =
                     widthError *
                         3.0 +
                     trafficPathError *
                         0.75 +
                     sidewalkPenalty +
-                    nameConfidencePenalty;
+                    nameConfidencePenalty +
+                    originalOmsiBonus;
 
                 if (
                     score >=
@@ -612,5 +668,6 @@ public sealed class MapStudioOmsiRoadSplineResolver
         bool LooksOneWay,
         bool LooksDivided,
         bool HasPedestrianPath,
-        bool NamedRoad);
+        bool NamedRoad,
+        bool OriginalOmsiRoad);
 }

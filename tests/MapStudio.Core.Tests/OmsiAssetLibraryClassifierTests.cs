@@ -36,6 +36,21 @@ public sealed class OmsiAssetLibraryClassifierTests
     [InlineData(
         @"Sceneryobjects\MapStudio_Traffic\Starter_TrafficLight\starter_trafficlight.sco",
         OmsiAssetLibraryGroup.StreetFurniture)]
+    [InlineData(
+        @"Sceneryobjects\Kreuz_MC\Einm_Altonaer.sco",
+        OmsiAssetLibraryGroup.Junctions)]
+    [InlineData(
+        @"Sceneryobjects\Kreuz_MC\Zebra_falks.sco",
+        OmsiAssetLibraryGroup.StreetFurniture)]
+    [InlineData(
+        @"Sceneryobjects\Verkehrszeichen_MC\VZ_vb_tempo30_m.sco",
+        OmsiAssetLibraryGroup.StreetFurniture)]
+    [InlineData(
+        @"Sceneryobjects\Ruede\hst_70er_wartehaus.sco",
+        OmsiAssetLibraryGroup.Transit)]
+    [InlineData(
+        @"Sceneryobjects\Ruede\peitschenleuchte01.sco",
+        OmsiAssetLibraryGroup.StreetFurniture)]
     public void ClassifiesSceneryObjects(
         string path,
         OmsiAssetLibraryGroup expected)
@@ -63,6 +78,12 @@ public sealed class OmsiAssetLibraryClassifierTests
     [InlineData(
         @"Splines\Marcel\str_2spur_8m.sli",
         OmsiAssetLibraryGroup.Roads)]
+    [InlineData(
+        @"Splines\Marcel\Hstr_6spur_Ruhlebener1.sli",
+        OmsiAssetLibraryGroup.Roads)]
+    [InlineData(
+        @"Splines\Ruede\sdwk_1.5m_DDR_Spandauer_Str.sli",
+        OmsiAssetLibraryGroup.Paths)]
     [InlineData(
         @"Splines\Paths\sidewalk.sli",
         OmsiAssetLibraryGroup.Paths)]

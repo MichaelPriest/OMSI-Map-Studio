@@ -30,6 +30,11 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                     asset =>
                         HasKindToken(
                             asset.RelativePath,
+                            point.Kind) ||
+                        OriginalRoleMatches(
+                            MapStudioOriginalOmsiAssetCatalog
+                                .Classify(
+                                    asset),
                             point.Kind))
                 .Select(
                     asset =>
@@ -103,8 +108,23 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
             Normalize(
                 asset.RelativePath);
 
+        var originalRole =
+            MapStudioOriginalOmsiAssetCatalog
+                .Classify(
+                    asset);
+
         var score =
-            20;
+            20 +
+            (
+                OriginalRoleMatches(
+                    originalRole,
+                    point.Kind)
+                    ? 24
+                    : originalRole !=
+                        MapStudioOriginalOmsiAssetRole.None
+                        ? 4
+                        : 0
+            );
 
         foreach (
             var token in
@@ -207,6 +227,11 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                     "streetlight",
                     "street lamp",
                     "lantern",
+                    "strlt",
+                    "peitschenleuchte",
+                    "gaslight",
+                    "neonlight",
+                    "sodiumlight",
                     "poste"
                 ],
             MapStudioOsmStreetFurnitureKind.UtilityPole =>
@@ -221,6 +246,8 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                 [
                     "sign",
                     "schild",
+                    "verkehrszeichen",
+                    "zeichen",
                     "traffic",
                     "placa"
                 ],
@@ -230,6 +257,9 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                     "bus stop",
                     "haltestelle",
                     "shelter",
+                    "wartehaus",
+                    "busbahnsteig",
+                    "hst",
                     "abrigo",
                     "ponto"
                 ],
@@ -245,6 +275,7 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                     "trash",
                     "waste",
                     "basket",
+                    "muelleinmer",
                     "lixeira"
                 ],
             MapStudioOsmStreetFurnitureKind.Bollard =>
@@ -279,6 +310,43 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                 ],
             _ =>
                 Array.Empty<string>()
+        };
+
+    private static bool OriginalRoleMatches(
+        MapStudioOriginalOmsiAssetRole role,
+        MapStudioOsmStreetFurnitureKind kind) =>
+        kind switch
+        {
+            MapStudioOsmStreetFurnitureKind.BusShelter =>
+                role is
+                    MapStudioOriginalOmsiAssetRole.BusStopObject or
+                    MapStudioOriginalOmsiAssetRole.BusShelterObject,
+            MapStudioOsmStreetFurnitureKind.StreetLight =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.StreetLightObject,
+            MapStudioOsmStreetFurnitureKind.TrafficSign =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.TrafficSignObject,
+            MapStudioOsmStreetFurnitureKind.Bench =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.BenchObject,
+            MapStudioOsmStreetFurnitureKind.WasteBasket =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.WasteBasketObject,
+            MapStudioOsmStreetFurnitureKind.Bollard =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.BollardObject,
+            MapStudioOsmStreetFurnitureKind.TrafficSignal =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.TrafficSignalObject,
+            MapStudioOsmStreetFurnitureKind.Crosswalk =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.CrosswalkObject,
+            MapStudioOsmStreetFurnitureKind.UtilityPole =>
+                role ==
+                    MapStudioOriginalOmsiAssetRole.UtilityPoleObject,
+            _ =>
+                false
         };
 
     private static IEnumerable<string> Tokenize(

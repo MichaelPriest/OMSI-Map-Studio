@@ -54,6 +54,55 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
     }
 
     [Fact]
+    public void ClassifierSeparatesOriginalOmsiConstructionFamilies()
+    {
+        var catalog =
+            MapStudioOmsiConstructionAssetClassifier
+                .Build(
+                    [
+                        new OmsiAssetIndexEntry(
+                            @"Splines\Marcel\str_2spur_11m_SeeburgerStr1.sli",
+                            OmsiAssetKind.Spline,
+                            100,
+                            1),
+                        new OmsiAssetIndexEntry(
+                            @"Sceneryobjects\Kreuz_MC\Einm_Altonaer.sco",
+                            OmsiAssetKind.SceneryObject,
+                            100,
+                            1),
+                        new OmsiAssetIndexEntry(
+                            @"Sceneryobjects\Verkehrszeichen_MC\Ampel_Kfz_1.sco",
+                            OmsiAssetKind.SceneryObject,
+                            100,
+                            1),
+                        new OmsiAssetIndexEntry(
+                            @"Sceneryobjects\Kreuz_MC\Zebra_falks.sco",
+                            OmsiAssetKind.SceneryObject,
+                            100,
+                            1)
+                    ]);
+
+        Assert.Single(
+            catalog.RoadSplines);
+
+        Assert.Single(
+            catalog.JunctionObjects);
+
+        Assert.Single(
+            catalog.TrafficSignalObjects);
+
+        Assert.Single(
+            catalog.CrosswalkAssets);
+
+        Assert.DoesNotContain(
+            catalog.JunctionObjects,
+            item =>
+                item.RelativePath.Contains(
+                    "Zebra",
+                    StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ResolverSelectsCompatibleInstalledSplineByPhysicalProfile()
     {
         var root =
@@ -112,18 +161,56 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
                         installedPath)
                         .Ticks);
 
+            var addonRelativePath =
+                @"Splines\Addon\road_2lane_11m.sli";
+
+            var addonPath =
+                Path.Combine(
+                    root,
+                    addonRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    addonPath)!);
+
+            File.Copy(
+                sourcePath,
+                addonPath,
+                overwrite:
+                    true);
+
+            var addonEntry =
+                new OmsiAssetIndexEntry(
+                    addonRelativePath,
+                    OmsiAssetKind.Spline,
+                    new FileInfo(
+                        addonPath)
+                        .Length,
+                    File.GetLastWriteTimeUtc(
+                        addonPath)
+                        .Ticks);
+
             var catalog =
                 MapStudioOmsiConstructionAssetClassifier
                     .Build(
-                        [entry]);
-
-            var candidate =
-                Assert.Single(
-                    catalog.RoadSplines);
+                        [
+                            addonEntry,
+                            entry
+                        ]);
 
             Assert.Equal(
-                installedRelativePath,
-                candidate.RelativePath);
+                2,
+                catalog.RoadSplines.Count);
+
+            Assert.Contains(
+                catalog.RoadSplines,
+                candidate =>
+                    string.Equals(
+                        candidate.RelativePath,
+                        installedRelativePath,
+                        StringComparison.OrdinalIgnoreCase));
 
             var matches =
                 await new MapStudioOmsiRoadSplineResolver()

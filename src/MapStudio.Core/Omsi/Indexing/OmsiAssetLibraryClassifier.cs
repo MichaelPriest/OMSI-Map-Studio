@@ -62,14 +62,18 @@ public static class OmsiAssetLibraryClassifier
                         "cruzamento",
                         "junction",
                         "intersection",
-                        "kreuzung"
+                        "kreuzung",
+                        "kreuz",
+                        "einm",
+                        "wende"
                     ],
                 ["calcada"] =
                     [
                         "calcada",
                         "calçada",
                         "sidewalk",
-                        "gehweg"
+                        "gehweg",
+                        "sdwk"
                     ],
                 ["trilho"] =
                     [
@@ -91,7 +95,9 @@ public static class OmsiAssetLibraryClassifier
                         "ponto",
                         "busstop",
                         "bus stop",
-                        "haltestelle"
+                        "haltestelle",
+                        "hst",
+                        "wartehaus"
                     ],
                 ["semaforo"] =
                     [
@@ -161,10 +167,49 @@ public static class OmsiAssetLibraryClassifier
             Normalize(
                 entry.RelativePath);
 
+        var originalRole =
+            MapStudioOriginalOmsiAssetCatalog
+                .Classify(
+                    entry);
+
         if (
             entry.Kind ==
                 OmsiAssetKind.SceneryObject)
         {
+            var originalGroup =
+                originalRole switch
+                {
+                    MapStudioOriginalOmsiAssetRole.JunctionObject =>
+                        OmsiAssetLibraryGroup.Junctions,
+                    MapStudioOriginalOmsiAssetRole.BusStopObject or
+                    MapStudioOriginalOmsiAssetRole.BusShelterObject =>
+                        OmsiAssetLibraryGroup.Transit,
+                    MapStudioOriginalOmsiAssetRole.BuildingObject =>
+                        OmsiAssetLibraryGroup.Buildings,
+                    MapStudioOriginalOmsiAssetRole.VegetationObject =>
+                        OmsiAssetLibraryGroup.Vegetation,
+                    MapStudioOriginalOmsiAssetRole.UtilityObject or
+                    MapStudioOriginalOmsiAssetRole.UtilityPoleObject =>
+                        OmsiAssetLibraryGroup.Utilities,
+                    MapStudioOriginalOmsiAssetRole.CrosswalkObject or
+                    MapStudioOriginalOmsiAssetRole.TrafficSignalObject or
+                    MapStudioOriginalOmsiAssetRole.TrafficSignObject or
+                    MapStudioOriginalOmsiAssetRole.StreetLightObject or
+                    MapStudioOriginalOmsiAssetRole.BenchObject or
+                    MapStudioOriginalOmsiAssetRole.WasteBasketObject or
+                    MapStudioOriginalOmsiAssetRole.BollardObject or
+                    MapStudioOriginalOmsiAssetRole.StreetFurnitureObject =>
+                        OmsiAssetLibraryGroup.StreetFurniture,
+                    _ =>
+                        OmsiAssetLibraryGroup.All
+                };
+
+            if (
+                originalGroup !=
+                    OmsiAssetLibraryGroup.All)
+            {
+                return originalGroup;
+            }
             if (ContainsAny(
                 text,
                 "junction",
@@ -319,6 +364,27 @@ public static class OmsiAssetLibraryClassifier
             entry.Kind ==
                 OmsiAssetKind.Spline)
         {
+            var originalGroup =
+                originalRole switch
+                {
+                    MapStudioOriginalOmsiAssetRole.RoadSpline or
+                    MapStudioOriginalOmsiAssetRole.InvisibleRoadSpline =>
+                        OmsiAssetLibraryGroup.Roads,
+                    MapStudioOriginalOmsiAssetRole.SidewalkSpline =>
+                        OmsiAssetLibraryGroup.Paths,
+                    MapStudioOriginalOmsiAssetRole.RailSpline =>
+                        OmsiAssetLibraryGroup.Rail,
+                    _ =>
+                        OmsiAssetLibraryGroup.All
+                };
+
+            if (
+                originalGroup !=
+                    OmsiAssetLibraryGroup.All)
+            {
+                return originalGroup;
+            }
+
             if (ContainsAny(
                 text,
                 "bridge",
@@ -384,7 +450,6 @@ public static class OmsiAssetLibraryClassifier
                 text,
                 "road",
                 "street",
-                "str",
                 "strasse",
                 "strabe",
                 "fahrbahn",
@@ -560,6 +625,8 @@ public static class OmsiAssetLibraryClassifier
                             "bus stop",
                             "haltestelle",
                             "shelter",
+                            "wartehaus",
+                            "hst",
                             "abrigo",
                             "ponto",
                             "parada")
@@ -579,6 +646,8 @@ public static class OmsiAssetLibraryClassifier
                         text,
                         "sign",
                         "schild",
+                        "verkehrszeichen",
+                        "zeichen",
                         "traffic",
                         "trafficlight",
                         "traffic light",
@@ -591,6 +660,11 @@ public static class OmsiAssetLibraryClassifier
                         text,
                         "lamp",
                         "light",
+                        "strlt",
+                        "peitschenleuchte",
+                        "gaslight",
+                        "neonlight",
+                        "sodiumlight",
                         "pole",
                         "poste")
                         ? "Iluminação"
