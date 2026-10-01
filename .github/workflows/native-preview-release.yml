@@ -5083,6 +5083,7 @@ jobs:
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
           $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $scene = Get-Content src/MapStudio.Renderer/Scene/NativeSceneBuilder.cs -Raw
 
@@ -5180,12 +5181,25 @@ jobs:
           }
 
           foreach ($required in @(
+            'TryBuildSelectedGroupDuplicateRequests',
             'targetWorld.X',
             'targetWorld.Z',
+            'Math.Floor',
             'OmsiTileGrid.TileSize'
           )) {
-            if (-not $scene.Contains('OmsiTileGrid') -and $required -eq 'OmsiTileGrid.TileSize') {
-              throw "Test 10.124 scene world-grid marker is missing."
+            if (-not $runtime.Contains($required)) {
+              throw "Test 10.124 world-coordinate duplicate math is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OmsiTileGrid.GetOriginX',
+            'OmsiTileGrid.GetOriginZ',
+            'placedObject.X',
+            'placedSpline.X'
+          )) {
+            if (-not $scene.Contains($required)) {
+              throw "Test 10.124 scene world-coordinate projection is missing: $required"
             }
           }
 
