@@ -142,6 +142,15 @@ public sealed class MapStudioRealWorldMapPipeline
                     cancellationToken)
                 .ConfigureAwait(false);
 
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .IndexingAssets,
+                $"Biblioteca OMSI pronta · {catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
+                $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
+                $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
+                $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
+
         cancellationToken
             .ThrowIfCancellationRequested();
 
@@ -238,6 +247,15 @@ public sealed class MapStudioRealWorldMapPipeline
                     cancellationToken)
                 .ConfigureAwait(false);
 
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .IndexingAssets,
+                $"Biblioteca OMSI pronta · {catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
+                $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
+                $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
+                $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
+
         cancellationToken
             .ThrowIfCancellationRequested();
 
@@ -332,6 +350,15 @@ public sealed class MapStudioRealWorldMapPipeline
                     assetIndexProgress,
                     cancellationToken)
                 .ConfigureAwait(false);
+
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .IndexingAssets,
+                $"Biblioteca OMSI pronta · {catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
+                $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
+                $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
+                $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
 
         cancellationToken.ThrowIfCancellationRequested();
 
