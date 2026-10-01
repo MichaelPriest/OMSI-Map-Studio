@@ -5,7 +5,9 @@ namespace MapStudio.Core.Omsi.Structures;
 public sealed record MapStudioRealWorldAssetCatalogResult(
     string DatabasePath,
     OmsiAssetIndexRefreshResult Refresh,
-    IReadOnlyList<OmsiAssetIndexEntry> SceneryObjects);
+    IReadOnlyList<OmsiAssetIndexEntry> SceneryObjects,
+    IReadOnlyList<OmsiAssetIndexEntry> Splines,
+    MapStudioOmsiConstructionAssetCatalog ConstructionAssets);
 
 public sealed class MapStudioRealWorldAssetCatalogLoader
 {
@@ -51,9 +53,27 @@ public sealed class MapStudioRealWorldAssetCatalogLoader
                     cancellationToken)
                 .ConfigureAwait(false);
 
+        var splines =
+            await index
+                .GetEntriesAsync(
+                    OmsiAssetKind.Spline,
+                    limit: 1_000_000,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var constructionAssets =
+            MapStudioOmsiConstructionAssetClassifier
+                .Build(
+                    [
+                        .. scenery,
+                        .. splines
+                    ]);
+
         return new MapStudioRealWorldAssetCatalogResult(
             databasePath,
             refresh,
-            scenery);
+            scenery,
+            splines,
+            constructionAssets);
     }
 }
