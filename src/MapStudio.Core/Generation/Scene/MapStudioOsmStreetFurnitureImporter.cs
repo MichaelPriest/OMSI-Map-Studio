@@ -13,7 +13,9 @@ public enum MapStudioOsmStreetFurnitureKind
     Bench,
     WasteBasket,
     Bollard,
-    FireHydrant
+    FireHydrant,
+    TrafficSignal,
+    Crosswalk
 }
 
 public sealed record MapStudioGeoStreetFurniturePoint(
@@ -192,6 +194,32 @@ public sealed class MapStudioOsmStreetFurnitureImporter
         {
             kind =
                 MapStudioOsmStreetFurnitureKind.StreetLight;
+            return true;
+        }
+
+        if (
+            string.Equals(
+                highway,
+                "traffic_signals",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            kind =
+                MapStudioOsmStreetFurnitureKind.TrafficSignal;
+            return true;
+        }
+
+        if (
+            string.Equals(
+                highway,
+                "crossing",
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrWhiteSpace(
+                Clean(
+                    tags.GetValueOrDefault(
+                        "crossing"))))
+        {
+            kind =
+                MapStudioOsmStreetFurnitureKind.Crosswalk;
             return true;
         }
 
@@ -477,6 +505,10 @@ public sealed class MapStudioOsmStreetFurnitureReconstructionAdapter
                 MapStudioSceneFeatureKind.Bollard,
             MapStudioOsmStreetFurnitureKind.FireHydrant =>
                 MapStudioSceneFeatureKind.FireHydrant,
+            MapStudioOsmStreetFurnitureKind.TrafficSignal =>
+                MapStudioSceneFeatureKind.TrafficSignal,
+            MapStudioOsmStreetFurnitureKind.Crosswalk =>
+                MapStudioSceneFeatureKind.Crosswalk,
             _ =>
                 MapStudioSceneFeatureKind.Unknown
         };
@@ -503,6 +535,12 @@ public sealed class MapStudioOsmStreetFurnitureReconstructionAdapter
                     0.88,
                 MapStudioOsmStreetFurnitureKind.FireHydrant =>
                     0.90,
+                MapStudioOsmStreetFurnitureKind.TrafficSignal =>
+                    0.94,
+                MapStudioOsmStreetFurnitureKind.Crosswalk =>
+                    point.DirectionDegrees is null
+                        ? 0.72
+                        : 0.84,
                 _ =>
                     0.60
             };
