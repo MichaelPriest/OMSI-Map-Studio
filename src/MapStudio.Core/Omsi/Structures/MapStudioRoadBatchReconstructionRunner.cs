@@ -95,7 +95,9 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             string osmXml,
             MapStudioGeographicAnchor anchor,
             CancellationToken cancellationToken = default,
-            MapStudioGeoreferencedElevationSurface? elevation = null)
+            MapStudioGeoreferencedElevationSurface? elevation = null,
+            IReadOnlyList<MapStudio.Core.Omsi.Indexing.OmsiAssetIndexEntry>?
+                installedRoadSplines = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -148,6 +150,30 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                 .Parse(
                     osmXml);
 
+        IReadOnlyDictionary<
+            string,
+            MapStudioOmsiRoadSplineMatch>
+            installedRoadMatches =
+                new Dictionary<
+                    string,
+                    MapStudioOmsiRoadSplineMatch>(
+                        StringComparer.OrdinalIgnoreCase);
+
+        if (
+            installedRoadSplines is
+                { Count: > 0 })
+        {
+            installedRoadMatches =
+                await new MapStudioOmsiRoadSplineResolver()
+                    .ResolveAsync(
+                        root,
+                        installedRoadSplines,
+                        MapStudioStandardRoadCatalog
+                            .Profiles,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+        }
+
         var traces =
             imported.Traces
                 .Select(
@@ -161,6 +187,20 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                     trace.OneWay,
                                     trace.WidthMeters);
 
+                        var splinePath =
+                            !trace.Bridge &&
+                            !trace.Tunnel &&
+                            (trace.Layer ?? 0) ==
+                                0 &&
+                            installedRoadMatches
+                                .TryGetValue(
+                                    profile.Key,
+                                    out var installedMatch)
+                                ? installedMatch
+                                    .RelativePath
+                                : profile
+                                    .RelativePath;
+
                         return new MapStudioRoadTrace(
                             trace.Id,
                             trace.Points
@@ -171,7 +211,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                                 anchor,
                                                 point))
                                 .ToArray(),
-                            profile.RelativePath,
+                            splinePath,
                             trace.LaneCount,
                             trace.OneWay,
                             trace.WidthMeters,
