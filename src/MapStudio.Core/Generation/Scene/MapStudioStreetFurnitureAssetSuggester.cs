@@ -84,6 +84,13 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                 group is
                     OmsiAssetLibraryGroup.Utilities or
                     OmsiAssetLibraryGroup.StreetFurniture,
+            MapStudioOsmStreetFurnitureKind.TrafficSignal =>
+                group ==
+                    OmsiAssetLibraryGroup.StreetFurniture,
+            MapStudioOsmStreetFurnitureKind.Crosswalk =>
+                group is
+                    OmsiAssetLibraryGroup.StreetFurniture or
+                    OmsiAssetLibraryGroup.Junctions,
             _ =>
                 false
         };
@@ -251,6 +258,24 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                     "hydrant",
                     "fire hydrant",
                     "hidrante"
+                ],
+            MapStudioOsmStreetFurnitureKind.TrafficSignal =>
+                [
+                    "trafficlight",
+                    "traffic light",
+                    "traffic signal",
+                    "ampel",
+                    "semaforo",
+                    "signalgeber"
+                ],
+            MapStudioOsmStreetFurnitureKind.Crosswalk =>
+                [
+                    "crosswalk",
+                    "zebra",
+                    "zebrastreifen",
+                    "pedestrian crossing",
+                    "faixa pedestre",
+                    "travessia"
                 ],
             _ =>
                 Array.Empty<string>()
