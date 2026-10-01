@@ -240,6 +240,149 @@ public sealed class MapStudioOsmRoadImporterTests
     }
 
     [Fact]
+    public void ImporterIgnoresPedestrianTracksParkingAislesAndAreaWays()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="-23.5500" lon="-46.6300" />
+              <node id="2" lat="-23.5500" lon="-46.6299" />
+
+              <way id="10">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="footway" />
+              </way>
+              <way id="11">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="path" />
+              </way>
+              <way id="12">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="steps" />
+              </way>
+              <way id="13">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="cycleway" />
+              </way>
+              <way id="14">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="track" />
+              </way>
+              <way id="15">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="service" />
+                <tag k="service" v="parking_aisle" />
+              </way>
+              <way id="16">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="service" />
+                <tag k="service" v="driveway" />
+              </way>
+              <way id="17">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="residential" />
+                <tag k="area" v="yes" />
+              </way>
+            </osm>
+            """;
+
+        var result =
+            new MapStudioOsmRoadImporter()
+                .Parse(
+                    xml);
+
+        Assert.Empty(
+            result.Traces);
+
+        Assert.Equal(
+            8,
+            result.IgnoredWayCount);
+    }
+
+    [Fact]
+    public void ImporterKeepsMotorRoadsAndBusDesignatedAccess()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="-23.5500" lon="-46.6300" />
+              <node id="2" lat="-23.5500" lon="-46.6299" />
+              <node id="3" lat="-23.5500" lon="-46.6298" />
+
+              <way id="20">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="primary" />
+              </way>
+              <way id="21">
+                <nd ref="2" /><nd ref="3" />
+                <tag k="highway" v="busway" />
+                <tag k="access" v="no" />
+                <tag k="bus" v="designated" />
+              </way>
+              <way id="22">
+                <nd ref="1" /><nd ref="3" />
+                <tag k="highway" v="service" />
+                <tag k="service" v="alley" />
+              </way>
+            </osm>
+            """;
+
+        var result =
+            new MapStudioOsmRoadImporter()
+                .Parse(
+                    xml);
+
+        Assert.Equal(
+            3,
+            result.Traces.Count);
+
+        Assert.Contains(
+            result.Traces,
+            trace =>
+                string.Equals(
+                    trace.Highway,
+                    "busway",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains(
+            result.Traces,
+            trace =>
+                string.Equals(
+                    trace.Highway,
+                    "service",
+                    StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ImporterRejectsExplicitMotorVehicleDenialWithoutBusException()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="-23.5500" lon="-46.6300" />
+              <node id="2" lat="-23.5500" lon="-46.6299" />
+              <way id="30">
+                <nd ref="1" /><nd ref="2" />
+                <tag k="highway" v="residential" />
+                <tag k="motor_vehicle" v="no" />
+              </way>
+            </osm>
+            """;
+
+        var result =
+            new MapStudioOsmRoadImporter()
+                .Parse(
+                    xml);
+
+        Assert.Empty(
+            result.Traces);
+
+        Assert.Equal(
+            1,
+            result.IgnoredWayCount);
+    }
+
+    [Fact]
     public void ImporterRejectsNonOsmRoot()
     {
         Assert.Throws<
