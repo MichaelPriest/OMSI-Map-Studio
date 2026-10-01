@@ -14051,7 +14051,7 @@ public sealed partial class MainWindow : Window
             "Sinalização: escolha um semáforo e coloque-o no mapa.");
 
         ExplorerSearchBox.Text =
-            "traffic";
+            "semaforo";
 
         RefreshLibraryFilter();
     }
