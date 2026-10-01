@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.128: prefer physically compatible installed OMSI road splines before the generated Road Kit.
+# Test 10.129: recognize and prioritize original OMSI 2 asset families during automatic reconstruction.
 
 on:
   push:
@@ -228,8 +228,12 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.127-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.128-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.128-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.129-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.129-native.md"
       - "src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs"
+      - "src/MapStudio.Core/Omsi/Indexing/MapStudioOriginalOmsiAssetCatalog.cs"
       - "tests/MapStudio.Core.Tests/OmsiAssetLibraryClassifierTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioOriginalOmsiAssetCatalogTests.cs"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs"
       - "src/MapStudio.Core/Settings/MapStudioUserSettingsStore.cs"
@@ -246,8 +250,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.128-native
-  TAG: v0.2.0-alpha.5-test.10.128-native
+  VERSION: 0.2.0-alpha.5-test.10.129-native
+  TAG: v0.2.0-alpha.5-test.10.129-native
 
 jobs:
   build-native-preview:
@@ -5466,6 +5470,95 @@ jobs:
 
           Write-Host "Verified installed OMSI SLI discovery, physical matching, MapStudio asset exclusion and end-to-end road placement preference."
 
+      - name: Verify test 10.129 original OMSI asset families
+        shell: pwsh
+        run: |
+          $catalog = Get-Content src/MapStudio.Core/Omsi/Indexing/MapStudioOriginalOmsiAssetCatalog.cs -Raw
+          $classifier = Get-Content src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs -Raw
+          $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs -Raw
+          $furniture = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioStreetFurnitureAssetSuggester.cs -Raw
+          $catalogTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOriginalOmsiAssetCatalogTests.cs -Raw
+          $resolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs -Raw
+          $furnitureTests = Get-Content tests/MapStudio.Core.Tests/MapStudioExtendedStreetFurnitureTests.cs -Raw
+
+          foreach ($required in @(
+            'RoadSpline',
+            'JunctionObject',
+            'CrosswalkObject',
+            'TrafficSignalObject',
+            'TrafficSignObject',
+            'BusStopObject',
+            'BusShelterObject',
+            'StreetLightObject',
+            'WasteBasketObject',
+            'BollardObject',
+            'BuildingObject',
+            'VegetationObject',
+            'splines\marcel\',
+            'splines\ruede\',
+            'sceneryobjects\kreuz_mc\',
+            'sceneryobjects\kreuz_rue\',
+            'sceneryobjects\verkehrszeichen_mc\',
+            'sceneryobjects\streetobjects_rue\'
+          )) {
+            if (-not $catalog.Contains($required)) {
+              throw "Test 10.129 original OMSI catalog marker is missing: $required"
+            }
+          }
+
+          if (-not $classifier.Contains('MapStudioOriginalOmsiAssetCatalog')) {
+            throw "Test 10.129 asset library classifier must use the original OMSI catalog."
+          }
+
+          foreach ($required in @(
+            'IsOriginalRoadSpline',
+            'OriginalOmsiRoad',
+            'originalOmsiBonus'
+          )) {
+            if (-not $resolver.Contains($required)) {
+              throw "Test 10.129 road resolver original OMSI preference marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OriginalRoleMatches',
+            'verkehrszeichen',
+            'strlt',
+            'wartehaus',
+            'muelleinmer'
+          )) {
+            if (-not $furniture.Contains($required)) {
+              throw "Test 10.129 street-furniture original OMSI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'str_2spur_11m_SeeburgerStr1.sli',
+            'Hstr_6spur_Ruhlebener1.sli',
+            'sdwk_1.5m_DDR_Spandauer_Str.sli',
+            'Einm_Altonaer.sco',
+            'Zebra_falks.sco',
+            'Ampel_Kfz_1.sco',
+            'VZ_vb_tempo30_m.sco',
+            'Busstop_Pole_L.sco',
+            'hst_70er_wartehaus.sco',
+            'strlt_gwg_70s_1.sco'
+          )) {
+            if (-not $catalogTests.Contains($required)) {
+              throw "Test 10.129 original OMSI catalog regression fixture is missing: $required"
+            }
+          }
+
+          if (-not $resolverTests.Contains('ClassifierSeparatesOriginalOmsiConstructionFamilies')) {
+            throw "Test 10.129 construction-family separation regression test is missing."
+          }
+
+          if (-not $furnitureTests.Contains('SuggesterRecognizesOriginalOmsiFurnitureFamilies')) {
+            throw "Test 10.129 stock OMSI street-furniture selection regression test is missing."
+          }
+
+          Write-Host "Verified original OMSI family catalog, road priority, junction/signal/crosswalk separation and stock street-furniture selection."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5658,11 +5751,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.128-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.129-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.128-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.129-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
