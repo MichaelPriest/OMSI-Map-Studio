@@ -120,6 +120,64 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                     spline.Y,
                     6);
             }
+
+            var ordered =
+                result.Placements
+                    .OrderBy(
+                        placement =>
+                            placement.GraphSegmentId)
+                    .ToArray();
+
+            var first =
+                ordered[0];
+
+            var second =
+                ordered[1];
+
+            var yaw =
+                first.Rotation *
+                Math.PI /
+                180.0;
+
+            var firstEndX =
+                OmsiTileGrid.GetOriginX(
+                    first.TileX) +
+                first.LocalX +
+                Math.Sin(
+                    yaw) *
+                first.LengthMeters;
+
+            var firstEndZ =
+                OmsiTileGrid.GetOriginZ(
+                    first.TileY) +
+                first.LocalZ +
+                Math.Cos(
+                    yaw) *
+                first.LengthMeters;
+
+            var secondStartX =
+                OmsiTileGrid.GetOriginX(
+                    second.TileX) +
+                second.LocalX;
+
+            var secondStartZ =
+                OmsiTileGrid.GetOriginZ(
+                    second.TileY) +
+                second.LocalZ;
+
+            Assert.InRange(
+                Math.Abs(
+                    firstEndX -
+                    secondStartX),
+                0,
+                0.001);
+
+            Assert.InRange(
+                Math.Abs(
+                    firstEndZ -
+                    secondStartZ),
+                0,
+                0.001);
         }
         finally
         {
