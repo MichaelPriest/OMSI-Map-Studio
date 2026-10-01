@@ -554,27 +554,24 @@ public static class OmsiAssetLibraryClassifier
             OmsiAssetLibraryGroup.StreetFurniture =>
                 ContainsAny(
                     text,
-                    "trafficlight",
-                    "traffic light",
-                    "ampel",
-                    "signalgeber",
-                    "semaforo")
-                    ? "Semáforos"
+                    "crosswalk",
+                    "zebra",
+                    "zebrastreifen",
+                    "travessia",
+                    "faixa pedestre")
+                    ? "Faixas de pedestres"
                     : ContainsAny(
                         text,
-                        "crosswalk",
-                        "zebra",
-                        "zebrastreifen",
-                        "travessia",
-                        "faixa pedestre")
-                        ? "Faixas de pedestres"
-                        : ContainsAny(
-                            text,
-                            "sign",
-                            "schild",
-                            "traffic",
-                            "placa")
-                            ? "Sinalização"
+                        "sign",
+                        "schild",
+                        "traffic",
+                        "trafficlight",
+                        "traffic light",
+                        "ampel",
+                        "signalgeber",
+                        "semaforo",
+                        "placa")
+                        ? "Sinalização"
                     : ContainsAny(
                         text,
                         "lamp",
