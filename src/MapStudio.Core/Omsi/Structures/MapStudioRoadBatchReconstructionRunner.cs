@@ -84,6 +84,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         MaximumLayerRampGradient =
             0.08;
 
+    private const double
+        MaximumStraightSplineEndpointErrorMeters =
+            0.02;
+
     public async Task<MapStudioRoadBatchReconstructionResult>
         RunAsync(
             string omsiRoot,
@@ -414,7 +418,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     endHeight,
                     segment.LengthMeters);
 
-            planned.Add(
+            var plannedSpline =
                 new PlannedSpline(
                     segment,
                     tile,
@@ -431,7 +435,13 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     endHeight,
                     gradientPercent,
                     rotation,
-                    splinePath));
+                    splinePath);
+
+            ValidateStraightSplineEndpoint(
+                plannedSpline);
+
+            planned.Add(
+                plannedSpline);
         }
 
         var structurePlan =
@@ -1564,6 +1574,64 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         return double.IsFinite(gradient)
             ? gradient
             : 0;
+    }
+
+    private static void ValidateStraightSplineEndpoint(
+        PlannedSpline placement)
+    {
+        var yaw =
+            placement.Rotation *
+            Math.PI /
+            180.0;
+
+        var worldStartX =
+            OmsiTileGrid.GetOriginX(
+                placement.Tile.X) +
+            placement.LocalX;
+
+        var worldStartZ =
+            OmsiTileGrid.GetOriginZ(
+                placement.Tile.Y) +
+            placement.LocalZ;
+
+        var calculatedEndX =
+            worldStartX +
+            Math.Sin(
+                yaw) *
+            placement.Segment
+                .LengthMeters;
+
+        var calculatedEndZ =
+            worldStartZ +
+            Math.Cos(
+                yaw) *
+            placement.Segment
+                .LengthMeters;
+
+        var dx =
+            calculatedEndX -
+            placement.Segment
+                .End.X;
+
+        var dz =
+            calculatedEndZ -
+            placement.Segment
+                .End.Z;
+
+        var error =
+            Math.Sqrt(
+                dx * dx +
+                dz * dz);
+
+        if (
+            !double.IsFinite(
+                error) ||
+            error >
+                MaximumStraightSplineEndpointErrorMeters)
+        {
+            throw new InvalidDataException(
+                $"realWorldRoadSplineEndpointMismatch trace={placement.Segment.TraceId} segment={placement.Segment.Id} error={error:G17}");
+        }
     }
 
     private static double ResolveRotationDegrees(
