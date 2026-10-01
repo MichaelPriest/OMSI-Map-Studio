@@ -539,7 +539,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
                         .GeneratingRoads,
-                    "Gerando vias reais com o Road Kit..."));
+                    roadSplineAssets is { Count: > 0 }
+                        ? "Gerando vias reais com splines OMSI compatíveis · Road Kit como fallback..."
+                        : "Gerando vias reais com o Road Kit..."));
 
             var roads =
                 await new MapStudioRoadBatchReconstructionRunner()
