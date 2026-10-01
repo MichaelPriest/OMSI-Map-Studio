@@ -28,6 +28,8 @@ public enum MapStudioSceneFeatureKind
     WasteBasket = 14,
     Bollard = 15,
     FireHydrant = 16,
+    TrafficSignal = 17,
+    Crosswalk = 18,
     Unknown = 99
 }
 
