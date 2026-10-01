@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.123: guarantee loading overlay render before heavy native operations.
+# Test 10.124: audit manual tools from XAML handlers through real persistence paths.
 
 on:
   push:
@@ -218,6 +218,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.122-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.123-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.123-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.124-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.124-native.md"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs"
       - "src/MapStudio.Core/Settings/MapStudioUserSettingsStore.cs"
@@ -234,8 +236,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.123-native
-  TAG: v0.2.0-alpha.5-test.10.123-native
+  VERSION: 0.2.0-alpha.5-test.10.124-native
+  TAG: v0.2.0-alpha.5-test.10.124-native
 
 jobs:
   build-native-preview:
@@ -5075,6 +5077,136 @@ jobs:
 
           Write-Host "Verified loading overlay remains present and yields a WinUI frame before heavy native operations."
 
+      - name: Verify test 10.124 manual tool wiring and persistence
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $scene = Get-Content src/MapStudio.Renderer/Scene/NativeSceneBuilder.cs -Raw
+
+          $clickHandlers = [regex]::Matches($xaml, 'Click="([^"]+)"') |
+            ForEach-Object { $_.Groups[1].Value } |
+            Sort-Object -Unique
+
+          if ($clickHandlers.Count -lt 150) {
+            throw "Test 10.124 expected the native UI manual-tool surface; found only $($clickHandlers.Count) Click handlers."
+          }
+
+          $missing = @()
+          foreach ($handler in $clickHandlers) {
+            $escaped = [regex]::Escape($handler)
+            $definition = "(?m)^\s*private\s+(?:async\s+)?[^\r\n{;]+\s+$escaped\s*\("
+            if ($window -notmatch $definition) {
+              $missing += $handler
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            throw "Test 10.124 XAML Click handler(s) without MainWindow implementation: $($missing -join ', ')"
+          }
+
+          foreach ($required in @(
+            'Viewport.TransformEditPending +=',
+            'Viewport.SceneryPlacementRequested +=',
+            'Viewport.SplinePlacementRequested +=',
+            'Viewport.SplineSplitRequested +=',
+            'Viewport.TerrainPointSelected +=',
+            'Viewport.TrafficPathNodeEditRequested +='
+          )) {
+            if (-not $window.Contains($required)) {
+              throw "Test 10.124 viewport completion wiring is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SavePendingTransformsAsync',
+            'InsertSceneryObjectAsync',
+            'InsertSceneryObjectBatchAsync',
+            'InsertSceneryObjectMultiBatchAsync',
+            'InsertSplineAsync',
+            'InsertSplineBatchAsync',
+            'SplitSplineAsync',
+            'UpdateSplineAdvancedAsync',
+            'TogglePlacedSplineVehicleFlowAsync',
+            'ReplacePlacedSplinePathAsync',
+            'UpdateSplineLinksAsync',
+            'LevelTerrainAsync',
+            'OffsetTerrainAsync',
+            'PaintTerrainTextureAsync',
+            'LevelTerrainPolygonAsync',
+            'OffsetTerrainPolygonAsync',
+            'PaintTerrainTexturePolygonAsync',
+            'SetTileWaterAsync',
+            'RemoveTileWaterAsync',
+            'UpdateTrafficRulesAsync',
+            'UpdateSceneryPathAsync',
+            'UpdateSplinePathAsync',
+            'DuplicateSceneryPathAsync',
+            'DuplicateSplinePathAsync',
+            'DeleteSceneryPathAsync',
+            'DeleteSplinePathAsync',
+            'UpdateTrafficLightProgramAsync',
+            'UpdateTimetableTrackAsync',
+            'UpdateStationLinkAsync'
+          )) {
+            if (-not $window.Contains($required)) {
+              throw "Test 10.124 manual persistence path is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TransformEditPending',
+            'SplinePlacementRequested',
+            'SplineSplitRequested',
+            'TerrainPointSelected',
+            'TryFinishSelectedSplineEndpointDrag',
+            'TryFinishSelectedSplineCurveEdit',
+            'EndGizmoDrag'
+          )) {
+            if (-not $viewport.Contains($required)) {
+              throw "Test 10.124 viewport manual-edit marker is missing: $required"
+            }
+          }
+
+          if (-not $window.Contains('OnLevelSelectedSplineToTerrainClick(')) {
+            throw "Test 10.124 selected-road Terrain reset is not wired."
+          }
+
+          if ($window.Contains('worldcoordinates ainda não está habilitada') -or
+              $window.Contains('worldcoordinates ainda não está habilitado')) {
+            throw "Test 10.124 copy/duplicate is still blocked on world-coordinate maps."
+          }
+
+          foreach ($required in @(
+            'targetWorld.X',
+            'targetWorld.Z',
+            'OmsiTileGrid.TileSize'
+          )) {
+            if (-not $scene.Contains('OmsiTileGrid') -and $required -eq 'OmsiTileGrid.TileSize') {
+              throw "Test 10.124 scene world-grid marker is missing."
+            }
+          }
+
+          if (-not $window.Contains('"semaforo"')) {
+            throw "Test 10.124 manual traffic-signal search must use the multilingual synonym set."
+          }
+
+          foreach ($required in @(
+            'InsertSceneryObjectAsync',
+            'InsertSplineAsync',
+            'UpdateTrafficRulesAsync',
+            'UpdateTimetableTrackAsync',
+            'UpdateStationLinkAsync'
+          )) {
+            if (-not $session.Contains($required)) {
+              throw "Test 10.124 session writer is missing: $required"
+            }
+          }
+
+          Write-Host "Verified all XAML Click handlers, interactive viewport completion events, real persistence paths, selected-road Terrain reset, world-coordinate copy/duplicate, and multilingual signal search."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5267,11 +5399,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.123-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.124-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.123-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.124-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
