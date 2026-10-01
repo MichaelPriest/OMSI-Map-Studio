@@ -192,7 +192,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 progress,
                 cancellationToken,
                 elevation,
-                buildingVisualEvidenceProvider)
+                buildingVisualEvidenceProvider,
+                catalog.ConstructionAssets
+                    .RoadSplines)
             .ConfigureAwait(false);
     }
 
@@ -289,7 +291,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 progress,
                 cancellationToken,
                 elevation,
-                buildingVisualEvidenceProvider)
+                buildingVisualEvidenceProvider,
+                catalog.ConstructionAssets
+                    .RoadSplines)
             .ConfigureAwait(false);
     }
 
@@ -344,7 +348,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 progress,
                 cancellationToken,
                 elevation,
-                buildingVisualEvidenceProvider)
+                buildingVisualEvidenceProvider,
+                catalog.ConstructionAssets
+                    .RoadSplines)
             .ConfigureAwait(false);
     }
 
@@ -367,7 +373,9 @@ public sealed class MapStudioRealWorldMapPipeline
             CancellationToken cancellationToken = default,
             MapStudioGeoreferencedElevationSurface? elevation = null,
             IMapStudioBuildingVisualEvidenceProvider?
-                buildingVisualEvidenceProvider = null)
+                buildingVisualEvidenceProvider = null,
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                roadSplineAssets = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -514,7 +522,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         download.OsmXml,
                         anchor,
                         cancellationToken,
-                        elevation)
+                        elevation,
+                        roadSplineAssets)
                     .ConfigureAwait(false);
 
             progress?.Report(
