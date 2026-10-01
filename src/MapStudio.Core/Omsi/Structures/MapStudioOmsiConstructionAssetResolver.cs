@@ -47,13 +47,17 @@ public static class MapStudioOmsiConstructionAssetClassifier
                 Normalize(
                     entry.RelativePath);
 
+            var libraryGroup =
+                OmsiAssetLibraryClassifier
+                    .Classify(
+                        entry);
+
             if (
                 entry.Kind ==
                     OmsiAssetKind.Spline &&
-                OmsiAssetLibraryClassifier
-                    .Classify(
-                        entry) ==
-                    OmsiAssetLibraryGroup.Roads &&
+                libraryGroup is
+                    OmsiAssetLibraryGroup.Roads or
+                    OmsiAssetLibraryGroup.Other &&
                 !normalized.Contains(
                     "mapstudio roadkit",
                     StringComparison.Ordinal) &&
@@ -248,9 +252,23 @@ public sealed class MapStudioOmsiRoadSplineResolver
                 .Where(
                     item =>
                         item.Kind ==
-                            OmsiAssetKind.Spline)
+                            OmsiAssetKind.Spline &&
+                        !IsMapStudioGeneratedPath(
+                            item.RelativePath))
+                .OrderBy(
+                    item =>
+                        OmsiAssetLibraryClassifier
+                            .Classify(
+                                item) ==
+                            OmsiAssetLibraryGroup.Roads
+                            ? 0
+                            : 1)
+                .ThenBy(
+                    item =>
+                        item.RelativePath,
+                    StringComparer.OrdinalIgnoreCase)
                 .Take(
-                    2_000))
+                    10_000))
         {
             cancellationToken
                 .ThrowIfCancellationRequested();
@@ -306,11 +324,16 @@ public sealed class MapStudioOmsiRoadSplineResolver
                 continue;
             }
 
+            var trafficPaths =
+                definition.Paths
+                    .Where(
+                        path =>
+                            path.Type ==
+                                0)
+                    .ToArray();
+
             var trafficPathCount =
-                definition.Paths.Count(
-                    path =>
-                        path.Type ==
-                        0);
+                trafficPaths.Length;
 
             if (trafficPathCount <= 0)
             {
@@ -358,19 +381,37 @@ public sealed class MapStudioOmsiRoadSplineResolver
                 entry.RelativePath
                     .ToLowerInvariant();
 
+            var pathDirectionCount =
+                trafficPaths
+                    .Select(
+                        path =>
+                            path.Direction)
+                    .Distinct()
+                    .Count();
+
+            var inferredOneWay =
+                pathDirectionCount ==
+                    1;
+
             measurements.Add(
                 new CandidateMeasurement(
                     entry.RelativePath,
                     width,
                     trafficPathCount,
                     LooksOneWay(
-                        normalizedName),
+                        normalizedName) ||
+                    inferredOneWay,
                     LooksDivided(
                         normalizedName),
                     definition.Paths.Any(
                         path =>
                             path.Type ==
-                            1)));
+                            1),
+                    OmsiAssetLibraryClassifier
+                        .Classify(
+                            entry) ==
+                        OmsiAssetLibraryGroup
+                            .Roads));
         }
 
         var resolved =
@@ -451,12 +492,18 @@ public sealed class MapStudioOmsiRoadSplineResolver
                         ? 1.5
                         : 0.0;
 
+                var nameConfidencePenalty =
+                    candidate.NamedRoad
+                        ? 0.0
+                        : 0.35;
+
                 var score =
                     widthError *
                         3.0 +
                     trafficPathError *
                         0.75 +
-                    sidewalkPenalty;
+                    sidewalkPenalty +
+                    nameConfidencePenalty;
 
                 if (
                     score >=
@@ -487,6 +534,33 @@ public sealed class MapStudioOmsiRoadSplineResolver
         }
 
         return resolved;
+    }
+
+    private static bool IsMapStudioGeneratedPath(
+        string path)
+    {
+        if (string.IsNullOrWhiteSpace(
+                path))
+        {
+            return true;
+        }
+
+        var normalized =
+            path
+                .Replace(
+                    '/',
+                    '\\')
+                .ToLowerInvariant();
+
+        return normalized.Contains(
+                @"\mapstudio_",
+                StringComparison.Ordinal) ||
+            normalized.Contains(
+                @"\mapstudio roadkit\",
+                StringComparison.Ordinal) ||
+            normalized.Contains(
+                @"\mapstudio_roadkit\",
+                StringComparison.Ordinal);
     }
 
     private static bool LooksOneWay(
@@ -525,5 +599,6 @@ public sealed class MapStudioOmsiRoadSplineResolver
         int TrafficPathCount,
         bool LooksOneWay,
         bool LooksDivided,
-        bool HasPedestrianPath);
+        bool HasPedestrianPath,
+        bool NamedRoad);
 }

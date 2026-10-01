@@ -61,6 +61,9 @@ public sealed class OmsiAssetLibraryClassifierTests
         @"Splines\Rail\tram_track.sli",
         OmsiAssetLibraryGroup.Rail)]
     [InlineData(
+        @"Splines\Marcel\str_2spur_8m.sli",
+        OmsiAssetLibraryGroup.Roads)]
+    [InlineData(
         @"Splines\Paths\sidewalk.sli",
         OmsiAssetLibraryGroup.Paths)]
     [InlineData(

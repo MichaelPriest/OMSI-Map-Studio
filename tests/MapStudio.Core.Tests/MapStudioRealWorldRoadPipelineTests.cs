@@ -7,6 +7,7 @@ using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Structures;
 using Xunit;
 
@@ -251,6 +252,137 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                 Directory.Delete(
                     root,
                     recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task RoadRunnerPrefersInstalledOmsiSplineOverRoadKitFallback()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-installed-omsi-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            await new MapStudioRoadKitGenerator()
+                .InstallOrUpdateAsync(
+                    root);
+
+            var sourceRelativePath =
+                MapStudioStandardRoadCatalog
+                    .RoadTwoLaneWithSidewalk
+                    .RelativePath;
+
+            var sourcePath =
+                Path.Combine(
+                    root,
+                    sourceRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            var installedRelativePath =
+                @"Splines\Marcel\str_2spur_11m.sli";
+
+            var installedPath =
+                Path.Combine(
+                    root,
+                    installedRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    installedPath)!);
+
+            File.Copy(
+                sourcePath,
+                installedPath,
+                overwrite:
+                    true);
+
+            var entry =
+                new OmsiAssetIndexEntry(
+                    installedRelativePath,
+                    OmsiAssetKind.Spline,
+                    new FileInfo(
+                        installedPath)
+                        .Length,
+                    File.GetLastWriteTimeUtc(
+                        installedPath)
+                        .Ticks);
+
+            var catalog =
+                MapStudioOmsiConstructionAssetClassifier
+                    .Build(
+                        [entry]);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        RoadXml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50),
+                        installedRoadSplines:
+                            catalog.RoadSplines);
+
+            Assert.Equal(
+                2,
+                result.PlacedSplineCount);
+
+            Assert.Equal(
+                2,
+                result.InstalledOmsiSplineCount);
+
+            Assert.Equal(
+                0,
+                result.RoadKitFallbackSplineCount);
+
+            Assert.All(
+                result.Placements,
+                placement =>
+                    Assert.Equal(
+                        installedRelativePath,
+                        placement.SplinePath,
+                        ignoreCase:
+                            true));
+
+            var tileContent =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        Path.Combine(
+                            mapDirectory,
+                            "tile_0_0.map"));
+
+            Assert.All(
+                tileContent.Splines,
+                spline =>
+                    Assert.Equal(
+                        installedRelativePath,
+                        spline.SplinePath,
+                        ignoreCase:
+                            true));
+        }
+        finally
+        {
+            if (Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
             }
         }
     }

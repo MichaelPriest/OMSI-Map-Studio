@@ -65,46 +65,74 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
 
         try
         {
-            var generated =
-                await new MapStudioRoadKitGenerator()
-                    .InstallOrUpdateAsync(
-                        root);
+            await new MapStudioRoadKitGenerator()
+                .InstallOrUpdateAsync(
+                    root);
 
-            var relativePath =
+            var sourceRelativePath =
                 MapStudioStandardRoadCatalog
-                    .RoadTwoLane
+                    .RoadTwoLaneWithSidewalk
                     .RelativePath;
 
-            var fullPath =
+            var sourcePath =
                 Path.Combine(
                     root,
-                    relativePath.Replace(
+                    sourceRelativePath.Replace(
                         '\\',
                         Path.DirectorySeparatorChar));
 
-            Assert.True(
-                File.Exists(
-                    fullPath));
+            var installedRelativePath =
+                @"Splines\Marcel\str_2spur_11m.sli";
+
+            var installedPath =
+                Path.Combine(
+                    root,
+                    installedRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    installedPath)!);
+
+            File.Copy(
+                sourcePath,
+                installedPath,
+                overwrite:
+                    true);
 
             var entry =
                 new OmsiAssetIndexEntry(
-                    relativePath,
+                    installedRelativePath,
                     OmsiAssetKind.Spline,
                     new FileInfo(
-                        fullPath)
+                        installedPath)
                         .Length,
                     File.GetLastWriteTimeUtc(
-                        fullPath)
+                        installedPath)
                         .Ticks);
+
+            var catalog =
+                MapStudioOmsiConstructionAssetClassifier
+                    .Build(
+                        [entry]);
+
+            var candidate =
+                Assert.Single(
+                    catalog.RoadSplines);
+
+            Assert.Equal(
+                installedRelativePath,
+                candidate.RelativePath);
 
             var matches =
                 await new MapStudioOmsiRoadSplineResolver()
                     .ResolveAsync(
                         root,
-                        [entry],
+                        catalog.RoadSplines,
                         [
                             MapStudioStandardRoadCatalog
-                                .RoadTwoLane
+                                .RoadTwoLaneWithSidewalk
                         ]);
 
             var match =
@@ -113,18 +141,19 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
 
             Assert.Equal(
                 MapStudioStandardRoadCatalog
-                    .RoadTwoLane
+                    .RoadTwoLaneWithSidewalk
                     .Key,
                 match.Key);
 
             Assert.Equal(
-                relativePath,
+                installedRelativePath,
                 match.Value.RelativePath);
 
-            Assert.InRange(
-                match.Value.WidthMeters,
-                6.99,
-                7.01);
+            Assert.DoesNotContain(
+                MapStudioRoadKitGenerator
+                    .PackFolderName,
+                match.Value.RelativePath,
+                StringComparison.OrdinalIgnoreCase);
 
             Assert.True(
                 match.Value.TrafficPathCount >
@@ -142,4 +171,5 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
             }
         }
     }
+
 }

@@ -558,6 +558,13 @@ public sealed class MapStudioRealWorldMapPipeline
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
+                        .GeneratingRoads,
+                    $"Vias montadas · {roads.InstalledOmsiSplineCount} trecho(s) com SLI instalada do OMSI · " +
+                    $"{roads.RoadKitFallbackSplineCount} fallback(s) do Road Kit."));
+
+            progress?.Report(
+                new MapStudioRealWorldMapPipelineProgress(
+                    MapStudioRealWorldMapPipelineStage
                         .ReconstructingScene,
                     "Reconstruindo prédios, vegetação, infraestrutura e mobiliário..."));
 

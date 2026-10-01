@@ -36,12 +36,45 @@ public sealed record MapStudioRoadBatchReconstructionResult(
     public int PlacedSplineCount =>
         Placements.Count;
 
+    public int InstalledOmsiSplineCount =>
+        Placements.Count(
+            placement =>
+                !IsRoadKitSplinePath(
+                    placement.SplinePath));
+
+    public int RoadKitFallbackSplineCount =>
+        Placements.Count -
+        InstalledOmsiSplineCount;
+
     public int GeneratedJunctionCount =>
         JunctionPlacements.Count;
 
     public int GeneratedStructureCount =>
         StructurePlacements?.Count ??
         0;
+
+    private static bool IsRoadKitSplinePath(
+        string path)
+    {
+        if (string.IsNullOrWhiteSpace(
+                path))
+        {
+            return false;
+        }
+
+        var normalized =
+            path
+                .Replace(
+                    '/',
+                    '\\');
+
+        return normalized.Contains(
+            @"\" +
+            MapStudioRoadKitGenerator
+                .PackFolderName +
+            @"\",
+            StringComparison.OrdinalIgnoreCase);
+    }
 
     public int ModifiedTileCount =>
         Placements
