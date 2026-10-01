@@ -2134,7 +2134,7 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            BeginLoading(
+            await BeginLoadingAndRenderAsync(
                 "Atualizando biblioteca",
                 _session.IsStandaloneWorkspace
                     ? "Indexando assets do Workspace..."
@@ -8678,7 +8678,7 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            BeginLoading(
+            await BeginLoadingAndRenderAsync(
                 "Duplicando seleção",
                 $"{selections.Count} item(ns) · deslocamento inicial +2 m");
 
@@ -22618,6 +22618,21 @@ public sealed partial class MainWindow : Window
             Visibility.Visible;
     }
 
+    private async Task BeginLoadingAndRenderAsync(
+        string title,
+        string? detail = null)
+    {
+        BeginLoading(
+            title,
+            detail);
+
+        // Return control to WinUI long enough for the loading overlay
+        // to be committed before CPU/disk/network work starts.
+        await Task.Delay(
+            TimeSpan.FromMilliseconds(
+                20));
+    }
+
     private void UpdateLoading(
         string title,
         string? detail = null,
@@ -23245,7 +23260,7 @@ public sealed partial class MainWindow : Window
         ActivateStandaloneWorkspaceAsync(
             bool announce)
     {
-        BeginLoading(
+        await BeginLoadingAndRenderAsync(
             "Inicializando Workspace Map Studio",
             "Preparando catálogo, biblioteca e editor standalone...");
 
@@ -23840,7 +23855,7 @@ public sealed partial class MainWindow : Window
             _mapLoadModeChanging =
                 true;
 
-            BeginLoading(
+            await BeginLoadingAndRenderAsync(
                 fullMap
                     ? "Carregando mapa completo"
                     : "Carregando região 3×3",
@@ -26270,7 +26285,7 @@ public sealed partial class MainWindow : Window
             _mapLoadModeChanging =
                 true;
 
-            BeginLoading(
+            await BeginLoadingAndRenderAsync(
                 _fullMapMode
                     ? $"Focando tile {tileX},{tileY}"
                     : $"Navegando para {tileX},{tileY}",
@@ -28497,7 +28512,7 @@ setTimeout(postBounds, 250);
 
         try
         {
-            BeginLoading(
+            await BeginLoadingAndRenderAsync(
                 "Criando mapa real",
                 $"{_realMapAreaColumns} × {_realMapAreaRows} tiles · {totalTiles} total");
 
@@ -31765,7 +31780,7 @@ setTimeout(postBounds, 250);
     private async Task OpenMapDirectoryAsync(
         string mapDirectory)
     {
-        BeginLoading(
+        await BeginLoadingAndRenderAsync(
             "Carregando mapa",
             Path.GetFileName(
                 mapDirectory));
