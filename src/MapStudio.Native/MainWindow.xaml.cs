@@ -11207,11 +11207,25 @@ public sealed partial class MainWindow : Window
 
     private void OnRoadElevationResetClick(
         object sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
+        if (
+            !Viewport.IsSplinePlacementActive &&
+            _selectionInfo?.Kind ==
+                PickingKind.Spline)
+        {
+            OnLevelSelectedSplineToTerrainClick(
+                sender,
+                e);
+
+            return;
+        }
+
         ApplyRoadElevationMode(
             NativeRoadElevationMode.FollowTerrain,
             0.0,
             "Ruas: seguindo novamente a altura real do terreno.");
+    }
 
     private void OnRoadSnapToggleClick(
         object sender,
