@@ -16,6 +16,8 @@ public sealed class MapStudioExtendedStreetFurnitureTests
               <node id="2" lat="-23.55" lon="-46.6299"><tag k="amenity" v="waste_basket"/></node>
               <node id="3" lat="-23.55" lon="-46.6298"><tag k="barrier" v="bollard"/></node>
               <node id="4" lat="-23.55" lon="-46.6297"><tag k="emergency" v="fire_hydrant"/></node>
+              <node id="5" lat="-23.55" lon="-46.6296"><tag k="highway" v="traffic_signals"/></node>
+              <node id="6" lat="-23.55" lon="-46.6295"><tag k="highway" v="crossing"/></node>
             </osm>
             """;
 
@@ -23,11 +25,13 @@ public sealed class MapStudioExtendedStreetFurnitureTests
             new MapStudioOsmStreetFurnitureImporter()
                 .Parse(xml);
 
-        Assert.Equal(4, result.Points.Count);
+        Assert.Equal(6, result.Points.Count);
         Assert.Contains(result.Points, p => p.Kind == MapStudioOsmStreetFurnitureKind.Bench);
         Assert.Contains(result.Points, p => p.Kind == MapStudioOsmStreetFurnitureKind.WasteBasket);
         Assert.Contains(result.Points, p => p.Kind == MapStudioOsmStreetFurnitureKind.Bollard);
         Assert.Contains(result.Points, p => p.Kind == MapStudioOsmStreetFurnitureKind.FireHydrant);
+        Assert.Contains(result.Points, p => p.Kind == MapStudioOsmStreetFurnitureKind.TrafficSignal);
+        Assert.Contains(result.Points, p => p.Kind == MapStudioOsmStreetFurnitureKind.Crosswalk);
     }
 
     [Theory]
@@ -35,6 +39,8 @@ public sealed class MapStudioExtendedStreetFurnitureTests
     [InlineData(MapStudioOsmStreetFurnitureKind.WasteBasket, @"Sceneryobjects\StreetFurniture\trash_bin.sco")]
     [InlineData(MapStudioOsmStreetFurnitureKind.Bollard, @"Sceneryobjects\StreetFurniture\bollard_black.sco")]
     [InlineData(MapStudioOsmStreetFurnitureKind.FireHydrant, @"Sceneryobjects\Utilities\fire_hydrant.sco")]
+    [InlineData(MapStudioOsmStreetFurnitureKind.TrafficSignal, @"Sceneryobjects\Traffic\Ampel_3fach.sco")]
+    [InlineData(MapStudioOsmStreetFurnitureKind.Crosswalk, @"Sceneryobjects\Markings\Zebrastreifen.sco")]
     public void SuggesterSelectsExtendedFurnitureAssets(
         MapStudioOsmStreetFurnitureKind kind,
         string expected)
@@ -46,7 +52,9 @@ public sealed class MapStudioExtendedStreetFurnitureTests
                 Asset(@"Sceneryobjects\StreetFurniture\wood_bench.sco"),
                 Asset(@"Sceneryobjects\StreetFurniture\trash_bin.sco"),
                 Asset(@"Sceneryobjects\StreetFurniture\bollard_black.sco"),
-                Asset(@"Sceneryobjects\Utilities\fire_hydrant.sco")
+                Asset(@"Sceneryobjects\Utilities\fire_hydrant.sco"),
+                Asset(@"Sceneryobjects\Traffic\Ampel_3fach.sco"),
+                Asset(@"Sceneryobjects\Markings\Zebrastreifen.sco")
             };
 
         var selected =
@@ -76,7 +84,9 @@ public sealed class MapStudioExtendedStreetFurnitureTests
                 Point("bench", MapStudioOsmStreetFurnitureKind.Bench),
                 Point("bin", MapStudioOsmStreetFurnitureKind.WasteBasket),
                 Point("bollard", MapStudioOsmStreetFurnitureKind.Bollard),
-                Point("hydrant", MapStudioOsmStreetFurnitureKind.FireHydrant)
+                Point("hydrant", MapStudioOsmStreetFurnitureKind.FireHydrant),
+                Point("signal", MapStudioOsmStreetFurnitureKind.TrafficSignal),
+                Point("crosswalk", MapStudioOsmStreetFurnitureKind.Crosswalk)
             };
 
         var items =
@@ -87,6 +97,8 @@ public sealed class MapStudioExtendedStreetFurnitureTests
         Assert.Contains(items, x => x.Kind == MapStudioSceneFeatureKind.WasteBasket);
         Assert.Contains(items, x => x.Kind == MapStudioSceneFeatureKind.Bollard);
         Assert.Contains(items, x => x.Kind == MapStudioSceneFeatureKind.FireHydrant);
+        Assert.Contains(items, x => x.Kind == MapStudioSceneFeatureKind.TrafficSignal);
+        Assert.Contains(items, x => x.Kind == MapStudioSceneFeatureKind.Crosswalk);
     }
 
     private static OmsiAssetIndexEntry Asset(string path) =>
