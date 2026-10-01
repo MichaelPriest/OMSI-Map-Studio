@@ -21,6 +21,7 @@ using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Structures;
 using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.Omsi.Traffic;
+using MapStudio.Core.Settings;
 using MapStudio.Core.Workspace;
 using MapStudio.Native.Controls;
 using MapStudio.Native.Dialogs;
@@ -229,6 +230,10 @@ public sealed partial class MainWindow : Window
 
     private readonly OmsiNativeSession _session =
         new();
+
+    private readonly MapStudioUserSettingsStore
+        _userSettings =
+            new();
 
     private readonly List<MapStudioRoadTrace>
         _proceduralRoadTraces =
@@ -23627,6 +23632,83 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async Task<string?>
+        ResolveOmsiRootForOpenAsync()
+    {
+        var savedRoot =
+            _userSettings
+                .TryGetValidOmsiRootPath();
+
+        if (string.IsNullOrWhiteSpace(
+                savedRoot))
+        {
+            return await PickFolderAsync();
+        }
+
+        var content =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    430
+            };
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "O caminho do OMSI 2 salvo na primeira configuração continua disponível:",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    savedRoot,
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Instalação do OMSI 2",
+                Content =
+                    content,
+                PrimaryButtonText =
+                    "Usar caminho salvo",
+                SecondaryButtonText =
+                    "Escolher outra pasta",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var result =
+            await dialog
+                .ShowAsync();
+
+        return result switch
+        {
+            ContentDialogResult.Primary =>
+                savedRoot,
+            ContentDialogResult.Secondary =>
+                await PickFolderAsync(),
+            _ =>
+                null
+        };
+    }
+
     private async void OnOpenOmsiClick(
         object sender,
         RoutedEventArgs e)
@@ -23644,7 +23726,7 @@ public sealed partial class MainWindow : Window
         try
         {
             var root =
-                await PickFolderAsync();
+                await ResolveOmsiRootForOpenAsync();
 
             if (
                 string.IsNullOrWhiteSpace(
@@ -23660,6 +23742,23 @@ public sealed partial class MainWindow : Window
                 await _session
                     .SelectOmsiRootAsync(
                         root);
+
+            string?
+                settingsWarning =
+                    null;
+
+            try
+            {
+                _userSettings
+                    .SaveOmsiRootPath(
+                        root);
+            }
+            catch (Exception settingsException)
+            {
+                settingsWarning =
+                    settingsException
+                        .Message;
+            }
 
             SetContentRootModeLabel(
                 "OMSI");
@@ -23682,7 +23781,9 @@ public sealed partial class MainWindow : Window
             await LoadAssetLibraryAsync();
 
             StatusText.Text =
-                "Fonte OMSI ativa. Use “Workspace” para voltar ao editor standalone.";
+                settingsWarning is null
+                    ? "Fonte OMSI ativa · caminho salvo nas configurações para as próximas execuções. Use “Workspace” para voltar ao editor standalone."
+                    : $"Fonte OMSI ativa, mas o caminho não pôde ser salvo nas configurações: {settingsWarning}";
         }
         catch (Exception exception)
         {
