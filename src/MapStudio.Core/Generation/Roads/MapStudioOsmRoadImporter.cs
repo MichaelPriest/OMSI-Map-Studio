@@ -11,6 +11,41 @@ public sealed record MapStudioOsmRoadImportResult(
 
 public sealed class MapStudioOsmRoadImporter
 {
+    private static readonly HashSet<string>
+        SupportedMotorRoadHighways =
+            new(
+                [
+                    "motorway",
+                    "motorway_link",
+                    "trunk",
+                    "trunk_link",
+                    "primary",
+                    "primary_link",
+                    "secondary",
+                    "secondary_link",
+                    "tertiary",
+                    "tertiary_link",
+                    "unclassified",
+                    "residential",
+                    "living_street",
+                    "service",
+                    "road",
+                    "busway",
+                    "bus_guideway"
+                ],
+                StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string>
+        IgnoredServiceKinds =
+            new(
+                [
+                    "parking_aisle",
+                    "driveway",
+                    "drive-through",
+                    "emergency_access"
+                ],
+                StringComparer.OrdinalIgnoreCase);
+
     public MapStudioOsmRoadImportResult Parse(
         string xml)
     {
@@ -162,6 +197,9 @@ public sealed class MapStudioOsmRoadImporter
                     "highway",
                     out var highway) ||
                 string.IsNullOrWhiteSpace(
+                    highway) ||
+                !ShouldImportMotorRoad(
+                    tags,
                     highway))
             {
                 ignoredWays++;
@@ -363,6 +401,119 @@ public sealed class MapStudioOsmRoadImporter
             traces,
             ignoredWays,
             missingNodeReferences);
+    }
+
+    private static bool ShouldImportMotorRoad(
+        IReadOnlyDictionary<string, string?> tags,
+        string highway)
+    {
+        var normalizedHighway =
+            highway.Trim();
+
+        if (
+            !SupportedMotorRoadHighways.Contains(
+                normalizedHighway))
+        {
+            return false;
+        }
+
+        if (
+            IsTrue(
+                tags.GetValueOrDefault(
+                    "area")) ||
+            IsTrue(
+                tags.GetValueOrDefault(
+                    "proposed")) ||
+            IsTrue(
+                tags.GetValueOrDefault(
+                    "construction")))
+        {
+            return false;
+        }
+
+        if (
+            string.Equals(
+                normalizedHighway,
+                "service",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var service =
+                tags.GetValueOrDefault(
+                    "service")
+                    ?.Trim();
+
+            if (
+                !string.IsNullOrWhiteSpace(
+                    service) &&
+                IgnoredServiceKinds.Contains(
+                    service))
+            {
+                return false;
+            }
+        }
+
+        var busAccess =
+            tags.GetValueOrDefault(
+                "bus")
+                ?.Trim();
+
+        var busAllowed =
+            string.Equals(
+                busAccess,
+                "yes",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                busAccess,
+                "designated",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                busAccess,
+                "permissive",
+                StringComparison.OrdinalIgnoreCase);
+
+        if (busAllowed)
+        {
+            return true;
+        }
+
+        return
+            !IsExplicitlyDenied(
+                tags.GetValueOrDefault(
+                    "motor_vehicle")) &&
+            !IsExplicitlyDenied(
+                tags.GetValueOrDefault(
+                    "vehicle")) &&
+            !IsExplicitlyDenied(
+                tags.GetValueOrDefault(
+                    "access"));
+    }
+
+    private static bool IsExplicitlyDenied(
+        string? value)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                value))
+        {
+            return false;
+        }
+
+        var normalized =
+            value.Trim();
+
+        return
+            string.Equals(
+                normalized,
+                "no",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                normalized,
+                "agricultural",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                normalized,
+                "forestry",
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsTrue(
