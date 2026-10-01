@@ -55,10 +55,14 @@ public static class MapStudioOriginalOmsiAssetCatalog
             NormalizePath(
                 relativePath);
 
+        var fileNameOffset =
+            path.LastIndexOf(
+                '\\') +
+            1;
+
         var fileName =
-            Path.GetFileName(
-                    path)
-                .ToLowerInvariant();
+            path[
+                fileNameOffset..];
 
         if (kind == OmsiAssetKind.Spline)
         {

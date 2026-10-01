@@ -5401,6 +5401,7 @@ jobs:
         shell: pwsh
         run: |
           $classifier = Get-Content src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs -Raw
+          $originalCatalog = Get-Content src/MapStudio.Core/Omsi/Indexing/MapStudioOriginalOmsiAssetCatalog.cs -Raw
           $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs -Raw
           $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
           $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
@@ -5408,12 +5409,18 @@ jobs:
           $resolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs -Raw
           $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
 
+          if (-not $classifier.Contains('"fahrbahn"')) {
+            throw "Test 10.128 generic OMSI road-name fallback marker is missing: fahrbahn"
+          }
+
           foreach ($required in @(
-            '"str"',
-            '"fahrbahn"'
+            '"str_"',
+            '"hstr_"',
+            '"demo_lht_str_"',
+            'RoadSpline'
           )) {
-            if (-not $classifier.Contains($required)) {
-              throw "Test 10.128 OMSI road-name classifier marker is missing: $required"
+            if (-not $originalCatalog.Contains($required)) {
+              throw "Test 10.128 precise original OMSI road-family marker is missing: $required"
             }
           }
 
