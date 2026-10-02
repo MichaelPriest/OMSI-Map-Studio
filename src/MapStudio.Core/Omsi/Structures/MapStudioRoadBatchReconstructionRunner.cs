@@ -181,6 +181,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         MaximumStraightSplineEndpointErrorMeters =
             0.02;
 
+    private const double
+        MaximumJunctionControlAssociationDistanceMeters =
+            35.0;
+
     public async Task<MapStudioRoadBatchReconstructionResult>
         RunAsync(
             string omsiRoot,
@@ -378,6 +382,17 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                     item.Segment)
                             .ToArray());
 
+        var junctionControls =
+            new MapStudioOsmJunctionControlReader()
+                .Parse(
+                    osmXml,
+                    anchor);
+
+        var signalizedJunctionNodeIds =
+            ResolveSignalizedJunctionNodeIds(
+                graph,
+                junctionControls);
+
         IReadOnlyDictionary<int, MapStudioOmsiJunctionMatch>
             installedJunctionMatches =
                 new Dictionary<int, MapStudioOmsiJunctionMatch>();
@@ -385,7 +400,9 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         if (installedJunctionObjects is { Count: > 0 })
         {
             var targets =
-                BuildInstalledJunctionTargets(graph);
+                BuildInstalledJunctionTargets(
+                    graph,
+                    signalizedJunctionNodeIds);
 
             if (targets.Count > 0)
             {
@@ -399,12 +416,6 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         .ConfigureAwait(false);
             }
         }
-
-        var junctionControls =
-            new MapStudioOsmJunctionControlReader()
-                .Parse(
-                    osmXml,
-                    anchor);
 
         var installedTrafficSignalPath =
             ResolveInstalledSceneryAssetPath(
@@ -1315,9 +1326,6 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             return;
         }
 
-        const double maximumAssociationDistanceMeters =
-            35.0;
-
         var signalArms =
             new HashSet<(int JunctionId, int SegmentId)>();
 
@@ -1341,7 +1349,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     .Where(
                         item =>
                             item.Distance <=
-                                maximumAssociationDistanceMeters)
+                                MaximumJunctionControlAssociationDistanceMeters)
                     .OrderBy(
                         item =>
                             item.Distance)
@@ -2288,9 +2296,65 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             0,
             1);
 
+    private static IReadOnlySet<int>
+        ResolveSignalizedJunctionNodeIds(
+            MapStudioRoadGraph graph,
+            IReadOnlyList<MapStudioOsmJunctionControl>
+                controls)
+    {
+        var result =
+            new HashSet<int>();
+
+        foreach (
+            var control in
+                controls.Where(
+                    item =>
+                        item.Kind ==
+                            MapStudioOsmJunctionControlKind
+                                .TrafficSignal))
+        {
+            var junction =
+                graph.Junctions
+                    .Select(
+                        item =>
+                            (
+                                Junction:
+                                    item,
+                                Distance:
+                                    item.Position
+                                        .DistanceTo(
+                                            control.WorldPoint)
+                            ))
+                    .Where(
+                        item =>
+                            item.Distance <=
+                                MaximumJunctionControlAssociationDistanceMeters)
+                    .OrderBy(
+                        item =>
+                            item.Distance)
+                    .ThenBy(
+                        item =>
+                            item.Junction.NodeId)
+                    .Select(
+                        item =>
+                            item.Junction)
+                    .FirstOrDefault();
+
+            if (junction is not null)
+            {
+                result.Add(
+                    junction.NodeId);
+            }
+        }
+
+        return result;
+    }
+
     private static IReadOnlyList<MapStudioOmsiJunctionTarget>
         BuildInstalledJunctionTargets(
-            MapStudioRoadGraph graph)
+            MapStudioRoadGraph graph,
+            IReadOnlySet<int>?
+                signalizedJunctionNodeIds = null)
     {
         var result =
             new List<MapStudioOmsiJunctionTarget>();
@@ -2366,7 +2430,12 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             result.Add(
                 new MapStudioOmsiJunctionTarget(
                     junction.NodeId,
-                    arms));
+                    arms,
+                    PreferFunctionalTrafficControl:
+                        signalizedJunctionNodeIds
+                            ?.Contains(
+                                junction.NodeId) ==
+                        true));
         }
 
         return result;
