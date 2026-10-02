@@ -260,6 +260,121 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
     }
 
     [Fact]
+    public async Task RunAsyncSkipsFeaturesAlreadyConsumedByRoadJunctions()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-furniture-consumed-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                Path.Combine(
+                    root,
+                    "maps",
+                    "FurnitureConsumedTest");
+
+            Directory.CreateDirectory(
+                mapDirectory);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    mapDirectory,
+                    "global.cfg"),
+                "[name]\r\nFurniture Consumed Test\r\n" +
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n",
+                Encoding.UTF8);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            await File.WriteAllTextAsync(
+                tilePath,
+                "[version]\r\n14\r\n",
+                Encoding.UTF8);
+
+            var assets =
+                new List<OmsiAssetIndexEntry>();
+
+            AddAsset(
+                root,
+                assets,
+                @"Sceneryobjects\StreetFurniture\traffic_light.sco");
+
+            const string xml =
+                """
+                <osm version="0.6">
+                  <node id="10" lat="-23.55000" lon="-46.63000">
+                    <tag k="highway" v="traffic_signals"/>
+                  </node>
+                  <node id="20" lat="-23.55002" lon="-46.62998">
+                    <tag k="highway" v="traffic_signals"/>
+                  </node>
+                </osm>
+                """;
+
+            var result =
+                await new MapStudioStreetFurnitureBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        xml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50),
+                        assets,
+                        cancellationToken:
+                            default,
+                        elevation:
+                            null,
+                        excludedFeatureIds:
+                            new HashSet<string>(
+                                StringComparer.Ordinal)
+                            {
+                                "osm-street-furniture-10"
+                            });
+
+            var placement =
+                Assert.Single(
+                    result.Placements);
+
+            Assert.Equal(
+                "osm-street-furniture-20",
+                placement.Id);
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        tilePath);
+
+            Assert.Single(
+                content.Objects);
+
+            Assert.DoesNotContain(
+                content.Objects,
+                item =>
+                    item.ObjectId ==
+                        0);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task RunAsyncReportsMissingFurnitureAssetWithoutChangingMap()
     {
         var root =
