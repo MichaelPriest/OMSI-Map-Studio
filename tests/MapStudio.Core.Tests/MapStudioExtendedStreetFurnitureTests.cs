@@ -156,7 +156,9 @@ public sealed class MapStudioExtendedStreetFurnitureTests
                 Asset(
                     @"Sceneryobjects\Verkehrszeichen_MC\VZ_206.sco"),
                 Asset(
-                    @"Sceneryobjects\Verkehrszeichen_MC\VZ_274_30.sco")
+                    @"Sceneryobjects\Verkehrszeichen_MC\VZ_274_30.sco"),
+                Asset(
+                    @"Sceneryobjects\Verkehrszeichen_MC\VZ_1274_50.sco")
             };
 
         OmsiAssetIndexEntry? Select(
