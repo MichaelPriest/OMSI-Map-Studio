@@ -5626,7 +5626,8 @@ jobs:
             'RoadRunnerUsesOriginalOmsiJunctionAndTrimsConnectedSplines',
             'WideJunctionXml',
             'InstalledOmsiJunctionCount',
-            'MapStudioJunctionAssetGenerator.RootFolderName'
+            'MapStudioJunctionAssetGenerator',
+            'RootFolderName'
           )) {
             if (-not $roadTests.Contains($required)) {
               throw "Test 10.130 junction placement round-trip regression is missing: $required"
