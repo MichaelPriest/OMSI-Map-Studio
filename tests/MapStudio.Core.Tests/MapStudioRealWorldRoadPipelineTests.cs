@@ -439,6 +439,22 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                 overwrite:
                     true);
 
+            var roadKitDirectory =
+                Path.Combine(
+                    root,
+                    "Splines",
+                    MapStudioRoadKitGenerator
+                        .PackFolderName);
+
+            Directory.Delete(
+                roadKitDirectory,
+                recursive:
+                    true);
+
+            Assert.False(
+                Directory.Exists(
+                    roadKitDirectory));
+
             var entry =
                 new OmsiAssetIndexEntry(
                     installedRelativePath,
@@ -490,6 +506,13 @@ public sealed class MapStudioRealWorldRoadPipelineTests
             Assert.Equal(
                 0,
                 result.RoadKitFallbackSplineCount);
+
+            Assert.False(
+                Directory.Exists(
+                    roadKitDirectory));
+
+            Assert.Empty(
+                result.RoadKit.SplineRelativePaths);
 
             Assert.All(
                 result.Placements,
