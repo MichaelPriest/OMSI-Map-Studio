@@ -34,7 +34,8 @@ public sealed record MapStudioRoadBatchReconstructionResult(
     MapStudioRoadKitInstallResult RoadKit,
     IReadOnlyList<MapStudioGeneratedSceneryPlacement>? StructurePlacements = null,
     IReadOnlyList<MapStudioGeneratedSceneryPlacement>? TrafficSignalPlacements = null,
-    IReadOnlyList<MapStudioGeneratedSceneryPlacement>? CrosswalkPlacements = null)
+    IReadOnlyList<MapStudioGeneratedSceneryPlacement>? CrosswalkPlacements = null,
+    IReadOnlyList<string>? ConsumedStreetFurnitureFeatureIds = null)
 {
     public int PlacedSplineCount =>
         Placements.Count;
@@ -836,6 +837,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     Array.Empty<string>(),
                     Array.Empty<string>());
 
+        var consumedStreetFurnitureFeatureIds =
+            new HashSet<string>(
+                StringComparer.Ordinal);
+
         try
         {
             var sceneryRequests =
@@ -1018,6 +1023,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                 junctionControls,
                 installedTrafficSignalPath,
                 installedCrosswalkPath,
+                consumedStreetFurnitureFeatureIds,
                 anchor,
                 elevation);
 
@@ -1226,6 +1232,12 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         placement.Id.StartsWith(
                             "osm-crosswalk-",
                             StringComparison.Ordinal))
+                .ToArray(),
+            consumedStreetFurnitureFeatureIds
+                .OrderBy(
+                    id =>
+                        id,
+                    StringComparer.Ordinal)
                 .ToArray());
     }
 
@@ -1287,6 +1299,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         IReadOnlyList<MapStudioOsmJunctionControl> controls,
         string? trafficSignalAssetPath,
         string? crosswalkAssetPath,
+        ISet<string> consumedStreetFurnitureFeatureIds,
         MapStudioGeographicAnchor anchor,
         MapStudioGeoreferencedElevationSurface? elevation)
     {
@@ -1494,6 +1507,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             anchor,
                             worldPoint);
 
+                    consumedStreetFurnitureFeatureIds.Add(
+                        "osm-street-furniture-" +
+                            control.NodeId);
+
                     requests.Add(
                         new MapStudioGeneratedSceneryPlacementRequest(
                             "osm-traffic-signal-" +
@@ -1609,6 +1626,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     junction.Position.Z +
                         armUz *
                         placementDistance);
+
+            consumedStreetFurnitureFeatureIds.Add(
+                "osm-street-furniture-" +
+                    control.NodeId);
 
             requests.Add(
                 new MapStudioGeneratedSceneryPlacementRequest(
