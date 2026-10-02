@@ -103,6 +103,143 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
     }
 
     [Fact]
+    public async Task ResolverPrefersOriginalOmsiRoadOverExactAddonAndRoadKitFallback()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-original-road-priority-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            await new MapStudioRoadKitGenerator()
+                .InstallOrUpdateAsync(
+                    root);
+
+            var exactAddonSource =
+                Path.Combine(
+                    root,
+                    MapStudioStandardRoadCatalog
+                        .RoadTwoLane
+                        .RelativePath
+                        .Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+            var originalSource =
+                Path.Combine(
+                    root,
+                    MapStudioStandardRoadCatalog
+                        .RoadTwoLaneWithSidewalk
+                        .RelativePath
+                        .Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+            var addonRelativePath =
+                @"Splines\Addon\road_exact_7m.sli";
+
+            var addonPath =
+                Path.Combine(
+                    root,
+                    addonRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    addonPath)!);
+
+            File.Copy(
+                exactAddonSource,
+                addonPath,
+                overwrite:
+                    true);
+
+            var originalRelativePath =
+                @"Splines\Marcel\str_2spur_11m_SeeburgerStr1.sli";
+
+            var originalPath =
+                Path.Combine(
+                    root,
+                    originalRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    originalPath)!);
+
+            File.Copy(
+                originalSource,
+                originalPath,
+                overwrite:
+                    true);
+
+            OmsiAssetIndexEntry Entry(
+                string relativePath,
+                string fullPath) =>
+                new(
+                    relativePath,
+                    OmsiAssetKind.Spline,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(
+                        fullPath)
+                        .Ticks);
+
+            var matches =
+                await new MapStudioOmsiRoadSplineResolver()
+                    .ResolveAsync(
+                        root,
+                        [
+                            Entry(
+                                addonRelativePath,
+                                addonPath),
+                            Entry(
+                                originalRelativePath,
+                                originalPath)
+                        ],
+                        [
+                            MapStudioStandardRoadCatalog
+                                .RoadTwoLane
+                        ]);
+
+            var match =
+                Assert.Single(
+                    matches);
+
+            Assert.Equal(
+                originalRelativePath,
+                match.Value.RelativePath,
+                ignoreCase:
+                    true);
+
+            Assert.DoesNotContain(
+                "Addon",
+                match.Value.RelativePath,
+                StringComparison.OrdinalIgnoreCase);
+
+            Assert.DoesNotContain(
+                MapStudioRoadKitGenerator
+                    .PackFolderName,
+                match.Value.RelativePath,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ResolverSelectsCompatibleInstalledSplineByPhysicalProfile()
     {
         var root =
