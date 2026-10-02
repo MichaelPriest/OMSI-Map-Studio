@@ -137,8 +137,9 @@ public sealed class MapStudioOsmStreetFurnitureImporter
                         tags.GetValueOrDefault("name")),
                     Clean(
                         tags.GetValueOrDefault("operator")),
-                    Clean(
-                        tags.GetValueOrDefault("ref")),
+                    ResolveReference(
+                        tags,
+                        kind),
                     Clean(
                         tags.GetValueOrDefault("shelter_type")),
                     ParseDirection(
@@ -243,6 +244,14 @@ public sealed class MapStudioOsmStreetFurnitureImporter
             string.Equals(
                 highway,
                 "traffic_sign",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                highway,
+                "stop",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                highway,
+                "give_way",
                 StringComparison.OrdinalIgnoreCase))
         {
             kind =
@@ -352,6 +361,55 @@ public sealed class MapStudioOsmStreetFurnitureImporter
                 group =>
                     group.Last().Value,
                 StringComparer.OrdinalIgnoreCase);
+
+    private static string? ResolveReference(
+        IReadOnlyDictionary<string, string?> tags,
+        MapStudioOsmStreetFurnitureKind kind)
+    {
+        var reference =
+            Clean(
+                tags.GetValueOrDefault(
+                    "ref"));
+
+        if (
+            kind !=
+                MapStudioOsmStreetFurnitureKind
+                    .TrafficSign)
+        {
+            return reference;
+        }
+
+        var trafficSign =
+            Clean(
+                tags.GetValueOrDefault(
+                    "traffic_sign"));
+
+        if (!string.IsNullOrWhiteSpace(
+                trafficSign))
+        {
+            return trafficSign;
+        }
+
+        var highway =
+            Clean(
+                tags.GetValueOrDefault(
+                    "highway"));
+
+        if (
+            string.Equals(
+                highway,
+                "stop",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                highway,
+                "give_way",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return highway;
+        }
+
+        return reference;
+    }
 
     private static double? ParseDirection(
         string? value)
@@ -524,7 +582,10 @@ public sealed class MapStudioOsmStreetFurnitureReconstructionAdapter
                 MapStudioOsmStreetFurnitureKind.UtilityPole =>
                     0.86,
                 MapStudioOsmStreetFurnitureKind.TrafficSign =>
-                    0.84,
+                    string.IsNullOrWhiteSpace(
+                        point.Reference)
+                        ? 0.78
+                        : 0.94,
                 MapStudioOsmStreetFurnitureKind.BusShelter =>
                     0.82,
                 MapStudioOsmStreetFurnitureKind.Bench =>
