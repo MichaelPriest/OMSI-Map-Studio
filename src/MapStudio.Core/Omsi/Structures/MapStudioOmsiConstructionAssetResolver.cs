@@ -500,6 +500,13 @@ public sealed class MapStudioOmsiRoadSplineResolver
                 double.PositiveInfinity;
 
             CandidateMeasurement?
+                bestOriginalStrict =
+                    null;
+
+            var bestOriginalStrictScore =
+                double.PositiveInfinity;
+
+            CandidateMeasurement?
                 bestOriginalFallback =
                     null;
 
@@ -575,15 +582,30 @@ public sealed class MapStudioOmsiRoadSplineResolver
 
                 if (
                     widthError <=
-                        allowedWidthError &&
-                    score <
-                        bestScore)
+                        allowedWidthError)
                 {
-                    best =
-                        candidate;
+                    if (
+                        score <
+                            bestScore)
+                    {
+                        best =
+                            candidate;
 
-                    bestScore =
-                        score;
+                        bestScore =
+                            score;
+                    }
+
+                    if (
+                        candidate.OriginalOmsiRoad &&
+                        score <
+                            bestOriginalStrictScore)
+                    {
+                        bestOriginalStrict =
+                            candidate;
+
+                        bestOriginalStrictScore =
+                            score;
+                    }
                 }
 
                 var originalFallbackWidthError =
@@ -608,8 +630,9 @@ public sealed class MapStudioOmsiRoadSplineResolver
             }
 
             var selected =
-                best ??
-                bestOriginalFallback;
+                bestOriginalStrict ??
+                bestOriginalFallback ??
+                best;
 
             if (selected is null)
             {
@@ -619,9 +642,13 @@ public sealed class MapStudioOmsiRoadSplineResolver
             var selectedScore =
                 ReferenceEquals(
                     selected,
-                    best)
-                    ? bestScore
-                    : bestOriginalFallbackScore;
+                    bestOriginalStrict)
+                    ? bestOriginalStrictScore
+                    : ReferenceEquals(
+                        selected,
+                        bestOriginalFallback)
+                        ? bestOriginalFallbackScore
+                        : bestScore;
 
             resolved[
                 profile.Key] =
