@@ -98,35 +98,22 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
         }
 
         if (
-            string.Equals(
-                normalizedReference,
-                "stop",
-                StringComparison.Ordinal))
+            normalizedReference is
+                "stop" or
+                "br r 1")
         {
-            return
-                ContainsToken(
-                    normalizedPath,
-                    "stop") ||
-                ContainsToken(
-                    normalizedPath,
-                    "206");
+            return MatchesStopSignAsset(
+                normalizedPath);
         }
 
         if (
             normalizedReference is
                 "give way" or
-                "yield")
+                "yield" or
+                "br r 2")
         {
-            return
-                ContainsToken(
-                    normalizedPath,
-                    "give way") ||
-                ContainsToken(
-                    normalizedPath,
-                    "yield") ||
-                ContainsToken(
-                    normalizedPath,
-                    "205");
+            return MatchesGiveWaySignAsset(
+                normalizedPath);
         }
 
         var numericTokens =
@@ -172,6 +159,27 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                             normalizedPath,
                             token));
     }
+
+    private static bool MatchesStopSignAsset(
+        string normalizedPath) =>
+        ContainsToken(
+            normalizedPath,
+            "stop") ||
+        ContainsToken(
+            normalizedPath,
+            "206");
+
+    private static bool MatchesGiveWaySignAsset(
+        string normalizedPath) =>
+        ContainsToken(
+            normalizedPath,
+            "give way") ||
+        ContainsToken(
+            normalizedPath,
+            "yield") ||
+        ContainsToken(
+            normalizedPath,
+            "205");
 
     private static bool IsAllowedGroup(
         OmsiAssetLibraryGroup group,
