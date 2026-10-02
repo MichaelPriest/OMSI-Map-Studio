@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.133: reuse the persistent OMSI asset index instead of rescanning on every automatic generation.
+# Test 10.134: prefer geometrically compatible stock junctions with native OMSI traffic-light programs for signalized OSM intersections.
 
 on:
   push:
@@ -236,6 +236,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.132-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.133-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.133-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.134-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.134-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -261,8 +263,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.133-native
-  TAG: v0.2.0-alpha.5-test.10.133-native
+  VERSION: 0.2.0-alpha.5-test.10.134-native
+  TAG: v0.2.0-alpha.5-test.10.134-native
 
 jobs:
   build-native-preview:
@@ -5798,6 +5800,69 @@ jobs:
 
           Write-Host "Verified zero-scan cached OMSI catalog reuse and explicit full reindex fallback."
 
+      - name: Verify test 10.134 functional stock traffic-controlled junction preference
+        shell: pwsh
+        run: |
+          $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiJunctionResolver.cs -Raw
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $resolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiJunctionResolverTests.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+
+          foreach ($required in @(
+            'PreferFunctionalTrafficControl',
+            'HasFunctionalTrafficControl',
+            'TrafficLightControllers',
+            'TrafficLightIndex',
+            'IsBetterMatch'
+          )) {
+            if (-not $resolver.Contains($required)) {
+              throw "Test 10.134 functional stock junction resolver marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ResolveSignalizedJunctionNodeIds',
+            'MaximumJunctionControlAssociationDistanceMeters',
+            'PreferFunctionalTrafficControl:',
+            'FunctionalStockTrafficControlledJunctionCount'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.134 OSM signalized-junction propagation marker is missing: $required"
+            }
+          }
+
+          if (-not $pipeline.Contains('FunctionalStockTrafficControlledJunctionCount') -or
+              -not $pipeline.Contains('controle semafórico OMSI')) {
+            throw "Test 10.134 pipeline functional-junction reporting is missing."
+          }
+
+          foreach ($required in @(
+            'ResolverPrefersFunctionalTrafficControlledStockJunctionWhenRequested',
+            'withTrafficControl',
+            '[use_traffic_light]',
+            '[traffic_lights_group]',
+            '[traffic_light]',
+            '[phase]'
+          )) {
+            if (-not $resolverTests.Contains($required)) {
+              throw "Test 10.134 functional resolver regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadRunnerPrefersFunctionalStockJunctionForSignalizedOsmIntersection',
+            'ControlledWideJunctionXml',
+            'FunctionalStockTrafficControlledJunctionCount',
+            'Kreuz_Z_Signal_4arm.sco'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.134 OSM-to-functional-junction regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified signalized OSM targets prefer physically compatible stock junctions with native OMSI traffic programs."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5990,11 +6055,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.133-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.134-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.133-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.134-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
