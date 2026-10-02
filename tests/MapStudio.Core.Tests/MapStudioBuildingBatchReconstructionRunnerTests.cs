@@ -1,6 +1,7 @@
 using System.Text;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Config;
+using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Structures;
 using Xunit;
@@ -193,6 +194,157 @@ public sealed class MapStudioBuildingBatchReconstructionRunnerTests
                 Directory.Delete(
                     root,
                     recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task RunAsyncPrefersOriginalOmsiBuildingObjectBeforeProceduralFallback()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-building-stock-priority-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                Path.Combine(
+                    root,
+                    "maps",
+                    "BuildingStockPriorityTest");
+
+            Directory.CreateDirectory(
+                mapDirectory);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    mapDirectory,
+                    "global.cfg"),
+                "[name]\r\nBuilding Stock Priority Test\r\n" +
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n",
+                Encoding.UTF8);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            await File.WriteAllTextAsync(
+                tilePath,
+                "[version]\r\n14\r\n",
+                Encoding.UTF8);
+
+            var stockRelativePath =
+                @"Sceneryobjects\Buildings_MC\bw_50s_01.sco";
+
+            var stockPath =
+                Path.Combine(
+                    root,
+                    stockRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    stockPath)!);
+
+            await File.WriteAllTextAsync(
+                stockPath,
+                "[friendlyname]\r\nOriginal OMSI Building\r\n",
+                Encoding.ASCII);
+
+            var stockEntry =
+                new OmsiAssetIndexEntry(
+                    stockRelativePath,
+                    OmsiAssetKind.SceneryObject,
+                    new FileInfo(stockPath).Length,
+                    File.GetLastWriteTimeUtc(
+                        stockPath)
+                        .Ticks);
+
+            const string xml =
+                """
+                <osm version="0.6">
+                  <node id="1" lat="-23.55000" lon="-46.63000"/>
+                  <node id="2" lat="-23.55000" lon="-46.62990"/>
+                  <node id="3" lat="-23.55008" lon="-46.62990"/>
+                  <node id="4" lat="-23.55008" lon="-46.63000"/>
+                  <way id="100">
+                    <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><nd ref="1"/>
+                    <tag k="building" v="apartments"/>
+                    <tag k="building:levels" v="4"/>
+                    <tag k="height" v="14"/>
+                    <tag k="roof:shape" v="hipped"/>
+                    <tag k="roof:height" v="2"/>
+                    <tag k="name" v="Edificio Stock"/>
+                    <tag k="addr:street" v="Rua Teste"/>
+                    <tag k="addr:housenumber" v="100"/>
+                  </way>
+                </osm>
+                """;
+
+            var result =
+                await new MapStudioBuildingBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        xml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50),
+                        installedAssets:
+                            [stockEntry]);
+
+            var placement =
+                Assert.Single(
+                    result.Placements);
+
+            Assert.Equal(
+                1,
+                result.InstalledOmsiBuildingCount);
+
+            Assert.Equal(
+                0,
+                result.ProceduralBuildingCount);
+
+            Assert.Equal(
+                stockRelativePath,
+                placement.SceneryObjectPath,
+                ignoreCase:
+                    true);
+
+            Assert.DoesNotContain(
+                "MapStudio_Buildings",
+                placement.SceneryObjectPath,
+                StringComparison.OrdinalIgnoreCase);
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        tilePath);
+
+            var placedObject =
+                Assert.Single(
+                    content.Objects);
+
+            Assert.Equal(
+                stockRelativePath,
+                placedObject.SceneryObjectPath,
+                ignoreCase:
+                    true);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
             }
         }
     }
