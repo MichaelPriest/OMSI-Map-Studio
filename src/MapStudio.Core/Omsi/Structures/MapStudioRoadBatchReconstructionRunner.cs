@@ -895,7 +895,16 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             out var installedJunction))
                 {
                     junctionAssetPath =
-                        installedJunction.RelativePath;
+                        Path.Combine(
+                            root,
+                            installedJunction
+                                .RelativePath
+                                .Replace(
+                                    '/',
+                                    Path.DirectorySeparatorChar)
+                                .Replace(
+                                    '\\',
+                                    Path.DirectorySeparatorChar));
 
                     junctionRotation =
                         installedJunction.RotationDegrees;

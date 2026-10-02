@@ -192,14 +192,25 @@ public sealed class MapStudioOmsiJunctionResolver
                 continue;
             }
 
+            var normalizedRotation =
+                NormalizeAngle(
+                    rotation);
+
+            var minimalRotation =
+                Math.Min(
+                    normalizedRotation,
+                    360.0 -
+                    normalizedRotation);
+
             var score =
                 angularError / targetArms.Length +
-                widthError / targetArms.Length * 1.5;
+                widthError / targetArms.Length * 1.5 +
+                minimalRotation * 0.001;
 
             var match = new MapStudioOmsiJunctionMatch(
                 target.NodeId,
                 candidate.RelativePath,
-                NormalizeAngle(rotation),
+                normalizedRotation,
                 score,
                 trims,
                 mouths.Length);
