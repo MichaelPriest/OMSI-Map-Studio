@@ -445,12 +445,29 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                 anchor,
                 elevation);
 
+        var requiresRoadKit =
+            placementSegments.Any(
+                segment =>
+                    IsRoadKitSplinePath(
+                        segment.ProfileId));
+
         var roadKit =
-            await new MapStudioRoadKitGenerator()
-                .InstallOrUpdateAsync(
-                    root,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            requiresRoadKit
+                ? await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root,
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                : new MapStudioRoadKitInstallResult(
+                    Path.Combine(
+                        root,
+                        "Splines",
+                        MapStudioRoadKitGenerator
+                            .PackFolderName),
+                    BackupDirectory:
+                        null,
+                    Array.Empty<string>(),
+                    Array.Empty<string>());
 
         var tiles =
             new Dictionary<
@@ -2654,6 +2671,28 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             throw new InvalidDataException(
                 $"realWorldRoadSplineEndpointMismatch trace={placement.Segment.TraceId} segment={placement.Segment.Id} error={error:G17}");
         }
+    }
+
+    private static bool IsRoadKitSplinePath(
+        string? path)
+    {
+        if (string.IsNullOrWhiteSpace(
+                path))
+        {
+            return false;
+        }
+
+        var normalized =
+            path.Replace(
+                '/',
+                '\\');
+
+        return normalized.Contains(
+            "\\" +
+            MapStudioRoadKitGenerator
+                .PackFolderName +
+            "\\",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static double ResolveRotationDegrees(
