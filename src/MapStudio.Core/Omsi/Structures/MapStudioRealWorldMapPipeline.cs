@@ -30,8 +30,9 @@ public sealed record MapStudioRealWorldMapPipelineResult(
 {
     public int PlacedElementCount =>
         Roads.PlacedSplineCount +
-        Roads.GeneratedJunctionCount +
+        Roads.JunctionPlacements.Count +
         Roads.GeneratedStructureCount +
+        Roads.JunctionAccessoryCount +
         Scene.PlacedObjectCount;
 }
 
@@ -205,7 +206,11 @@ public sealed class MapStudioRealWorldMapPipeline
                 catalog.ConstructionAssets
                     .RoadSplines,
                 catalog.ConstructionAssets
-                    .JunctionObjects)
+                    .JunctionObjects,
+                catalog.ConstructionAssets
+                    .TrafficSignalObjects,
+                catalog.ConstructionAssets
+                    .CrosswalkAssets)
             .ConfigureAwait(false);
     }
 
@@ -315,7 +320,11 @@ public sealed class MapStudioRealWorldMapPipeline
                 catalog.ConstructionAssets
                     .RoadSplines,
                 catalog.ConstructionAssets
-                    .JunctionObjects)
+                    .JunctionObjects,
+                catalog.ConstructionAssets
+                    .TrafficSignalObjects,
+                catalog.ConstructionAssets
+                    .CrosswalkAssets)
             .ConfigureAwait(false);
     }
 
@@ -383,7 +392,11 @@ public sealed class MapStudioRealWorldMapPipeline
                 catalog.ConstructionAssets
                     .RoadSplines,
                 catalog.ConstructionAssets
-                    .JunctionObjects)
+                    .JunctionObjects,
+                catalog.ConstructionAssets
+                    .TrafficSignalObjects,
+                catalog.ConstructionAssets
+                    .CrosswalkAssets)
             .ConfigureAwait(false);
     }
 
@@ -410,7 +423,11 @@ public sealed class MapStudioRealWorldMapPipeline
             IReadOnlyList<OmsiAssetIndexEntry>?
                 roadSplineAssets = null,
             IReadOnlyList<OmsiAssetIndexEntry>?
-                junctionObjectAssets = null)
+                junctionObjectAssets = null,
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                trafficSignalObjectAssets = null,
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                crosswalkAssets = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -561,7 +578,9 @@ public sealed class MapStudioRealWorldMapPipeline
                         cancellationToken,
                         elevation,
                         roadSplineAssets,
-                        junctionObjectAssets)
+                        junctionObjectAssets,
+                        trafficSignalObjectAssets,
+                        crosswalkAssets)
                     .ConfigureAwait(false);
 
             progress?.Report(
@@ -571,7 +590,9 @@ public sealed class MapStudioRealWorldMapPipeline
                     $"Vias montadas · {roads.InstalledOmsiSplineCount} trecho(s) com SLI instalada do OMSI · " +
                     $"{roads.RoadKitFallbackSplineCount} fallback(s) do Road Kit · " +
                     $"{roads.InstalledOmsiJunctionCount} cruzamento(s) stock OMSI · " +
-                    $"{roads.GeneratedJunctionCount} cruzamento(s) gerado(s)."));
+                    $"{roads.GeneratedJunctionCount} cruzamento(s) gerado(s) · " +
+                    $"{roads.InstalledTrafficSignalCount} semáforo(s) stock · " +
+                    $"{roads.InstalledCrosswalkCount} travessia(s) stock."));
 
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(
@@ -627,7 +648,7 @@ public sealed class MapStudioRealWorldMapPipeline
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
                         .Completed,
-                    $"Mapa real concluído: {roads.PlacedSplineCount} spline(s) de via, {roads.GeneratedJunctionCount} junction(s), {roads.GeneratedStructureCount} estrutura(s) viária(s) e {scene.PlacedObjectCount} objeto(s) de cenário."));
+                    $"Mapa real concluído: {roads.PlacedSplineCount} spline(s) de via, {roads.JunctionPlacements.Count} junction(s), {roads.JunctionAccessoryCount} controle(s) viário(s) stock, {roads.GeneratedStructureCount} estrutura(s) viária(s) e {scene.PlacedObjectCount} objeto(s) de cenário."));
 
             return result;
         }
