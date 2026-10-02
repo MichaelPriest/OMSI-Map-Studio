@@ -146,6 +146,67 @@ public sealed class MapStudioExtendedStreetFurnitureTests
     }
 
     [Fact]
+    public void SuggesterMatchesExplicitPrioritySignsAndRejectsUnrelatedStockSign()
+    {
+        var assets =
+            new[]
+            {
+                Asset(
+                    @"Sceneryobjects\Verkehrszeichen_MC\VZ_205.sco"),
+                Asset(
+                    @"Sceneryobjects\Verkehrszeichen_MC\VZ_206.sco"),
+                Asset(
+                    @"Sceneryobjects\Verkehrszeichen_MC\VZ_274_30.sco")
+            };
+
+        OmsiAssetIndexEntry? Select(
+            string reference) =>
+            new MapStudioStreetFurnitureAssetSuggester()
+                .Suggest(
+                    assets,
+                    new MapStudioGeoStreetFurniturePoint(
+                        "sign-" +
+                            reference,
+                        -23.55,
+                        -46.63,
+                        MapStudioOsmStreetFurnitureKind
+                            .TrafficSign,
+                        null,
+                        null,
+                        reference,
+                        null,
+                        90));
+
+        Assert.Equal(
+            @"Sceneryobjects\Verkehrszeichen_MC\VZ_206.sco",
+            Select(
+                "stop")
+                ?.RelativePath);
+
+        Assert.Equal(
+            @"Sceneryobjects\Verkehrszeichen_MC\VZ_205.sco",
+            Select(
+                "give_way")
+                ?.RelativePath);
+
+        Assert.Equal(
+            @"Sceneryobjects\Verkehrszeichen_MC\VZ_206.sco",
+            Select(
+                "DE:206")
+                ?.RelativePath);
+
+        Assert.Equal(
+            @"Sceneryobjects\Verkehrszeichen_MC\VZ_274_30.sco",
+            Select(
+                "DE:274-30")
+                ?.RelativePath);
+
+        Assert.Null(
+            Select(
+                "BR:R-1"));
+    }
+
+    [Fact]
     public void AdapterMapsExtendedFurnitureToDedicatedSceneKinds()
     {
         var points =
