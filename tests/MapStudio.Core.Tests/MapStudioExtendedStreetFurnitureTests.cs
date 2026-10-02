@@ -216,6 +216,16 @@ public sealed class MapStudioExtendedStreetFurnitureTests
         Assert.Null(
             Select(
                 "BR:R-3"));
+
+        Assert.Equal(
+            @"Sceneryobjects\Verkehrszeichen_MC\VZ_274_30.sco",
+            Select(
+                "maxspeed 30")
+                ?.RelativePath);
+
+        Assert.Null(
+            Select(
+                "maxspeed 50"));
     }
 
     [Fact]
