@@ -30,7 +30,8 @@ public sealed record MapStudioRealWorldMapPipelineResult(
 {
     public int PlacedElementCount =>
         Roads.PlacedSplineCount +
-        Roads.JunctionPlacements.Count +
+        Roads.GeneratedJunctionCount +
+        Roads.InstalledOmsiJunctionCount +
         Roads.GeneratedStructureCount +
         Roads.JunctionAccessoryCount +
         Scene.PlacedObjectCount;
