@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.135: place explicit OSM traffic signs with safe stock matching and way-derived orientation.
+# Test 10.136: map Brazilian R-1/R-2 to safe stock STOP/GIVE-WAY equivalents.
 
 on:
   push:
@@ -240,6 +240,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.134-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.135-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.135-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.136-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.136-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -265,8 +267,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.135-native
-  TAG: v0.2.0-alpha.5-test.10.135-native
+  VERSION: 0.2.0-alpha.5-test.10.136-native
+  TAG: v0.2.0-alpha.5-test.10.136-native
 
 jobs:
   build-native-preview:
@@ -5961,6 +5963,55 @@ jobs:
 
           Write-Host "Verified explicit OSM STOP/GIVE_WAY acquisition, safe stock VZ matching, way-relative direction and conservative ambiguity handling."
 
+      - name: Verify test 10.136 Brazilian priority-sign equivalents
+        shell: pwsh
+        run: |
+          $suggester = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioStreetFurnitureAssetSuggester.cs -Raw
+          $extendedTests = Get-Content tests/MapStudio.Core.Tests/MapStudioExtendedStreetFurnitureTests.cs -Raw
+          $batchTests = Get-Content tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs -Raw
+
+          foreach ($required in @(
+            'br r 1',
+            'br r 2',
+            'MatchesStopSignAsset',
+            'MatchesGiveWaySignAsset',
+            '"206"',
+            '"205"'
+          )) {
+            if (-not $suggester.Contains($required)) {
+              throw "Test 10.136 Brazilian priority-sign matcher marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SuggesterMatchesExplicitPrioritySignsAndRejectsUnrelatedStockSign',
+            'BR:R-1',
+            'BR:R-2',
+            'BR:R-3',
+            'VZ_206.sco',
+            'VZ_205.sco'
+          )) {
+            if (-not $extendedTests.Contains($required)) {
+              throw "Test 10.136 Brazilian sign matcher regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAsyncPlacesBrazilianR1AndR2UsingCompatibleStockSigns',
+            'BR:R-1',
+            'BR:R-2',
+            'BR:R-3',
+            'VZ_206.sco',
+            'VZ_205.sco',
+            'MissingAssetFeatureIds'
+          )) {
+            if (-not $batchTests.Contains($required)) {
+              throw "Test 10.136 Brazilian sign tile round-trip regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified Brazilian R-1/R-2 use only known-compatible stock STOP/GIVE-WAY assets while unrelated codes remain unmatched."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6153,11 +6204,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.135-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.136-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.135-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.136-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
