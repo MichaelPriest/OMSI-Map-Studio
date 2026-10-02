@@ -174,11 +174,11 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
               <node id="1" lat="-23.5500" lon="-46.6302"/>
               <node id="10" lat="-23.5500" lon="-46.6300">
                 <tag k="highway" v="stop"/>
-                <tag k="direction" v="forward"/>
+                <tag k="stop:direction" v="forward"/>
               </node>
               <node id="20" lat="-23.5500" lon="-46.6298">
                 <tag k="highway" v="give_way"/>
-                <tag k="direction" v="backward"/>
+                <tag k="give_way:direction" v="backward"/>
               </node>
               <node id="30" lat="-23.5500" lon="-46.6296"/>
               <way id="100">
