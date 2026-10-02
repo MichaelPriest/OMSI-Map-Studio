@@ -23,7 +23,7 @@ public sealed record MapStudioOmsiJunctionMatch(
 
 public sealed class MapStudioOmsiJunctionResolver
 {
-    private const double MouthClusterDegrees = 24.0;
+    private const double MouthClusterDegrees = 30.0;
     private const double MaximumArmAngularErrorDegrees = 15.0;
 
     private readonly OmsiSceneryObjectReader _reader = new();
