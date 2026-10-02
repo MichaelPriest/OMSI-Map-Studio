@@ -5880,8 +5880,8 @@ jobs:
             'PreviousCacheSchemaVersion',
             'osm-layers-v2',
             'osm-layers-v3',
-            'node["highway"="stop"]',
-            'node["highway"="give_way"]'
+            'node[\"highway\"=\"stop\"]',
+            'node[\"highway\"=\"give_way\"]'
           )) {
             if (-not $layered.Contains($required)) {
               throw "Test 10.135 OSM traffic-sign acquisition marker is missing: $required"
@@ -5916,8 +5916,8 @@ jobs:
           }
 
           foreach ($required in @(
-            'node["highway"="stop"]',
-            'node["highway"="give_way"]'
+            'node[\"highway\"=\"stop\"]',
+            'node[\"highway\"=\"give_way\"]'
           )) {
             if (-not $layeredTests.Contains($required)) {
               throw "Test 10.135 layered sign selector regression is missing: $required"
