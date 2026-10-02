@@ -398,6 +398,22 @@ public sealed class MapStudioOsmStreetFurnitureImporter
         if (!string.IsNullOrWhiteSpace(
                 trafficSign))
         {
+            if (
+                TryResolveExplicitMaxSpeedReference(
+                    tags,
+                    trafficSign,
+                    out var maxSpeedReference))
+            {
+                return maxSpeedReference;
+            }
+
+            if (
+                IsMaxSpeedTrafficSign(
+                    trafficSign))
+            {
+                return null;
+            }
+
             return trafficSign;
         }
 
@@ -420,6 +436,191 @@ public sealed class MapStudioOsmStreetFurnitureImporter
         }
 
         return reference;
+    }
+
+    private static bool
+        TryResolveExplicitMaxSpeedReference(
+            IReadOnlyDictionary<string, string?> tags,
+            string trafficSign,
+            out string reference)
+    {
+        reference =
+            string.Empty;
+
+        if (
+            !IsMaxSpeedTrafficSign(
+                trafficSign))
+        {
+            return false;
+        }
+
+        if (
+            !TryExtractBracketedMaxSpeed(
+                trafficSign,
+                out var speedKph) &&
+            !TryParseExplicitMaxSpeedKph(
+                tags.GetValueOrDefault(
+                    "maxspeed"),
+                out speedKph))
+        {
+            return false;
+        }
+
+        reference =
+            "maxspeed " +
+            speedKph.ToString(
+                CultureInfo.InvariantCulture);
+
+        return true;
+    }
+
+    private static bool IsMaxSpeedTrafficSign(
+        string trafficSign)
+    {
+        var normalized =
+            Clean(
+                trafficSign);
+
+        if (
+            string.IsNullOrWhiteSpace(
+                normalized))
+        {
+            return false;
+        }
+
+        return
+            string.Equals(
+                normalized,
+                "maxspeed",
+                StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith(
+                "BR:R-19",
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryExtractBracketedMaxSpeed(
+        string trafficSign,
+        out int speedKph)
+    {
+        speedKph =
+            0;
+
+        var open =
+            trafficSign.IndexOf(
+                '[');
+
+        if (open < 0)
+        {
+            return false;
+        }
+
+        var close =
+            trafficSign.IndexOf(
+                ']',
+                open + 1);
+
+        if (
+            close <=
+                open + 1)
+        {
+            return false;
+        }
+
+        return TryParseExplicitMaxSpeedKph(
+            trafficSign[
+                (open + 1)..close],
+            out speedKph);
+    }
+
+    private static bool TryParseExplicitMaxSpeedKph(
+        string? value,
+        out int speedKph)
+    {
+        speedKph =
+            0;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                value))
+        {
+            return false;
+        }
+
+        var normalized =
+            value
+                .Trim()
+                .ToLowerInvariant();
+
+        foreach (
+            var suffix in
+                new[]
+                {
+                    "km/h",
+                    "kmh",
+                    "kph"
+                })
+        {
+            if (
+                normalized.EndsWith(
+                    suffix,
+                    StringComparison.Ordinal))
+            {
+                normalized =
+                    normalized[
+                        ..^suffix.Length]
+                        .Trim();
+
+                break;
+            }
+        }
+
+        if (
+            normalized.Any(
+                char.IsLetter) ||
+            normalized.Contains(
+                ';',
+                StringComparison.Ordinal) ||
+            normalized.Contains(
+                '|',
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (
+            !double.TryParse(
+                normalized,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var parsed) ||
+            !double.IsFinite(
+                parsed) ||
+            parsed <
+                5 ||
+            parsed >
+                200)
+        {
+            return false;
+        }
+
+        var rounded =
+            (int)Math.Round(
+                parsed,
+                MidpointRounding.AwayFromZero);
+
+        if (
+            Math.Abs(
+                parsed -
+                rounded) >
+            0.01)
+        {
+            return false;
+        }
+
+        speedKph =
+            rounded;
+
+        return true;
     }
 
     private static IReadOnlyDictionary<
