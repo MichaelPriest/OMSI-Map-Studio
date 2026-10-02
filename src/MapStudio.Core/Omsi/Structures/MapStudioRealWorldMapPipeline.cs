@@ -203,7 +203,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 elevation,
                 buildingVisualEvidenceProvider,
                 catalog.ConstructionAssets
-                    .RoadSplines)
+                    .RoadSplines,
+                catalog.ConstructionAssets
+                    .JunctionObjects)
             .ConfigureAwait(false);
     }
 
@@ -311,7 +313,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 elevation,
                 buildingVisualEvidenceProvider,
                 catalog.ConstructionAssets
-                    .RoadSplines)
+                    .RoadSplines,
+                catalog.ConstructionAssets
+                    .JunctionObjects)
             .ConfigureAwait(false);
     }
 
@@ -377,7 +381,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 elevation,
                 buildingVisualEvidenceProvider,
                 catalog.ConstructionAssets
-                    .RoadSplines)
+                    .RoadSplines,
+                catalog.ConstructionAssets
+                    .JunctionObjects)
             .ConfigureAwait(false);
     }
 
@@ -402,7 +408,9 @@ public sealed class MapStudioRealWorldMapPipeline
             IMapStudioBuildingVisualEvidenceProvider?
                 buildingVisualEvidenceProvider = null,
             IReadOnlyList<OmsiAssetIndexEntry>?
-                roadSplineAssets = null)
+                roadSplineAssets = null,
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                junctionObjectAssets = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -552,7 +560,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         anchor,
                         cancellationToken,
                         elevation,
-                        roadSplineAssets)
+                        roadSplineAssets,
+                        junctionObjectAssets)
                     .ConfigureAwait(false);
 
             progress?.Report(
@@ -560,7 +569,9 @@ public sealed class MapStudioRealWorldMapPipeline
                     MapStudioRealWorldMapPipelineStage
                         .GeneratingRoads,
                     $"Vias montadas · {roads.InstalledOmsiSplineCount} trecho(s) com SLI instalada do OMSI · " +
-                    $"{roads.RoadKitFallbackSplineCount} fallback(s) do Road Kit."));
+                    $"{roads.RoadKitFallbackSplineCount} fallback(s) do Road Kit · " +
+                    $"{roads.InstalledOmsiJunctionCount} cruzamento(s) stock OMSI · " +
+                    $"{roads.GeneratedJunctionCount} cruzamento(s) gerado(s)."));
 
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(

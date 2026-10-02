@@ -1,6 +1,7 @@
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Config;
+using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
@@ -46,12 +47,34 @@ public sealed record MapStudioRoadBatchReconstructionResult(
         Placements.Count -
         InstalledOmsiSplineCount;
 
+    public int InstalledOmsiJunctionCount =>
+        JunctionPlacements.Count(
+            placement =>
+                !IsGeneratedJunctionPath(
+                    placement.SceneryObjectPath));
+
     public int GeneratedJunctionCount =>
-        JunctionPlacements.Count;
+        JunctionPlacements.Count -
+        InstalledOmsiJunctionCount;
 
     public int GeneratedStructureCount =>
         StructurePlacements?.Count ??
         0;
+
+    private static bool IsGeneratedJunctionPath(
+        string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var normalized = path.Replace('/', '\\');
+
+        return normalized.Contains(
+            @"\" + MapStudioJunctionAssetGenerator.RootFolderName + @"\",
+            StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool IsRoadKitSplinePath(
         string path)
@@ -129,8 +152,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             MapStudioGeographicAnchor anchor,
             CancellationToken cancellationToken = default,
             MapStudioGeoreferencedElevationSurface? elevation = null,
-            IReadOnlyList<MapStudio.Core.Omsi.Indexing.OmsiAssetIndexEntry>?
-                installedRoadSplines = null)
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                installedRoadSplines = null,
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                installedJunctionObjects = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -312,6 +337,33 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                     item.Segment)
                             .ToArray());
 
+        IReadOnlyDictionary<int, MapStudioOmsiJunctionMatch>
+            installedJunctionMatches =
+                new Dictionary<int, MapStudioOmsiJunctionMatch>();
+
+        if (installedJunctionObjects is { Count: > 0 })
+        {
+            var targets =
+                BuildInstalledJunctionTargets(graph);
+
+            if (targets.Count > 0)
+            {
+                installedJunctionMatches =
+                    await new MapStudioOmsiJunctionResolver()
+                        .ResolveAsync(
+                            root,
+                            installedJunctionObjects,
+                            targets,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+            }
+        }
+
+        var placementSegments =
+            ApplyInstalledJunctionTrims(
+                graph.Segments,
+                installedJunctionMatches);
+
         var structuralElevations =
             BuildStructuralEndpointElevations(
                 graph.Segments,
@@ -389,7 +441,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         var skippedOutside =
             0;
 
-        foreach (var segment in graph.Segments)
+        foreach (var segment in placementSegments)
         {
             var startTile =
                 (
@@ -831,18 +883,44 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         anchor,
                         elevation);
 
-                var asset =
-                    await junctionGenerator
-                        .GenerateAsync(
-                            root,
-                            new MapStudioJunctionSpec(
-                                "OSM Junction " +
-                                    junction.NodeId,
-                                arms,
-                                StructureKind:
-                                    structureKind),
-                            cancellationToken)
-                        .ConfigureAwait(false);
+                string junctionAssetPath;
+                double junctionRotation;
+
+                if (
+                    structureKind ==
+                        MapStudioJunctionStructureKind.Ground &&
+                    installedJunctionMatches
+                        .TryGetValue(
+                            junction.NodeId,
+                            out var installedJunction))
+                {
+                    junctionAssetPath =
+                        installedJunction.RelativePath;
+
+                    junctionRotation =
+                        installedJunction.RotationDegrees;
+                }
+                else
+                {
+                    var asset =
+                        await junctionGenerator
+                            .GenerateAsync(
+                                root,
+                                new MapStudioJunctionSpec(
+                                    "OSM Junction " +
+                                        junction.NodeId,
+                                    arms,
+                                    StructureKind:
+                                        structureKind),
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                    junctionAssetPath =
+                        asset.SceneryObjectPath;
+
+                    junctionRotation =
+                        0;
+                }
 
                 var junctionTerrainHeight =
                     SampleTerrainHeight(
@@ -855,11 +933,13 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     new MapStudioGeneratedSceneryPlacementRequest(
                         "osm-junction-" +
                             junction.NodeId,
-                        asset.SceneryObjectPath,
+                        junctionAssetPath,
                         junction.Position,
                         HeightMeters:
                             junctionHeight -
-                            junctionTerrainHeight));
+                            junctionTerrainHeight,
+                        Rotation:
+                            junctionRotation));
             }
 
             var bridgeAssets =
@@ -1609,6 +1689,202 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             amount,
             0,
             1);
+
+    private static IReadOnlyList<MapStudioOmsiJunctionTarget>
+        BuildInstalledJunctionTargets(
+            MapStudioRoadGraph graph)
+    {
+        var result =
+            new List<MapStudioOmsiJunctionTarget>();
+
+        foreach (var junction in graph.Junctions)
+        {
+            var connected =
+                graph.Segments
+                    .Where(
+                        segment =>
+                            segment.FromNodeId ==
+                                junction.NodeId ||
+                            segment.ToNodeId ==
+                                junction.NodeId)
+                    .Where(
+                        segment =>
+                        {
+                            var profile =
+                                ResolveProfile(
+                                    segment.ProfileId);
+
+                            return profile?.IsPedestrian !=
+                                true;
+                        })
+                    .ToArray();
+
+            if (
+                connected.Length is < 3 or > 6 ||
+                connected.Any(
+                    segment =>
+                    {
+                        var structure =
+                            ResolvePlacementStructure(
+                                segment);
+
+                        return
+                            structure.Bridge ||
+                            structure.Tunnel;
+                    }))
+            {
+                continue;
+            }
+
+            var arms =
+                connected
+                    .Select(
+                        segment =>
+                        {
+                            var other =
+                                segment.FromNodeId ==
+                                    junction.NodeId
+                                    ? segment.End
+                                    : segment.Start;
+
+                            var profile =
+                                ResolveProfile(
+                                    segment.ProfileId);
+
+                            return new MapStudioOmsiJunctionTargetArm(
+                                segment.Id,
+                                ResolveRotationDegrees(
+                                    junction.Position,
+                                    other),
+                                Math.Max(
+                                    segment.WidthMeters ??
+                                        0,
+                                    profile?.TotalWidthMeters ??
+                                        7.0),
+                                segment.LengthMeters);
+                        })
+                    .ToArray();
+
+            result.Add(
+                new MapStudioOmsiJunctionTarget(
+                    junction.NodeId,
+                    arms));
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<MapStudioRoadGraphSegment>
+        ApplyInstalledJunctionTrims(
+            IReadOnlyList<MapStudioRoadGraphSegment> segments,
+            IReadOnlyDictionary<int, MapStudioOmsiJunctionMatch> matches)
+    {
+        if (matches.Count == 0)
+        {
+            return segments;
+        }
+
+        var trims =
+            new Dictionary<
+                int,
+                (double Start, double End)>();
+
+        foreach (var match in matches.Values)
+        {
+            foreach (var pair in match.TrimDistanceBySegmentId)
+            {
+                var segment =
+                    segments.FirstOrDefault(
+                        segment =>
+                            segment.Id ==
+                                pair.Key);
+
+                if (segment is null)
+                {
+                    continue;
+                }
+
+                var current =
+                    trims.GetValueOrDefault(
+                        segment.Id);
+
+                if (segment.FromNodeId == match.NodeId)
+                {
+                    current.Start =
+                        Math.Max(
+                            current.Start,
+                            pair.Value);
+                }
+                else if (segment.ToNodeId == match.NodeId)
+                {
+                    current.End =
+                        Math.Max(
+                            current.End,
+                            pair.Value);
+                }
+
+                trims[segment.Id] =
+                    current;
+            }
+        }
+
+        return segments
+            .Select(
+                segment =>
+                {
+                    if (
+                        !trims.TryGetValue(
+                            segment.Id,
+                            out var trim) ||
+                        (
+                            trim.Start <= 0.001 &&
+                            trim.End <= 0.001
+                        ))
+                    {
+                        return segment;
+                    }
+
+                    var originalLength =
+                        segment.Start
+                            .DistanceTo(
+                                segment.End);
+
+                    if (
+                        originalLength <= 0.001 ||
+                        trim.Start + trim.End >=
+                            originalLength - 0.5)
+                    {
+                        return segment;
+                    }
+
+                    var start =
+                        MapStudioRoadPoint.Lerp(
+                            segment.Start,
+                            segment.End,
+                            trim.Start /
+                                originalLength);
+
+                    var end =
+                        MapStudioRoadPoint.Lerp(
+                            segment.Start,
+                            segment.End,
+                            1.0 -
+                            trim.End /
+                                originalLength);
+
+                    return segment with
+                    {
+                        Start =
+                            start,
+                        End =
+                            end,
+                        LengthMeters =
+                            start.DistanceTo(
+                                end)
+                    };
+                })
+            .ToArray();
+    }
 
     private static MapStudioStandardRoadProfile?
         ResolveProfile(

@@ -6,6 +6,7 @@ using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
+using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Structures;
@@ -803,6 +804,131 @@ public sealed class MapStudioRealWorldRoadPipelineTests
     }
 
     [Fact]
+    public async Task RoadRunnerUsesOriginalOmsiJunctionAndTrimsConnectedSplines()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-stock-junction-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var relativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_Test_4arm.sco";
+
+            MapStudioOmsiJunctionResolverTests
+                .WriteStockJunction(
+                    root,
+                    relativePath,
+                    [0, 90, 180, 270],
+                    8.0);
+
+            var fullPath =
+                Path.Combine(
+                    root,
+                    relativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            var entry =
+                new OmsiAssetIndexEntry(
+                    relativePath,
+                    OmsiAssetKind.SceneryObject,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(fullPath).Ticks);
+
+            var catalog =
+                MapStudioOmsiConstructionAssetClassifier
+                    .Build(
+                        [entry]);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        WideJunctionXml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            150,
+                            150),
+                        installedJunctionObjects:
+                            catalog.JunctionObjects);
+
+            Assert.Equal(
+                1,
+                result.InstalledOmsiJunctionCount);
+
+            Assert.Equal(
+                0,
+                result.GeneratedJunctionCount);
+
+            var junction =
+                Assert.Single(
+                    result.JunctionPlacements);
+
+            Assert.Equal(
+                relativePath,
+                junction.SceneryObjectPath,
+                ignoreCase:
+                    true);
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        Path.Combine(
+                            mapDirectory,
+                            "tile_0_0.map"));
+
+            var placedObject =
+                Assert.Single(
+                    content.Objects);
+
+            Assert.Equal(
+                relativePath,
+                placedObject.SceneryObjectPath,
+                ignoreCase:
+                    true);
+
+            Assert.Equal(
+                4,
+                content.Splines.Count);
+
+            Assert.All(
+                content.Splines,
+                spline =>
+                    Assert.InRange(
+                        spline.Length,
+                        10.0,
+                        18.0));
+
+            Assert.DoesNotContain(
+                content.Objects,
+                item =>
+                    item.SceneryObjectPath.Contains(
+                        MapStudioJunctionAssetGenerator
+                            .RootFolderName,
+                        StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task FullMapPipelineDownloadsOnceAndCreatesRoadsAndScene()
     {
         var root =
@@ -1428,6 +1554,31 @@ public sealed class MapStudioRealWorldRoadPipelineTests
 
           <way id="200">
             <nd ref="6"/><nd ref="7"/><nd ref="3"/><nd ref="8"/><nd ref="9"/>
+            <tag k="highway" v="secondary"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+          </way>
+        </osm>
+        """;
+
+    private const string WideJunctionXml =
+        """
+        <osm version="0.6">
+          <node id="1" lat="-23.55000" lon="-46.63020"/>
+          <node id="3" lat="-23.55000" lon="-46.63000"/>
+          <node id="5" lat="-23.55000" lon="-46.62980"/>
+          <node id="6" lat="-23.55020" lon="-46.63000"/>
+          <node id="9" lat="-23.54980" lon="-46.63000"/>
+
+          <way id="100">
+            <nd ref="1"/><nd ref="3"/><nd ref="5"/>
+            <tag k="highway" v="residential"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+          </way>
+
+          <way id="200">
+            <nd ref="6"/><nd ref="3"/><nd ref="9"/>
             <tag k="highway" v="secondary"/>
             <tag k="lanes" v="2"/>
             <tag k="width" v="7"/>
