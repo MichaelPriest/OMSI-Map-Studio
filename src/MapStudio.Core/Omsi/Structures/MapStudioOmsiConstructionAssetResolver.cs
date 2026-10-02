@@ -499,6 +499,13 @@ public sealed class MapStudioOmsiRoadSplineResolver
             var bestScore =
                 double.PositiveInfinity;
 
+            CandidateMeasurement?
+                bestOriginalFallback =
+                    null;
+
+            var bestOriginalFallbackScore =
+                double.PositiveInfinity;
+
             foreach (
                 var candidate
                 in measurements)
@@ -526,19 +533,6 @@ public sealed class MapStudioOmsiRoadSplineResolver
                     Math.Abs(
                         candidate.WidthMeters -
                         profile.TotalWidthMeters);
-
-                var allowedWidthError =
-                    Math.Max(
-                        1.25,
-                        profile.TotalWidthMeters *
-                        0.18);
-
-                if (
-                    widthError >
-                        allowedWidthError)
-                {
-                    continue;
-                }
 
                 var trafficPathError =
                     Math.Abs(
@@ -573,32 +567,69 @@ public sealed class MapStudioOmsiRoadSplineResolver
                     nameConfidencePenalty +
                     originalOmsiBonus;
 
+                var allowedWidthError =
+                    Math.Max(
+                        1.25,
+                        profile.TotalWidthMeters *
+                        0.18);
+
                 if (
-                    score >=
+                    widthError <=
+                        allowedWidthError &&
+                    score <
                         bestScore)
                 {
-                    continue;
+                    best =
+                        candidate;
+
+                    bestScore =
+                        score;
                 }
 
-                best =
-                    candidate;
+                var originalFallbackWidthError =
+                    Math.Max(
+                        5.0,
+                        profile.TotalWidthMeters *
+                        0.75);
 
-                bestScore =
-                    score;
+                if (
+                    candidate.OriginalOmsiRoad &&
+                    widthError <=
+                        originalFallbackWidthError &&
+                    score <
+                        bestOriginalFallbackScore)
+                {
+                    bestOriginalFallback =
+                        candidate;
+
+                    bestOriginalFallbackScore =
+                        score;
+                }
             }
 
-            if (best is null)
+            var selected =
+                best ??
+                bestOriginalFallback;
+
+            if (selected is null)
             {
                 continue;
             }
 
+            var selectedScore =
+                ReferenceEquals(
+                    selected,
+                    best)
+                    ? bestScore
+                    : bestOriginalFallbackScore;
+
             resolved[
                 profile.Key] =
                 new MapStudioOmsiRoadSplineMatch(
-                    best.RelativePath,
-                    best.WidthMeters,
-                    best.TrafficPathCount,
-                    bestScore);
+                    selected.RelativePath,
+                    selected.WidthMeters,
+                    selected.TrafficPathCount,
+                    selectedScore);
         }
 
         return resolved;
