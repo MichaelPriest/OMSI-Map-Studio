@@ -32,7 +32,9 @@ public sealed record MapStudioRoadBatchReconstructionResult(
     int MissingNodeReferenceCount,
     IReadOnlyList<string> BackupPaths,
     MapStudioRoadKitInstallResult RoadKit,
-    IReadOnlyList<MapStudioGeneratedSceneryPlacement>? StructurePlacements = null)
+    IReadOnlyList<MapStudioGeneratedSceneryPlacement>? StructurePlacements = null,
+    IReadOnlyList<MapStudioGeneratedSceneryPlacement>? TrafficSignalPlacements = null,
+    IReadOnlyList<MapStudioGeneratedSceneryPlacement>? CrosswalkPlacements = null)
 {
     public int PlacedSplineCount =>
         Placements.Count;
@@ -60,6 +62,18 @@ public sealed record MapStudioRoadBatchReconstructionResult(
     public int GeneratedStructureCount =>
         StructurePlacements?.Count ??
         0;
+
+    public int InstalledTrafficSignalCount =>
+        TrafficSignalPlacements?.Count ??
+        0;
+
+    public int InstalledCrosswalkCount =>
+        CrosswalkPlacements?.Count ??
+        0;
+
+    public int JunctionAccessoryCount =>
+        InstalledTrafficSignalCount +
+        InstalledCrosswalkCount;
 
     private static bool IsGeneratedJunctionPath(
         string path)
@@ -126,6 +140,28 @@ public sealed record MapStudioRoadBatchReconstructionResult(
                                 placement.TileX,
                                 placement.TileY
                             )))
+            .Concat(
+                (
+                    TrafficSignalPlacements ??
+                    Array.Empty<MapStudioGeneratedSceneryPlacement>()
+                )
+                    .Select(
+                        placement =>
+                            (
+                                placement.TileX,
+                                placement.TileY
+                            )))
+            .Concat(
+                (
+                    CrosswalkPlacements ??
+                    Array.Empty<MapStudioGeneratedSceneryPlacement>()
+                )
+                    .Select(
+                        placement =>
+                            (
+                                placement.TileX,
+                                placement.TileY
+                            )))
             .Distinct()
             .Count();
 }
@@ -155,7 +191,11 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             IReadOnlyList<OmsiAssetIndexEntry>?
                 installedRoadSplines = null,
             IReadOnlyList<OmsiAssetIndexEntry>?
-                installedJunctionObjects = null)
+                installedJunctionObjects = null,
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                installedTrafficSignalObjects = null,
+            IReadOnlyList<OmsiAssetIndexEntry>?
+                installedCrosswalkAssets = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -358,6 +398,26 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         .ConfigureAwait(false);
             }
         }
+
+        var junctionControls =
+            new MapStudioOsmJunctionControlReader()
+                .Parse(
+                    osmXml,
+                    anchor);
+
+        var installedTrafficSignalPath =
+            ResolveInstalledSceneryAssetPath(
+                root,
+                installedTrafficSignalObjects,
+                MapStudioOriginalOmsiAssetRole
+                    .TrafficSignalObject);
+
+        var installedCrosswalkPath =
+            ResolveInstalledSceneryAssetPath(
+                root,
+                installedCrosswalkAssets,
+                MapStudioOriginalOmsiAssetRole
+                    .CrosswalkObject);
 
         var placementSegments =
             ApplyInstalledJunctionTrims(
@@ -951,6 +1011,16 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             junctionRotation));
             }
 
+            AppendJunctionAccessoryRequests(
+                sceneryRequests,
+                graph,
+                installedJunctionMatches,
+                junctionControls,
+                installedTrafficSignalPath,
+                installedCrosswalkPath,
+                anchor,
+                elevation);
+
             var bridgeAssets =
                 new Dictionary<
                     string,
@@ -1140,7 +1210,505 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         placement.Id.StartsWith(
                             "osm-tunnel-portal-",
                             StringComparison.Ordinal))
+                .ToArray(),
+            sceneryWrite
+                .Placements
+                .Where(
+                    placement =>
+                        placement.Id.StartsWith(
+                            "osm-traffic-signal-",
+                            StringComparison.Ordinal))
+                .ToArray(),
+            sceneryWrite
+                .Placements
+                .Where(
+                    placement =>
+                        placement.Id.StartsWith(
+                            "osm-crosswalk-",
+                            StringComparison.Ordinal))
                 .ToArray());
+    }
+
+    private static string? ResolveInstalledSceneryAssetPath(
+        string omsiRoot,
+        IReadOnlyList<OmsiAssetIndexEntry>? entries,
+        MapStudioOriginalOmsiAssetRole preferredRole)
+    {
+        if (entries is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        foreach (
+            var entry in
+                entries
+                    .Where(
+                        item =>
+                            item.Kind ==
+                                OmsiAssetKind.SceneryObject)
+                    .OrderBy(
+                        item =>
+                            MapStudioOriginalOmsiAssetCatalog
+                                .Classify(
+                                    item) ==
+                                preferredRole
+                                ? 0
+                                : 1)
+                    .ThenBy(
+                        item =>
+                            item.RelativePath,
+                        StringComparer.OrdinalIgnoreCase))
+        {
+            var fullPath =
+                Path.Combine(
+                    omsiRoot,
+                    entry.RelativePath
+                        .Replace(
+                            '/',
+                            Path.DirectorySeparatorChar)
+                        .Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+            if (File.Exists(fullPath))
+            {
+                return fullPath;
+            }
+        }
+
+        return null;
+    }
+
+    private static void AppendJunctionAccessoryRequests(
+        ICollection<MapStudioGeneratedSceneryPlacementRequest> requests,
+        MapStudioRoadGraph graph,
+        IReadOnlyDictionary<int, MapStudioOmsiJunctionMatch>
+            installedJunctionMatches,
+        IReadOnlyList<MapStudioOsmJunctionControl> controls,
+        string? trafficSignalAssetPath,
+        string? crosswalkAssetPath,
+        MapStudioGeographicAnchor anchor,
+        MapStudioGeoreferencedElevationSurface? elevation)
+    {
+        if (
+            controls.Count == 0 ||
+            (
+                string.IsNullOrWhiteSpace(
+                    trafficSignalAssetPath) &&
+                string.IsNullOrWhiteSpace(
+                    crosswalkAssetPath)
+            ))
+        {
+            return;
+        }
+
+        const double maximumAssociationDistanceMeters =
+            35.0;
+
+        var signalArms =
+            new HashSet<(int JunctionId, int SegmentId)>();
+
+        var crosswalkArms =
+            new HashSet<(int JunctionId, int SegmentId)>();
+
+        foreach (var control in controls)
+        {
+            var junction =
+                graph.Junctions
+                    .Select(
+                        item =>
+                            (
+                                Junction:
+                                    item,
+                                Distance:
+                                    item.Position
+                                        .DistanceTo(
+                                            control.WorldPoint)
+                            ))
+                    .Where(
+                        item =>
+                            item.Distance <=
+                                maximumAssociationDistanceMeters)
+                    .OrderBy(
+                        item =>
+                            item.Distance)
+                    .Select(
+                        item =>
+                            item.Junction)
+                    .FirstOrDefault();
+
+            if (junction is null)
+            {
+                continue;
+            }
+
+            var connected =
+                graph.Segments
+                    .Where(
+                        segment =>
+                            segment.FromNodeId ==
+                                junction.NodeId ||
+                            segment.ToNodeId ==
+                                junction.NodeId)
+                    .Where(
+                        segment =>
+                            ResolveProfile(
+                                segment.ProfileId)
+                                ?.IsPedestrian !=
+                            true)
+                    .ToArray();
+
+            if (connected.Length < 3)
+            {
+                continue;
+            }
+
+            if (
+                control.Kind ==
+                    MapStudioOsmJunctionControlKind
+                        .TrafficSignal &&
+                !string.IsNullOrWhiteSpace(
+                    trafficSignalAssetPath))
+            {
+                var controlDistance =
+                    junction.Position
+                        .DistanceTo(
+                            control.WorldPoint);
+
+                var targetSegments =
+                    controlDistance <=
+                        3.0
+                        ? connected
+                        : new[]
+                        {
+                            FindBestJunctionArm(
+                                junction,
+                                connected,
+                                control.WorldPoint)
+                        }
+                            .Where(
+                                segment =>
+                                    segment is not null)
+                            .Cast<MapStudioRoadGraphSegment>()
+                            .ToArray();
+
+                foreach (
+                    var segment in targetSegments)
+                {
+                    if (
+                        !signalArms.Add(
+                            (
+                                junction.NodeId,
+                                segment.Id
+                            )))
+                    {
+                        continue;
+                    }
+
+                    var other =
+                        segment.FromNodeId ==
+                            junction.NodeId
+                            ? segment.End
+                            : segment.Start;
+
+                    var armDistance =
+                        junction.Position
+                            .DistanceTo(
+                                other);
+
+                    if (armDistance <= 0.001)
+                    {
+                        continue;
+                    }
+
+                    var ux =
+                        (
+                            other.X -
+                            junction.Position.X
+                        ) /
+                        armDistance;
+
+                    var uz =
+                        (
+                            other.Z -
+                            junction.Position.Z
+                        ) /
+                        armDistance;
+
+                    var width =
+                        Math.Max(
+                            segment.WidthMeters ??
+                                0,
+                            ResolveProfile(
+                                segment.ProfileId)
+                                ?.TotalWidthMeters ??
+                                7.0);
+
+                    var trimDistance =
+                        installedJunctionMatches
+                            .TryGetValue(
+                                junction.NodeId,
+                                out var match) &&
+                        match.TrimDistanceBySegmentId
+                            .TryGetValue(
+                                segment.Id,
+                                out var trim)
+                            ? trim
+                            : Math.Min(
+                                8.0,
+                                segment.LengthMeters *
+                                0.25);
+
+                    var longitudinal =
+                        Math.Max(
+                            trimDistance +
+                                0.75,
+                            Math.Min(
+                                controlDistance,
+                                trimDistance +
+                                    4.0));
+
+                    var lateral =
+                        Math.Max(
+                            2.5,
+                            width /
+                            2.0) +
+                        0.6;
+
+                    var worldPoint =
+                        new MapStudioRoadPoint(
+                            junction.Position.X +
+                                ux *
+                                longitudinal -
+                                uz *
+                                lateral,
+                            junction.Position.Z +
+                                uz *
+                                longitudinal +
+                                ux *
+                                lateral);
+
+                    var terrainHeight =
+                        SampleTerrainHeight(
+                            elevation,
+                            anchor,
+                            worldPoint);
+
+                    requests.Add(
+                        new MapStudioGeneratedSceneryPlacementRequest(
+                            "osm-traffic-signal-" +
+                                control.NodeId +
+                                "-" +
+                                junction.NodeId +
+                                "-" +
+                                segment.Id,
+                            trafficSignalAssetPath,
+                            worldPoint,
+                            HeightMeters:
+                                terrainHeight -
+                                terrainHeight,
+                            Rotation:
+                                ResolveRotationDegrees(
+                                    junction.Position,
+                                    other)));
+                }
+
+                continue;
+            }
+
+            if (
+                control.Kind !=
+                    MapStudioOsmJunctionControlKind
+                        .Crosswalk ||
+                string.IsNullOrWhiteSpace(
+                    crosswalkAssetPath))
+            {
+                continue;
+            }
+
+            var distanceFromCenter =
+                junction.Position
+                    .DistanceTo(
+                        control.WorldPoint);
+
+            if (distanceFromCenter <= 1.0)
+            {
+                continue;
+            }
+
+            var crosswalkSegment =
+                FindBestJunctionArm(
+                    junction,
+                    connected,
+                    control.WorldPoint);
+
+            if (
+                crosswalkSegment is null ||
+                !crosswalkArms.Add(
+                    (
+                        junction.NodeId,
+                        crosswalkSegment.Id
+                    )))
+            {
+                continue;
+            }
+
+            var crosswalkOther =
+                crosswalkSegment.FromNodeId ==
+                    junction.NodeId
+                    ? crosswalkSegment.End
+                    : crosswalkSegment.Start;
+
+            var armLength =
+                junction.Position
+                    .DistanceTo(
+                        crosswalkOther);
+
+            if (armLength <= 0.001)
+            {
+                continue;
+            }
+
+            var armUx =
+                (
+                    crosswalkOther.X -
+                    junction.Position.X
+                ) /
+                armLength;
+
+            var armUz =
+                (
+                    crosswalkOther.Z -
+                    junction.Position.Z
+                ) /
+                armLength;
+
+            var minimumDistance =
+                installedJunctionMatches
+                    .TryGetValue(
+                        junction.NodeId,
+                        out var crosswalkMatch) &&
+                crosswalkMatch.TrimDistanceBySegmentId
+                    .TryGetValue(
+                        crosswalkSegment.Id,
+                        out var crosswalkTrim)
+                    ? crosswalkTrim +
+                        1.0
+                    : 4.0;
+
+            var placementDistance =
+                Math.Max(
+                    minimumDistance,
+                    distanceFromCenter);
+
+            var crosswalkPoint =
+                new MapStudioRoadPoint(
+                    junction.Position.X +
+                        armUx *
+                        placementDistance,
+                    junction.Position.Z +
+                        armUz *
+                        placementDistance);
+
+            requests.Add(
+                new MapStudioGeneratedSceneryPlacementRequest(
+                    "osm-crosswalk-" +
+                        control.NodeId +
+                        "-" +
+                        junction.NodeId +
+                        "-" +
+                        crosswalkSegment.Id,
+                    crosswalkAssetPath,
+                    crosswalkPoint,
+                    Rotation:
+                        NormalizeRotationDegrees(
+                            ResolveRotationDegrees(
+                                junction.Position,
+                                crosswalkOther) +
+                            90.0)));
+        }
+    }
+
+    private static MapStudioRoadGraphSegment?
+        FindBestJunctionArm(
+            MapStudioRoadJunction junction,
+            IReadOnlyList<MapStudioRoadGraphSegment> connected,
+            MapStudioRoadPoint controlPoint)
+    {
+        var targetAngle =
+            ResolveRotationDegrees(
+                junction.Position,
+                controlPoint);
+
+        return connected
+            .Select(
+                segment =>
+                {
+                    var other =
+                        segment.FromNodeId ==
+                            junction.NodeId
+                            ? segment.End
+                            : segment.Start;
+
+                    var armAngle =
+                        ResolveRotationDegrees(
+                            junction.Position,
+                            other);
+
+                    return (
+                        Segment:
+                            segment,
+                        Error:
+                            Math.Abs(
+                                SignedAngleDeltaDegrees(
+                                    armAngle,
+                                    targetAngle))
+                    );
+                })
+            .OrderBy(
+                item =>
+                    item.Error)
+            .ThenBy(
+                item =>
+                    item.Segment.Id)
+            .Select(
+                item =>
+                    item.Segment)
+            .FirstOrDefault();
+    }
+
+    private static double SignedAngleDeltaDegrees(
+        double from,
+        double to)
+    {
+        var delta =
+            NormalizeRotationDegrees(
+                to) -
+            NormalizeRotationDegrees(
+                from);
+
+        while (delta > 180.0)
+        {
+            delta -= 360.0;
+        }
+
+        while (delta <= -180.0)
+        {
+            delta += 360.0;
+        }
+
+        return delta;
+    }
+
+    private static double NormalizeRotationDegrees(
+        double value)
+    {
+        value %= 360.0;
+
+        return value < 0
+            ? value +
+                360.0
+            : value;
     }
 
     private static IReadOnlyDictionary<
