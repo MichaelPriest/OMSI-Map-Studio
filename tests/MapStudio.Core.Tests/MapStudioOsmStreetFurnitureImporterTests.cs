@@ -155,6 +155,11 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
                 <tag k="maxspeed" v="implicit"/>
                 <tag k="direction" v="0"/>
               </node>
+              <node id="50" lat="-23.5504" lon="-46.6304">
+                <tag k="traffic_sign" v="BR:R-190"/>
+                <tag k="maxspeed" v="50"/>
+                <tag k="direction" v="0"/>
+              </node>
             </osm>
             """;
 
@@ -165,7 +170,7 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
                 .Points;
 
         Assert.Equal(
-            4,
+            5,
             points.Count);
 
         Assert.Equal(
@@ -197,6 +202,14 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
                 point =>
                     point.Id ==
                         "osm-street-furniture-40")
+                .Reference);
+
+        Assert.Equal(
+            "BR:R-190",
+            points.Single(
+                point =>
+                    point.Id ==
+                        "osm-street-furniture-50")
                 .Reference);
     }
 
