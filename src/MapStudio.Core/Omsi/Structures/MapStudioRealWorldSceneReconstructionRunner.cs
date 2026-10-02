@@ -92,7 +92,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         cancellationToken,
                         elevation,
                         buildingVisualEvidenceProvider,
-                        buildingVisualEvidenceProgress)
+                        buildingVisualEvidenceProgress,
+                        assets)
                     .ConfigureAwait(false);
 
             var vegetation =
