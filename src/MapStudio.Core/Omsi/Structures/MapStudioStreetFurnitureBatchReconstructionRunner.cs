@@ -42,7 +42,9 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
                 IReadOnlyList<MapStudioSceneEvidence>>?
                 additionalEvidence = null,
             CancellationToken cancellationToken = default,
-            MapStudioGeoreferencedElevationSurface? elevation = null)
+            MapStudioGeoreferencedElevationSurface? elevation = null,
+            IReadOnlySet<string>?
+                excludedFeatureIds = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -53,10 +55,23 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
             new MapStudioOsmStreetFurnitureImporter()
                 .Parse(osmXml);
 
+        var eligiblePoints =
+            excludedFeatureIds is null ||
+            excludedFeatureIds.Count ==
+                0
+                ? imported.Points
+                : imported.Points
+                    .Where(
+                        point =>
+                            !excludedFeatureIds
+                                .Contains(
+                                    point.Id))
+                    .ToArray();
+
         var candidates =
             new MapStudioOsmStreetFurnitureReconstructionAdapter()
                 .BuildCandidates(
-                    imported.Points);
+                    eligiblePoints);
 
         if (
             additionalEvidence is not null &&
@@ -121,7 +136,7 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
 
         foreach (
             var point in
-                imported.Points.Where(
+                eligiblePoints.Where(
                     point =>
                         automaticIds.Contains(
                             point.Id)))
