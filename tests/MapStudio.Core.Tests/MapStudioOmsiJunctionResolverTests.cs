@@ -229,6 +229,99 @@ public sealed class MapStudioOmsiJunctionResolverTests
     }
 
     [Fact]
+    public async Task ResolverPrefersFunctionalTrafficControlledStockJunctionWhenRequested()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-stock-junction-signal-preference-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var plainRelativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_A_Plain_4arm.sco";
+
+            var signalRelativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_Z_Signal_4arm.sco";
+
+            WriteStockJunction(
+                root,
+                plainRelativePath,
+                [0, 90, 180, 270],
+                8.0);
+
+            WriteStockJunction(
+                root,
+                signalRelativePath,
+                [0, 90, 180, 270],
+                8.0,
+                withTrafficControl:
+                    true);
+
+            OmsiAssetIndexEntry Entry(
+                string relativePath)
+            {
+                var fullPath =
+                    Path.Combine(
+                        root,
+                        relativePath.Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+                return new OmsiAssetIndexEntry(
+                    relativePath,
+                    OmsiAssetKind.SceneryObject,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(fullPath).Ticks);
+            }
+
+            var matches =
+                await new MapStudioOmsiJunctionResolver()
+                    .ResolveAsync(
+                        root,
+                        [
+                            Entry(plainRelativePath),
+                            Entry(signalRelativePath)
+                        ],
+                        [
+                            new MapStudioOmsiJunctionTarget(
+                                101,
+                                [
+                                    new(1, 0, 7, 30),
+                                    new(2, 90, 7, 30),
+                                    new(3, 180, 7, 30),
+                                    new(4, 270, 7, 30)
+                                ],
+                                PreferFunctionalTrafficControl:
+                                    true)
+                        ]);
+
+            var match =
+                Assert.Single(
+                    matches)
+                    .Value;
+
+            Assert.Equal(
+                signalRelativePath,
+                match.RelativePath);
+
+            Assert.True(
+                match.HasFunctionalTrafficControl);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ResolverRejectsThreeArmAssetForFourArmTarget()
     {
         var root = Path.Combine(
@@ -282,7 +375,8 @@ public sealed class MapStudioOmsiJunctionResolverTests
         string root,
         string relativePath,
         IReadOnlyList<double> angles,
-        double radius)
+        double radius,
+        bool withTrafficControl = false)
     {
         var fullPath = Path.Combine(
             root,
@@ -320,7 +414,35 @@ public sealed class MapStudioOmsiJunctionResolverTests
                 builder.AppendLine("0");
                 builder.AppendLine("0");
                 builder.AppendLine();
+
+                if (withTrafficControl)
+                {
+                    builder.AppendLine("[use_traffic_light]");
+                    builder.AppendLine("0");
+                    builder.AppendLine();
+                }
             }
+        }
+
+        if (withTrafficControl)
+        {
+            builder.AppendLine("[traffic_lights_group]");
+            builder.AppendLine("60");
+            builder.AppendLine();
+
+            builder.AppendLine("[traffic_light]");
+            builder.AppendLine("Main");
+            builder.AppendLine();
+
+            builder.AppendLine("[phase]");
+            builder.AppendLine("0");
+            builder.AppendLine("30");
+            builder.AppendLine();
+
+            builder.AppendLine("[phase]");
+            builder.AppendLine("6");
+            builder.AppendLine("30");
+            builder.AppendLine();
         }
 
         builder.AppendLine("[mesh]");
