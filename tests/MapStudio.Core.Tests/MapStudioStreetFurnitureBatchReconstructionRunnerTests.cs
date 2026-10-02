@@ -497,6 +497,124 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
     }
 
     [Fact]
+    public async Task RunAsyncPlacesExplicitMaximumSpeedUsingExactStockValue()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-furniture-maxspeed-sign-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                Path.Combine(
+                    root,
+                    "maps",
+                    "FurnitureMaxSpeedSignTest");
+
+            Directory.CreateDirectory(
+                mapDirectory);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    mapDirectory,
+                    "global.cfg"),
+                "[name]\r\nFurniture Max Speed Sign Test\r\n" +
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n",
+                Encoding.UTF8);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            await File.WriteAllTextAsync(
+                tilePath,
+                "[version]\r\n14\r\n",
+                Encoding.UTF8);
+
+            var assets =
+                new List<OmsiAssetIndexEntry>();
+
+            AddAsset(
+                root,
+                assets,
+                @"Sceneryobjects\Verkehrszeichen_MC\VZ_274_30.sco");
+
+            AddAsset(
+                root,
+                assets,
+                @"Sceneryobjects\Verkehrszeichen_MC\VZ_274_50.sco");
+
+            const string xml =
+                """
+                <osm version="0.6">
+                  <node id="10" lat="-23.55000" lon="-46.63000">
+                    <tag k="traffic_sign" v="maxspeed"/>
+                    <tag k="maxspeed" v="50"/>
+                    <tag k="direction" v="90"/>
+                  </node>
+                </osm>
+                """;
+
+            var result =
+                await new MapStudioStreetFurnitureBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        xml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50),
+                        assets);
+
+            var placement =
+                Assert.Single(
+                    result.Placements);
+
+            Assert.EndsWith(
+                @"Verkehrszeichen_MC\VZ_274_50.sco",
+                placement.SceneryObjectPath,
+                StringComparison.OrdinalIgnoreCase);
+
+            Assert.Empty(
+                result.MissingAssetFeatureIds);
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        tilePath);
+
+            var sign =
+                Assert.Single(
+                    content.Objects);
+
+            Assert.Contains(
+                "VZ_274_50.sco",
+                sign.SceneryObjectPath,
+                StringComparison.OrdinalIgnoreCase);
+
+            Assert.InRange(
+                sign.Rotation,
+                89.999,
+                90.001);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task RunAsyncPlacesBrazilianR1AndR2UsingCompatibleStockSigns()
     {
         var root =
