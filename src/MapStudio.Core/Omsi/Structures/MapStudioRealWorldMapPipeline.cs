@@ -662,7 +662,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
                         .Completed,
-                    $"Mapa real concluído: {roads.PlacedSplineCount} spline(s) de via, {roads.JunctionPlacements.Count} junction(s), {roads.JunctionAccessoryCount} controle(s) viário(s) stock, {roads.GeneratedStructureCount} estrutura(s) viária(s) e {scene.PlacedObjectCount} objeto(s) de cenário."));
+                    $"Mapa real concluído: {roads.PlacedSplineCount} spline(s) de via ({roads.InstalledOmsiSplineCount} stock OMSI / {roads.RoadKitFallbackSplineCount} fallback), " +
+                    $"{roads.JunctionPlacements.Count} junction(s), {roads.JunctionAccessoryCount} controle(s) viário(s) stock, {roads.GeneratedStructureCount} estrutura(s) viária(s), " +
+                    $"{scene.Buildings.InstalledOmsiBuildingCount} prédio(s) stock OMSI, {scene.Buildings.ProceduralBuildingCount} prédio(s) procedural(is) e {scene.PlacedObjectCount} objeto(s) de cenário."));
 
             return result;
         }
