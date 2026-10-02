@@ -83,6 +83,14 @@ public sealed class MapStudioOsmStreetFurnitureImporter
                 "osmRootInvalid");
         }
 
+        var nodeCoordinates =
+            BuildNodeCoordinates(
+                root);
+
+        var roadWays =
+            BuildRoadWays(
+                root);
+
         var points =
             new List<MapStudioGeoStreetFurniturePoint>();
 
@@ -142,8 +150,11 @@ public sealed class MapStudioOsmStreetFurnitureImporter
                         kind),
                     Clean(
                         tags.GetValueOrDefault("shelter_type")),
-                    ParseDirection(
-                        tags.GetValueOrDefault("direction"))));
+                    ResolveDirection(
+                        tags,
+                        id,
+                        nodeCoordinates,
+                        roadWays)));
         }
 
         return new MapStudioOsmStreetFurnitureImportResult(
@@ -411,6 +422,383 @@ public sealed class MapStudioOsmStreetFurnitureImporter
         return reference;
     }
 
+    private static IReadOnlyDictionary<
+        long,
+        GeoCoordinate>
+        BuildNodeCoordinates(
+            XElement root)
+    {
+        var result =
+            new Dictionary<
+                long,
+                GeoCoordinate>();
+
+        foreach (
+            var node in
+                root.Elements()
+                    .Where(
+                        item =>
+                            item.Name.LocalName ==
+                            "node"))
+        {
+            if (
+                long.TryParse(
+                    node.Attribute("id")?.Value,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var id) &&
+                TryDouble(
+                    node.Attribute("lat")?.Value,
+                    out var latitude) &&
+                TryDouble(
+                    node.Attribute("lon")?.Value,
+                    out var longitude) &&
+                latitude is >= -90 and <= 90 &&
+                longitude is >= -180 and <= 180)
+            {
+                result[id] =
+                    new GeoCoordinate(
+                        latitude,
+                        longitude);
+            }
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<RoadWay>
+        BuildRoadWays(
+            XElement root)
+    {
+        var result =
+            new List<RoadWay>();
+
+        foreach (
+            var way in
+                root.Elements()
+                    .Where(
+                        item =>
+                            item.Name.LocalName ==
+                            "way"))
+        {
+            var tags =
+                ReadTags(
+                    way);
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    Clean(
+                        tags.GetValueOrDefault(
+                            "highway"))))
+            {
+                continue;
+            }
+
+            var nodeIds =
+                way.Elements()
+                    .Where(
+                        item =>
+                            item.Name.LocalName ==
+                            "nd")
+                    .Select(
+                        item =>
+                            item.Attribute(
+                                "ref")
+                                ?.Value)
+                    .Where(
+                        value =>
+                            long.TryParse(
+                                value,
+                                NumberStyles.Integer,
+                                CultureInfo.InvariantCulture,
+                                out _))
+                    .Select(
+                        value =>
+                            long.Parse(
+                                value!,
+                                NumberStyles.Integer,
+                                CultureInfo.InvariantCulture))
+                    .ToArray();
+
+            if (nodeIds.Length >= 2)
+            {
+                result.Add(
+                    new RoadWay(
+                        nodeIds));
+            }
+        }
+
+        return result;
+    }
+
+    private static double? ResolveDirection(
+        IReadOnlyDictionary<string, string?> tags,
+        string? nodeIdValue,
+        IReadOnlyDictionary<long, GeoCoordinate>
+            nodeCoordinates,
+        IReadOnlyList<RoadWay> roadWays)
+    {
+        var highway =
+            Clean(
+                tags.GetValueOrDefault(
+                    "highway"))
+                ?.ToLowerInvariant();
+
+        var directionValue =
+            highway switch
+            {
+                "stop" =>
+                    Clean(
+                        tags.GetValueOrDefault(
+                            "stop:direction")) ??
+                    Clean(
+                        tags.GetValueOrDefault(
+                            "direction")),
+                "give_way" =>
+                    Clean(
+                        tags.GetValueOrDefault(
+                            "give_way:direction")) ??
+                    Clean(
+                        tags.GetValueOrDefault(
+                            "direction")),
+                _ =>
+                    Clean(
+                        tags.GetValueOrDefault(
+                            "direction"))
+            };
+
+        var absolute =
+            ParseDirection(
+                directionValue);
+
+        if (absolute is not null)
+        {
+            return absolute;
+        }
+
+        var normalized =
+            directionValue
+                ?.Trim()
+                .ToLowerInvariant();
+
+        if (
+            normalized is not
+                ("forward" or "backward") ||
+            !long.TryParse(
+                nodeIdValue,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var nodeId))
+        {
+            return null;
+        }
+
+        var candidates =
+            roadWays
+                .Select(
+                    way =>
+                        ResolveWayForwardBearing(
+                            way,
+                            nodeId,
+                            nodeCoordinates))
+                .Where(
+                    bearing =>
+                        bearing is not null)
+                .Select(
+                    bearing =>
+                        normalized ==
+                            "backward"
+                            ? NormalizeDegrees(
+                                bearing!.Value +
+                                180.0)
+                            : bearing!.Value)
+                .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            return null;
+        }
+
+        var mean =
+            CircularMeanDegrees(
+                candidates);
+
+        const double
+            MaximumAmbiguousDirectionSpreadDegrees =
+                25.0;
+
+        if (
+            candidates.Any(
+                bearing =>
+                    CircularAngularDistanceDegrees(
+                        bearing,
+                        mean) >
+                    MaximumAmbiguousDirectionSpreadDegrees))
+        {
+            return null;
+        }
+
+        return mean;
+    }
+
+    private static double? ResolveWayForwardBearing(
+        RoadWay way,
+        long nodeId,
+        IReadOnlyDictionary<long, GeoCoordinate>
+            nodeCoordinates)
+    {
+        for (
+            var index = 0;
+            index < way.NodeIds.Count;
+            index++)
+        {
+            if (
+                way.NodeIds[index] !=
+                    nodeId)
+            {
+                continue;
+            }
+
+            long fromId;
+            long toId;
+
+            if (
+                index + 1 <
+                    way.NodeIds.Count)
+            {
+                fromId =
+                    nodeId;
+                toId =
+                    way.NodeIds[
+                        index +
+                        1];
+            }
+            else if (index > 0)
+            {
+                fromId =
+                    way.NodeIds[
+                        index -
+                        1];
+                toId =
+                    nodeId;
+            }
+            else
+            {
+                return null;
+            }
+
+            if (
+                !nodeCoordinates.TryGetValue(
+                    fromId,
+                    out var from) ||
+                !nodeCoordinates.TryGetValue(
+                    toId,
+                    out var to))
+            {
+                return null;
+            }
+
+            return ResolveBearingDegrees(
+                from,
+                to);
+        }
+
+        return null;
+    }
+
+    private static double ResolveBearingDegrees(
+        GeoCoordinate from,
+        GeoCoordinate to)
+    {
+        var latitude1 =
+            from.Latitude *
+            Math.PI /
+            180.0;
+
+        var latitude2 =
+            to.Latitude *
+            Math.PI /
+            180.0;
+
+        var longitudeDelta =
+            (
+                to.Longitude -
+                from.Longitude
+            ) *
+            Math.PI /
+            180.0;
+
+        var y =
+            Math.Sin(
+                longitudeDelta) *
+            Math.Cos(
+                latitude2);
+
+        var x =
+            Math.Cos(
+                latitude1) *
+            Math.Sin(
+                latitude2) -
+            Math.Sin(
+                latitude1) *
+            Math.Cos(
+                latitude2) *
+            Math.Cos(
+                longitudeDelta);
+
+        return NormalizeDegrees(
+            Math.Atan2(
+                y,
+                x) *
+            180.0 /
+            Math.PI);
+    }
+
+    private static double CircularMeanDegrees(
+        IReadOnlyList<double> values)
+    {
+        var x =
+            values.Sum(
+                value =>
+                    Math.Cos(
+                        value *
+                        Math.PI /
+                        180.0));
+
+        var y =
+            values.Sum(
+                value =>
+                    Math.Sin(
+                        value *
+                        Math.PI /
+                        180.0));
+
+        return NormalizeDegrees(
+            Math.Atan2(
+                y,
+                x) *
+            180.0 /
+            Math.PI);
+    }
+
+    private static double
+        CircularAngularDistanceDegrees(
+            double first,
+            double second)
+    {
+        var delta =
+            Math.Abs(
+                NormalizeDegrees(
+                    first) -
+                NormalizeDegrees(
+                    second));
+
+        return Math.Min(
+            delta,
+            360.0 -
+                delta);
+    }
+
     private static double? ParseDirection(
         string? value)
     {
@@ -517,6 +905,13 @@ public sealed class MapStudioOsmStreetFurnitureImporter
             CultureInfo.InvariantCulture,
             out result) &&
         double.IsFinite(result);
+
+    private readonly record struct GeoCoordinate(
+        double Latitude,
+        double Longitude);
+
+    private sealed record RoadWay(
+        IReadOnlyList<long> NodeIds);
 }
 
 public sealed class MapStudioOsmStreetFurnitureReconstructionAdapter
