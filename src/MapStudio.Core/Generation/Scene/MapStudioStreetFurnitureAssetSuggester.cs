@@ -243,8 +243,7 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
         }
 
         return
-            ContainsToken(
-                normalizedPath,
+            tokens.Contains(
                 "274") ||
             ContainsToken(
                 normalizedPath,
@@ -259,11 +258,9 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                 normalizedPath,
                 "maxspeed") ||
             (
-                ContainsToken(
-                    normalizedPath,
+                tokens.Contains(
                     "r") &&
-                ContainsToken(
-                    normalizedPath,
+                tokens.Contains(
                     "19")
             );
     }
