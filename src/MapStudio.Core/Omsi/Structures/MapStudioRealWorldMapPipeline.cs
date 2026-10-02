@@ -134,7 +134,7 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .IndexingAssets,
-                "Atualizando biblioteca de assets OMSI..."));
+                "Carregando biblioteca de assets OMSI..."));
 
         var catalog =
             await new MapStudioRealWorldAssetCatalogLoader()
@@ -148,7 +148,8 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .IndexingAssets,
-                $"Biblioteca OMSI pronta · {catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
+                $"{(catalog.ReusedExistingIndex ? "Índice OMSI em cache reutilizado" : "Índice OMSI atualizado")} · " +
+                $"{catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
                 $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
                 $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
                 $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
@@ -245,7 +246,7 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .IndexingAssets,
-                "Atualizando biblioteca de assets OMSI..."));
+                "Carregando biblioteca de assets OMSI..."));
 
         var catalog =
             await new MapStudioRealWorldAssetCatalogLoader()
@@ -259,7 +260,8 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .IndexingAssets,
-                $"Biblioteca OMSI pronta · {catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
+                $"{(catalog.ReusedExistingIndex ? "Índice OMSI em cache reutilizado" : "Índice OMSI atualizado")} · " +
+                $"{catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
                 $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
                 $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
                 $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
@@ -355,7 +357,7 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .IndexingAssets,
-                "Atualizando biblioteca de assets OMSI..."));
+                "Carregando biblioteca de assets OMSI..."));
 
         var catalog =
             await new MapStudioRealWorldAssetCatalogLoader()
@@ -369,7 +371,8 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .IndexingAssets,
-                $"Biblioteca OMSI pronta · {catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
+                $"{(catalog.ReusedExistingIndex ? "Índice OMSI em cache reutilizado" : "Índice OMSI atualizado")} · " +
+                $"{catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
                 $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
                 $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
                 $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
