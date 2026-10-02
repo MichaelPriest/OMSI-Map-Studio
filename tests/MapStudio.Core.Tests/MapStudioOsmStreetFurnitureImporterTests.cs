@@ -74,6 +74,98 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
     }
 
     [Fact]
+    public void ImporterRecognizesPrioritySignsAndPreservesExplicitReference()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="10" lat="-23.55" lon="-46.63">
+                <tag k="highway" v="stop"/>
+                <tag k="direction" v="90"/>
+              </node>
+              <node id="20" lat="-23.5501" lon="-46.6301">
+                <tag k="highway" v="give_way"/>
+                <tag k="direction" v="270"/>
+              </node>
+              <node id="30" lat="-23.5502" lon="-46.6302">
+                <tag k="traffic_sign" v="DE:206"/>
+                <tag k="direction" v="180"/>
+              </node>
+            </osm>
+            """;
+
+        var result =
+            new MapStudioOsmStreetFurnitureImporter()
+                .Parse(
+                    xml);
+
+        Assert.Equal(
+            3,
+            result.Points.Count);
+
+        Assert.All(
+            result.Points,
+            point =>
+                Assert.Equal(
+                    MapStudioOsmStreetFurnitureKind
+                        .TrafficSign,
+                    point.Kind));
+
+        Assert.Contains(
+            result.Points,
+            point =>
+                point.Reference ==
+                    "stop");
+
+        Assert.Contains(
+            result.Points,
+            point =>
+                point.Reference ==
+                    "give_way");
+
+        Assert.Contains(
+            result.Points,
+            point =>
+                point.Reference ==
+                    "DE:206");
+    }
+
+    [Fact]
+    public void ExplicitTrafficSignEvidenceCanAutoGenerate()
+    {
+        var candidate =
+            Assert.Single(
+                new MapStudioOsmStreetFurnitureReconstructionAdapter()
+                    .BuildCandidates(
+                        [
+                            new MapStudioGeoStreetFurniturePoint(
+                                "sign-explicit",
+                                -23.55,
+                                -46.63,
+                                MapStudioOsmStreetFurnitureKind
+                                    .TrafficSign,
+                                null,
+                                null,
+                                "DE:206",
+                                null,
+                                90)
+                        ]));
+
+        var decision =
+            Assert.Single(
+                new MapStudioSceneReconstructionPlanBuilder()
+                    .Build(
+                        [candidate])
+                    .Features);
+
+        Assert.True(
+            decision.AutoGenerate);
+
+        Assert.False(
+            decision.NeedsReview);
+    }
+
+    [Fact]
     public void AdapterMapsFurnitureToSceneFeatures()
     {
         var candidates =
