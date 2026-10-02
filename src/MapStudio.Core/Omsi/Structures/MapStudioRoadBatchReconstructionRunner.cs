@@ -35,7 +35,8 @@ public sealed record MapStudioRoadBatchReconstructionResult(
     IReadOnlyList<MapStudioGeneratedSceneryPlacement>? StructurePlacements = null,
     IReadOnlyList<MapStudioGeneratedSceneryPlacement>? TrafficSignalPlacements = null,
     IReadOnlyList<MapStudioGeneratedSceneryPlacement>? CrosswalkPlacements = null,
-    IReadOnlyList<string>? ConsumedStreetFurnitureFeatureIds = null)
+    IReadOnlyList<string>? ConsumedStreetFurnitureFeatureIds = null,
+    int FunctionalStockTrafficControlledJunctionCount = 0)
 {
     public int PlacedSplineCount =>
         Placements.Count;
@@ -1249,7 +1250,12 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     id =>
                         id,
                     StringComparer.Ordinal)
-                .ToArray());
+                .ToArray(),
+            installedJunctionMatches
+                .Values
+                .Count(
+                    match =>
+                        match.HasFunctionalTrafficControl));
     }
 
     private static string? ResolveInstalledSceneryAssetPath(
