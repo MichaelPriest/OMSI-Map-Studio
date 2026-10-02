@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.129: recognize and prioritize original OMSI 2 asset families during automatic reconstruction.
+# Test 10.130: fit original OMSI junction SCOs from their real traffic-path geometry and trim connecting splines.
 
 on:
   push:
@@ -230,6 +230,10 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.128-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.129-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.129-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.130-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.130-native.md"
+      - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiJunctionResolver.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioOmsiJunctionResolverTests.cs"
       - "src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs"
       - "src/MapStudio.Core/Omsi/Indexing/MapStudioOriginalOmsiAssetCatalog.cs"
       - "tests/MapStudio.Core.Tests/OmsiAssetLibraryClassifierTests.cs"
@@ -250,8 +254,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.129-native
-  TAG: v0.2.0-alpha.5-test.10.129-native
+  VERSION: 0.2.0-alpha.5-test.10.130-native
+  TAG: v0.2.0-alpha.5-test.10.130-native
 
 jobs:
   build-native-preview:
@@ -5566,6 +5570,71 @@ jobs:
 
           Write-Host "Verified original OMSI family catalog, road priority, junction/signal/crosswalk separation and stock street-furniture selection."
 
+      - name: Verify test 10.130 stock OMSI junction geometry fitting
+        shell: pwsh
+        run: |
+          $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiJunctionResolver.cs -Raw
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $resolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiJunctionResolverTests.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+
+          foreach ($required in @(
+            'BuildMouths',
+            'BuildEndpoint',
+            'MaximumArmAngularErrorDegrees',
+            'MouthClusterDegrees',
+            'TrimDistanceBySegmentId',
+            'CircularMeanSigned',
+            'MapStudioOriginalOmsiAssetRole.JunctionObject'
+          )) {
+            if (-not $resolver.Contains($required)) {
+              throw "Test 10.130 stock junction resolver marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BuildInstalledJunctionTargets',
+            'ApplyInstalledJunctionTrims',
+            'installedJunctionObjects',
+            'InstalledOmsiJunctionCount',
+            'junctionAssetPath',
+            'junctionRotation',
+            'MapStudioJunctionAssetGenerator'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.130 road runner junction integration marker is missing: $required"
+            }
+          }
+
+          if (-not $pipeline.Contains('JunctionObjects') -or
+              -not $pipeline.Contains('cruzamento(s) stock OMSI')) {
+            throw "Test 10.130 auto-indexed pipeline must pass and report stock OMSI junction assets."
+          }
+
+          foreach ($required in @(
+            'ResolverFitsOriginalFourArmJunctionFromRealPathGeometry',
+            'ResolverFitsOriginalThreeArmJunctionFromRealPathGeometry',
+            'ResolverRejectsThreeArmAssetForFourArmTarget'
+          )) {
+            if (-not $resolverTests.Contains($required)) {
+              throw "Test 10.130 junction resolver regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadRunnerUsesOriginalOmsiJunctionAndTrimsConnectedSplines',
+            'WideJunctionXml',
+            'InstalledOmsiJunctionCount',
+            'MapStudioJunctionAssetGenerator.RootFolderName'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.130 junction placement round-trip regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified stock OMSI junction path-geometry fitting, safe fallback, spline trimming and map round-trip coverage."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5758,11 +5827,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.129-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.130-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.129-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.130-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
