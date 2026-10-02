@@ -148,6 +148,87 @@ public sealed class MapStudioOmsiJunctionResolverTests
     }
 
     [Fact]
+    public async Task ResolverKeepsCloseArmsSeparateUsingPathTangents()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "mapstudio-stock-junction-close-arms-" +
+            Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var relativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_Test_5arm.sco";
+
+            WriteStockJunction(
+                root,
+                relativePath,
+                [0, 45, 135, 225, 315],
+                8.0);
+
+            var fullPath = Path.Combine(
+                root,
+                relativePath.Replace(
+                    '\\',
+                    Path.DirectorySeparatorChar));
+
+            var entry = new OmsiAssetIndexEntry(
+                relativePath,
+                OmsiAssetKind.SceneryObject,
+                new FileInfo(fullPath).Length,
+                File.GetLastWriteTimeUtc(fullPath).Ticks);
+
+            var matches =
+                await new MapStudioOmsiJunctionResolver()
+                    .ResolveAsync(
+                        root,
+                        [entry],
+                        [
+                            new MapStudioOmsiJunctionTarget(
+                                88,
+                                [
+                                    new(20, 7, 7, 30),
+                                    new(21, 52, 7, 30),
+                                    new(22, 142, 7, 30),
+                                    new(23, 232, 7, 30),
+                                    new(24, 322, 7, 30)
+                                ])
+                        ]);
+
+            var match =
+                Assert.Single(
+                    matches);
+
+            Assert.Equal(
+                88,
+                match.Key);
+
+            Assert.Equal(
+                5,
+                match.Value.MouthCount);
+
+            Assert.InRange(
+                match.Value.RotationDegrees,
+                6.5,
+                7.5);
+
+            Assert.Equal(
+                5,
+                match.Value.TrimDistanceBySegmentId.Count);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ResolverRejectsThreeArmAssetForFourArmTarget()
     {
         var root = Path.Combine(
