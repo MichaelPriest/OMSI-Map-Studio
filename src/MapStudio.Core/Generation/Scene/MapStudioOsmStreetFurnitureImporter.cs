@@ -583,7 +583,8 @@ public sealed class MapStudioOsmStreetFurnitureReconstructionAdapter
                     0.86,
                 MapStudioOsmStreetFurnitureKind.TrafficSign =>
                     string.IsNullOrWhiteSpace(
-                        point.Reference)
+                        point.Reference) ||
+                    point.DirectionDegrees is null
                         ? 0.78
                         : 0.94,
                 MapStudioOsmStreetFurnitureKind.BusShelter =>
