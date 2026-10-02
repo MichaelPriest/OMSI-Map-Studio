@@ -23,7 +23,7 @@ public sealed record MapStudioOmsiJunctionMatch(
 
 public sealed class MapStudioOmsiJunctionResolver
 {
-    private const double MouthClusterDegrees = 30.0;
+    private const double MouthHeadingClusterDegrees = 20.0;
     private const double MaximumArmAngularErrorDegrees = 15.0;
 
     private readonly OmsiSceneryObjectReader _reader = new();
@@ -250,7 +250,7 @@ public sealed class MapStudioOmsiJunctionResolver
 
         var external = endpoints
             .Where(endpoint => endpoint.Radius >= externalThreshold)
-            .OrderBy(endpoint => endpoint.AngleDegrees)
+            .OrderBy(endpoint => endpoint.OutwardHeadingDegrees)
             .ToArray();
 
         if (external.Length < 3)
@@ -263,8 +263,10 @@ public sealed class MapStudioOmsiJunctionResolver
         foreach (var endpoint in external)
         {
             if (clusters.Count == 0 ||
-                ForwardAngleGap(clusters[^1][^1].AngleDegrees, endpoint.AngleDegrees) >
-                MouthClusterDegrees)
+                ForwardAngleGap(
+                    clusters[^1][^1].OutwardHeadingDegrees,
+                    endpoint.OutwardHeadingDegrees) >
+                MouthHeadingClusterDegrees)
             {
                 clusters.Add([endpoint]);
             }
@@ -275,8 +277,10 @@ public sealed class MapStudioOmsiJunctionResolver
         }
 
         if (clusters.Count > 1 &&
-            CircularGap(clusters[^1][^1].AngleDegrees, clusters[0][0].AngleDegrees) <=
-            MouthClusterDegrees)
+            CircularGap(
+                clusters[^1][^1].OutwardHeadingDegrees,
+                clusters[0][0].OutwardHeadingDegrees) <=
+            MouthHeadingClusterDegrees)
         {
             clusters[^1].AddRange(clusters[0]);
             clusters.RemoveAt(0);
@@ -290,7 +294,8 @@ public sealed class MapStudioOmsiJunctionResolver
 
     private static Mouth BuildMouth(IReadOnlyList<Endpoint> cluster)
     {
-        var angle = CircularMeanUnsigned(cluster.Select(endpoint => endpoint.AngleDegrees));
+        var angle = CircularMeanUnsigned(
+            cluster.Select(endpoint => endpoint.OutwardHeadingDegrees));
         var radians = DegreesToRadians(angle);
         var lateralX = Math.Cos(radians);
         var lateralY = -Math.Sin(radians);
@@ -344,11 +349,36 @@ public sealed class MapStudioOmsiJunctionResolver
 
         var radius = Math.Sqrt(x * x + y * y);
 
+        var radialAngle =
+            NormalizeAngle(
+                Math.Atan2(x, y) *
+                180.0 /
+                Math.PI);
+
+        var tangentAngle =
+            NormalizeAngle(
+                path.Rotation +
+                curveAngle *
+                180.0 /
+                Math.PI);
+
+        var outwardHeading =
+            Math.Abs(
+                SignedAngleDelta(
+                    tangentAngle,
+                    radialAngle)) <=
+                90.0
+                ? tangentAngle
+                : NormalizeAngle(
+                    tangentAngle +
+                    180.0);
+
         return new Endpoint(
             x,
             y,
             radius,
-            NormalizeAngle(Math.Atan2(x, y) * 180.0 / Math.PI),
+            radialAngle,
+            outwardHeading,
             path.Width);
     }
 
@@ -419,5 +449,6 @@ public sealed class MapStudioOmsiJunctionResolver
         double Y,
         double Radius,
         double AngleDegrees,
+        double OutwardHeadingDegrees,
         double PathWidth);
 }
