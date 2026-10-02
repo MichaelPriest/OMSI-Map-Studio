@@ -612,6 +612,14 @@ public sealed class MapStudioRealWorldMapPipeline
                                             .ReconstructingScene,
                                         update.Message)));
 
+            var excludedStreetFurnitureFeatureIds =
+                roads.ConsumedStreetFurnitureFeatureIds is
+                    { Count: > 0 } consumedFeatureIds
+                    ? consumedFeatureIds
+                        .ToHashSet(
+                            StringComparer.Ordinal)
+                    : null;
+
             var scene =
                 await new MapStudioRealWorldSceneReconstructionRunner()
                     .RunAsync(
@@ -624,7 +632,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         cancellationToken,
                         elevation,
                         buildingVisualEvidenceProvider,
-                        buildingVisualEvidenceProgress)
+                        buildingVisualEvidenceProgress,
+                        excludedStreetFurnitureFeatureIds)
                     .ConfigureAwait(false);
 
             var result =
