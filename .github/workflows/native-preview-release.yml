@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.132: place original OMSI traffic signals and crossings from real OSM junction-control evidence.
+# Test 10.133: reuse the persistent OMSI asset index instead of rescanning on every automatic generation.
 
 on:
   push:
@@ -232,8 +232,10 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.129-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.131-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.131-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.132-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.132-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.133-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.133-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.133-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.133-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -259,8 +261,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.132-native
-  TAG: v0.2.0-alpha.5-test.10.132-native
+  VERSION: 0.2.0-alpha.5-test.10.133-native
+  TAG: v0.2.0-alpha.5-test.10.133-native
 
 jobs:
   build-native-preview:
@@ -5739,6 +5741,63 @@ jobs:
 
           Write-Host "Verified OSM junction controls, stock Ampel/Zebra placement, tile round-trip and road/scene deduplication."
 
+      - name: Verify test 10.133 persistent OMSI asset index reuse
+        shell: pwsh
+        run: |
+          $loader = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldAssetCatalogLoader.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldAssetCatalogLoaderTests.cs -Raw
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+
+          foreach ($required in @(
+            'ReusedExistingIndex',
+            'forceRefresh',
+            'GetStatisticsAsync',
+            'RefreshedAtUtc',
+            'File.Exists(databasePath)',
+            'ExaminedFiles:',
+            'DurationMilliseconds:'
+          )) {
+            if (-not $loader.Contains($required)) {
+              throw "Test 10.133 persistent-index loader marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'Carregando biblioteca de assets OMSI',
+            'Índice OMSI em cache reutilizado',
+            'ReusedExistingIndex'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.133 generation cache status marker is missing: $required"
+            }
+          }
+
+          if (-not $session.Contains('RefreshAssetLibraryAsync') -or
+              -not $session.Contains('.RefreshAsync(')) {
+            throw "Test 10.133 manual asset reindex path must remain available."
+          }
+
+          if (-not $xaml.Contains('ToolTipService.ToolTip="Reindexar biblioteca"') -or
+              -not $xaml.Contains('Click="OnRefreshLibraryClick"')) {
+            throw "Test 10.133 manual reindex UI action is missing."
+          }
+
+          foreach ($required in @(
+            'LoadAsyncRefreshesPersistentIndexAndReturnsSceneryObjects',
+            'ReusedExistingIndex',
+            'Refresh.ExaminedFiles',
+            'forceRefresh:',
+            'new-object.sco'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.133 persistent-index regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified zero-scan cached OMSI catalog reuse and explicit full reindex fallback."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5931,11 +5990,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.132-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.133-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.132-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.133-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
