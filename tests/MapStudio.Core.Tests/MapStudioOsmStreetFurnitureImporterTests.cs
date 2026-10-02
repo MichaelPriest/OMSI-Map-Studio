@@ -166,6 +166,40 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
     }
 
     [Fact]
+    public void ExplicitTrafficSignWithoutResolvedDirectionNeedsReview()
+    {
+        var candidate =
+            Assert.Single(
+                new MapStudioOsmStreetFurnitureReconstructionAdapter()
+                    .BuildCandidates(
+                        [
+                            new MapStudioGeoStreetFurniturePoint(
+                                "sign-unresolved-direction",
+                                -23.55,
+                                -46.63,
+                                MapStudioOsmStreetFurnitureKind
+                                    .TrafficSign,
+                                null,
+                                null,
+                                "stop",
+                                null)
+                        ]));
+
+        var decision =
+            Assert.Single(
+                new MapStudioSceneReconstructionPlanBuilder()
+                    .Build(
+                        [candidate])
+                    .Features);
+
+        Assert.False(
+            decision.AutoGenerate);
+
+        Assert.True(
+            decision.NeedsReview);
+    }
+
+    [Fact]
     public void AdapterMapsFurnitureToSceneFeatures()
     {
         var candidates =
