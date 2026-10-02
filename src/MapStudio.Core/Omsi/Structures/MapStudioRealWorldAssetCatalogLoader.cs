@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using MapStudio.Core.Omsi.Indexing;
 
 namespace MapStudio.Core.Omsi.Structures;
@@ -7,7 +8,8 @@ public sealed record MapStudioRealWorldAssetCatalogResult(
     OmsiAssetIndexRefreshResult Refresh,
     IReadOnlyList<OmsiAssetIndexEntry> SceneryObjects,
     IReadOnlyList<OmsiAssetIndexEntry> Splines,
-    MapStudioOmsiConstructionAssetCatalog ConstructionAssets);
+    MapStudioOmsiConstructionAssetCatalog ConstructionAssets,
+    bool ReusedExistingIndex = false);
 
 public sealed class MapStudioRealWorldAssetCatalogLoader
 {
@@ -15,7 +17,8 @@ public sealed class MapStudioRealWorldAssetCatalogLoader
         LoadAsync(
             string omsiRoot,
             IProgress<OmsiAssetIndexProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool forceRefresh = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
 
@@ -37,13 +40,78 @@ public sealed class MapStudioRealWorldAssetCatalogLoader
         var index =
             new OmsiAssetIndex(databasePath);
 
-        var refresh =
-            await index
-                .RefreshAsync(
-                    root,
-                    progress,
-                    cancellationToken)
-                .ConfigureAwait(false);
+        var reusedExistingIndex =
+            false;
+
+        OmsiAssetIndexRefreshResult refresh;
+
+        if (
+            !forceRefresh &&
+            File.Exists(databasePath))
+        {
+            try
+            {
+                var statistics =
+                    await index
+                        .GetStatisticsAsync(
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                if (statistics.RefreshedAtUtc is not null)
+                {
+                    refresh =
+                        new OmsiAssetIndexRefreshResult(
+                            ExaminedFiles:
+                                0,
+                            TotalEntries:
+                                statistics.TotalEntries,
+                            AddedFiles:
+                                0,
+                            UpdatedFiles:
+                                0,
+                            UnchangedFiles:
+                                statistics.TotalEntries,
+                            RemovedFiles:
+                                0,
+                            DurationMilliseconds:
+                                0);
+
+                    reusedExistingIndex =
+                        true;
+                }
+                else
+                {
+                    refresh =
+                        await index
+                            .RefreshAsync(
+                                root,
+                                progress,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                }
+            }
+            catch (
+                SqliteException)
+            {
+                refresh =
+                    await index
+                        .RefreshAsync(
+                            root,
+                            progress,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            refresh =
+                await index
+                    .RefreshAsync(
+                        root,
+                        progress,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+        }
 
         var scenery =
             await index
@@ -74,6 +142,7 @@ public sealed class MapStudioRealWorldAssetCatalogLoader
             refresh,
             scenery,
             splines,
-            constructionAssets);
+            constructionAssets,
+            reusedExistingIndex);
     }
 }
