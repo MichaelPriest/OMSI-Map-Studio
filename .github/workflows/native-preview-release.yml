@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.136: map Brazilian R-1/R-2 to safe stock STOP/GIVE-WAY equivalents.
+# Test 10.137: place explicit maximum-speed signs only when value, direction and installed asset match.
 
 on:
   push:
@@ -242,6 +242,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.135-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.136-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.136-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.137-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.137-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -267,8 +269,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.136-native
-  TAG: v0.2.0-alpha.5-test.10.136-native
+  VERSION: 0.2.0-alpha.5-test.10.137-native
+  TAG: v0.2.0-alpha.5-test.10.137-native
 
 jobs:
   build-native-preview:
@@ -6012,6 +6014,78 @@ jobs:
 
           Write-Host "Verified Brazilian R-1/R-2 use only known-compatible stock STOP/GIVE-WAY assets while unrelated codes remain unmatched."
 
+      - name: Verify test 10.137 explicit maximum-speed signs
+        shell: pwsh
+        run: |
+          $importer = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOsmStreetFurnitureImporter.cs -Raw
+          $suggester = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioStreetFurnitureAssetSuggester.cs -Raw
+          $importerTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmStreetFurnitureImporterTests.cs -Raw
+          $extendedTests = Get-Content tests/MapStudio.Core.Tests/MapStudioExtendedStreetFurnitureTests.cs -Raw
+          $batchTests = Get-Content tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs -Raw
+
+          foreach ($required in @(
+            'TryResolveExplicitMaxSpeedReference',
+            'IsMaxSpeedTrafficSign',
+            'TryExtractBracketedMaxSpeed',
+            'TryParseExplicitMaxSpeedKph',
+            'BR:R-19',
+            '"maxspeed "'
+          )) {
+            if (-not $importer.Contains($required)) {
+              throw "Test 10.137 explicit maxspeed importer marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TryParseMaxSpeedReference',
+            'MatchesMaxSpeedSignAsset',
+            '"274"',
+            '"tempo"',
+            '"geschw"',
+            '"maxspeed"'
+          )) {
+            if (-not $suggester.Contains($required)) {
+              throw "Test 10.137 speed-sign asset matcher marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ImporterCanonicalizesExplicitMaximumSpeedSigns',
+            'ExplicitMaximumSpeedWithoutNumericValueNeedsReview',
+            'BR:R-19[30]',
+            '60 km/h',
+            'implicit'
+          )) {
+            if (-not $importerTests.Contains($required)) {
+              throw "Test 10.137 maxspeed importer regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SuggesterMatchesExplicitPrioritySignsAndRejectsUnrelatedStockSign',
+            'maxspeed 30',
+            'maxspeed 50',
+            'VZ_274_30.sco'
+          )) {
+            if (-not $extendedTests.Contains($required)) {
+              throw "Test 10.137 exact speed-value matcher regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAsyncPlacesExplicitMaximumSpeedUsingExactStockValue',
+            'traffic_sign',
+            'maxspeed',
+            'VZ_274_30.sco',
+            'VZ_274_50.sco'
+          )) {
+            if (-not $batchTests.Contains($required)) {
+              throw "Test 10.137 speed-sign tile round-trip regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified explicit maxspeed/R-19 parsing, exact value matching, review fallback and OMSI tile round-trip."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6204,11 +6278,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.136-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.137-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.136-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.137-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
