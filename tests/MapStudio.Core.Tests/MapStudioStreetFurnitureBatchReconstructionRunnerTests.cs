@@ -497,6 +497,144 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
     }
 
     [Fact]
+    public async Task RunAsyncPlacesBrazilianR1AndR2UsingCompatibleStockSigns()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-furniture-br-priority-signs-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                Path.Combine(
+                    root,
+                    "maps",
+                    "FurnitureBrazilPrioritySignsTest");
+
+            Directory.CreateDirectory(
+                mapDirectory);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    mapDirectory,
+                    "global.cfg"),
+                "[name]\r\nFurniture Brazil Priority Signs Test\r\n" +
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n",
+                Encoding.UTF8);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            await File.WriteAllTextAsync(
+                tilePath,
+                "[version]\r\n14\r\n",
+                Encoding.UTF8);
+
+            var assets =
+                new List<OmsiAssetIndexEntry>();
+
+            AddAsset(
+                root,
+                assets,
+                @"Sceneryobjects\Verkehrszeichen_MC\VZ_205.sco");
+
+            AddAsset(
+                root,
+                assets,
+                @"Sceneryobjects\Verkehrszeichen_MC\VZ_206.sco");
+
+            const string xml =
+                """
+                <osm version="0.6">
+                  <node id="10" lat="-23.55000" lon="-46.63000">
+                    <tag k="traffic_sign" v="BR:R-1"/>
+                    <tag k="direction" v="90"/>
+                  </node>
+                  <node id="20" lat="-23.55002" lon="-46.62998">
+                    <tag k="traffic_sign" v="BR:R-2"/>
+                    <tag k="direction" v="270"/>
+                  </node>
+                </osm>
+                """;
+
+            var result =
+                await new MapStudioStreetFurnitureBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        xml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50),
+                        assets);
+
+            Assert.Equal(
+                2,
+                result.Placements.Count);
+
+            Assert.Empty(
+                result.MissingAssetFeatureIds);
+
+            Assert.Contains(
+                result.Placements,
+                placement =>
+                    placement.SceneryObjectPath
+                        .EndsWith(
+                            @"Verkehrszeichen_MC\VZ_206.sco",
+                            StringComparison.OrdinalIgnoreCase));
+
+            Assert.Contains(
+                result.Placements,
+                placement =>
+                    placement.SceneryObjectPath
+                        .EndsWith(
+                            @"Verkehrszeichen_MC\VZ_205.sco",
+                            StringComparison.OrdinalIgnoreCase));
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        tilePath);
+
+            Assert.Equal(
+                2,
+                content.Objects.Count);
+
+            Assert.Contains(
+                content.Objects,
+                item =>
+                    item.SceneryObjectPath
+                        .Contains(
+                            "VZ_206.sco",
+                            StringComparison.OrdinalIgnoreCase));
+
+            Assert.Contains(
+                content.Objects,
+                item =>
+                    item.SceneryObjectPath
+                        .Contains(
+                            "VZ_205.sco",
+                            StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task RunAsyncPlacesWayRelativeStopSignWithResolvedRotation()
     {
         var root =
