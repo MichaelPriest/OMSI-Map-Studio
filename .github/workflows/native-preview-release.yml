@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.131: cluster original OMSI junction mouths from real path tangents, including close oblique arms.
+# Test 10.132: place original OMSI traffic signals and crossings from real OSM junction-control evidence.
 
 on:
   push:
@@ -232,6 +232,11 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.129-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.131-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.131-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.132-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.132-native.md"
+      - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiJunctionResolver.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOmsiJunctionResolverTests.cs"
       - "src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs"
@@ -254,8 +259,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.131-native
-  TAG: v0.2.0-alpha.5-test.10.131-native
+  VERSION: 0.2.0-alpha.5-test.10.132-native
+  TAG: v0.2.0-alpha.5-test.10.132-native
 
 jobs:
   build-native-preview:
@@ -5638,6 +5643,102 @@ jobs:
 
           Write-Host "Verified stock OMSI junction path-tangent mouth clustering, close-arm separation, safe fallback, spline trimming and map round-trip coverage."
 
+      - name: Verify test 10.132 stock OMSI junction controls
+        shell: pwsh
+        run: |
+          $controlReader = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOsmJunctionControlReader.cs -Raw
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $sceneRunner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldSceneReconstructionRunner.cs -Raw
+          $furnitureRunner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioStreetFurnitureBatchReconstructionRunner.cs -Raw
+          $controlTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+          $furnitureTests = Get-Content tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs -Raw
+          $layeredClient = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioLayeredOsmSceneClient.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOsmJunctionControlKind',
+            'TrafficSignal',
+            'Crosswalk',
+            'traffic_signals',
+            'crossing:signals',
+            'MapStudioGeographicProjection'
+          )) {
+            if (-not $controlReader.Contains($required)) {
+              throw "Test 10.132 OSM junction-control reader marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'installedTrafficSignalObjects',
+            'installedCrosswalkAssets',
+            'AppendJunctionAccessoryRequests',
+            'InstalledTrafficSignalCount',
+            'InstalledCrosswalkCount',
+            'ConsumedStreetFurnitureFeatureIds',
+            'osm-traffic-signal-',
+            'osm-crosswalk-'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.132 road-control placement marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TrafficSignalObjects',
+            'CrosswalkAssets',
+            'excludedStreetFurnitureFeatureIds',
+            'ConsumedStreetFurnitureFeatureIds'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.132 pipeline propagation marker is missing: $required"
+            }
+          }
+
+          if (-not $sceneRunner.Contains('excludedStreetFurnitureFeatureIds')) {
+            throw "Test 10.132 scene exclusion propagation is missing."
+          }
+
+          foreach ($required in @(
+            'excludedFeatureIds',
+            'eligiblePoints'
+          )) {
+            if (-not $furnitureRunner.Contains($required)) {
+              throw "Test 10.132 consumed-control dedup marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'node[\"highway\"=\"traffic_signals\"]',
+            'node[\"highway\"=\"crossing\"]',
+            'node[\"crossing\"]'
+          )) {
+            if (-not $layeredClient.Contains($required)) {
+              throw "Test 10.132 layered OSM downloader control selector is missing: $required"
+            }
+          }
+
+          if (-not $controlTests.Contains('ReaderProjectsTrafficSignalsAndCrossings')) {
+            throw "Test 10.132 OSM control reader regression is missing."
+          }
+
+          foreach ($required in @(
+            'RoadRunnerPlacesStockSignalsAndCrosswalkFromOsmControls',
+            'ControlledWideJunctionXml',
+            'Ampel_Test.sco',
+            'Zebra_Test.sco'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.132 stock signal/crosswalk round-trip regression is missing: $required"
+            }
+          }
+
+          if (-not $furnitureTests.Contains('RunAsyncSkipsFeaturesAlreadyConsumedByRoadJunctions')) {
+            throw "Test 10.132 duplicate-control suppression regression is missing."
+          }
+
+          Write-Host "Verified OSM junction controls, stock Ampel/Zebra placement, tile round-trip and road/scene deduplication."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -5830,11 +5931,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.131-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.132-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.131-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.132-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
