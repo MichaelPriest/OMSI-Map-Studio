@@ -493,8 +493,12 @@ public sealed class MapStudioOsmStreetFurnitureImporter
                 normalized,
                 "maxspeed",
                 StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith(
+            string.Equals(
+                normalized,
                 "BR:R-19",
+                StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith(
+                "BR:R-19[",
                 StringComparison.OrdinalIgnoreCase);
     }
 
