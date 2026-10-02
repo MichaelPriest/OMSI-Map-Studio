@@ -11,7 +11,8 @@ public sealed record MapStudioOmsiJunctionTargetArm(
 
 public sealed record MapStudioOmsiJunctionTarget(
     int NodeId,
-    IReadOnlyList<MapStudioOmsiJunctionTargetArm> Arms);
+    IReadOnlyList<MapStudioOmsiJunctionTargetArm> Arms,
+    bool PreferFunctionalTrafficControl = false);
 
 public sealed record MapStudioOmsiJunctionMatch(
     int NodeId,
@@ -19,7 +20,8 @@ public sealed record MapStudioOmsiJunctionMatch(
     double RotationDegrees,
     double Score,
     IReadOnlyDictionary<int, double> TrimDistanceBySegmentId,
-    int MouthCount);
+    int MouthCount,
+    bool HasFunctionalTrafficControl = false);
 
 public sealed class MapStudioOmsiJunctionResolver
 {
@@ -86,7 +88,25 @@ public sealed class MapStudioOmsiJunctionResolver
                 continue;
             }
 
-            signatures.Add(new CandidateSignature(entry.RelativePath, mouths));
+            var hasFunctionalTrafficControl =
+                metadata.TrafficLightControllers
+                    .Any(
+                        controller =>
+                            controller.Programs.Count >
+                                0) &&
+                metadata.Paths
+                    .Any(
+                        path =>
+                            path.Type ==
+                                0 &&
+                            path.TrafficLightIndex is
+                                >= 0);
+
+            signatures.Add(
+                new CandidateSignature(
+                    entry.RelativePath,
+                    mouths,
+                    hasFunctionalTrafficControl));
         }
 
         var result = new Dictionary<int, MapStudioOmsiJunctionMatch>();
@@ -105,7 +125,12 @@ public sealed class MapStudioOmsiJunctionResolver
             foreach (var candidate in signatures.Where(candidate => candidate.Mouths.Count == target.Arms.Count))
             {
                 var match = TryFit(target, candidate);
-                if (match is not null && (best is null || match.Score < best.Score))
+                if (
+                    match is not null &&
+                    IsBetterMatch(
+                        target,
+                        match,
+                        best))
                 {
                     best = match;
                 }
@@ -118,6 +143,28 @@ public sealed class MapStudioOmsiJunctionResolver
         }
 
         return result;
+    }
+
+    private static bool IsBetterMatch(
+        MapStudioOmsiJunctionTarget target,
+        MapStudioOmsiJunctionMatch candidate,
+        MapStudioOmsiJunctionMatch? current)
+    {
+        if (current is null)
+        {
+            return true;
+        }
+
+        if (
+            target.PreferFunctionalTrafficControl &&
+            candidate.HasFunctionalTrafficControl !=
+                current.HasFunctionalTrafficControl)
+        {
+            return candidate.HasFunctionalTrafficControl;
+        }
+
+        return candidate.Score <
+            current.Score;
     }
 
     private static MapStudioOmsiJunctionMatch? TryFit(
@@ -213,7 +260,8 @@ public sealed class MapStudioOmsiJunctionResolver
                 normalizedRotation,
                 score,
                 trims,
-                mouths.Length);
+                mouths.Length,
+                candidate.HasFunctionalTrafficControl);
 
             if (best is null || match.Score < best.Score)
             {
@@ -437,7 +485,8 @@ public sealed class MapStudioOmsiJunctionResolver
 
     private sealed record CandidateSignature(
         string RelativePath,
-        IReadOnlyList<Mouth> Mouths);
+        IReadOnlyList<Mouth> Mouths,
+        bool HasFunctionalTrafficControl);
 
     private readonly record struct Mouth(
         double AngleDegrees,
