@@ -1066,6 +1066,112 @@ public sealed class MapStudioRealWorldRoadPipelineTests
     }
 
     [Fact]
+    public async Task RoadRunnerPrefersFunctionalStockJunctionForSignalizedOsmIntersection()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-functional-signal-junction-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var plainRelativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_A_Plain_4arm.sco";
+
+            var signalRelativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_Z_Signal_4arm.sco";
+
+            MapStudioOmsiJunctionResolverTests
+                .WriteStockJunction(
+                    root,
+                    plainRelativePath,
+                    [0, 90, 180, 270],
+                    8.0);
+
+            MapStudioOmsiJunctionResolverTests
+                .WriteStockJunction(
+                    root,
+                    signalRelativePath,
+                    [0, 90, 180, 270],
+                    8.0,
+                    withTrafficControl:
+                        true);
+
+            OmsiAssetIndexEntry Entry(
+                string relativePath)
+            {
+                var fullPath =
+                    Path.Combine(
+                        root,
+                        relativePath.Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+                return new OmsiAssetIndexEntry(
+                    relativePath,
+                    OmsiAssetKind.SceneryObject,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(fullPath).Ticks);
+            }
+
+            var catalog =
+                MapStudioOmsiConstructionAssetClassifier
+                    .Build(
+                        [
+                            Entry(plainRelativePath),
+                            Entry(signalRelativePath)
+                        ]);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        ControlledWideJunctionXml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            150,
+                            150),
+                        installedJunctionObjects:
+                            catalog.JunctionObjects);
+
+            var junction =
+                Assert.Single(
+                    result.JunctionPlacements);
+
+            Assert.Equal(
+                signalRelativePath,
+                junction.SceneryObjectPath,
+                ignoreCase:
+                    true);
+
+            Assert.Equal(
+                1,
+                result.InstalledOmsiJunctionCount);
+
+            Assert.Equal(
+                0,
+                result.GeneratedJunctionCount);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task FullMapPipelineDownloadsOnceAndCreatesRoadsAndScene()
     {
         var root =
