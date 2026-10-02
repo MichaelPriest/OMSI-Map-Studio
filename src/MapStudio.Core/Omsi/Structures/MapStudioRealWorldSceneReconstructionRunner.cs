@@ -47,7 +47,9 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
             IMapStudioBuildingVisualEvidenceProvider?
                 buildingVisualEvidenceProvider = null,
             IProgress<MapStudioBuildingVisualEvidenceProgress>?
-                buildingVisualEvidenceProgress = null)
+                buildingVisualEvidenceProgress = null,
+            IReadOnlySet<string>?
+                excludedStreetFurnitureFeatureIds = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -115,7 +117,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         assets,
                         streetFurnitureEvidence,
                         cancellationToken,
-                        elevation)
+                        elevation,
+                        excludedStreetFurnitureFeatureIds)
                     .ConfigureAwait(false);
 
             return new MapStudioRealWorldSceneReconstructionResult(
