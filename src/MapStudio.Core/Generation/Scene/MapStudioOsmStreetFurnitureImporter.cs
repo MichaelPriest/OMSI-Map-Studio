@@ -578,10 +578,10 @@ public sealed class MapStudioOsmStreetFurnitureImporter
             normalized.Any(
                 char.IsLetter) ||
             normalized.Contains(
-                ';',
+                ";",
                 StringComparison.Ordinal) ||
             normalized.Contains(
-                '|',
+                "|",
                 StringComparison.Ordinal))
         {
             return false;
