@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.138: harden Brazilian R-19 and speed-sign family matching against prefix/substr false positives.
+# Test 10.139: enforce original OMSI stock-first roads/buildings and lazy Road Kit fallback.
 
 on:
   push:
@@ -246,6 +246,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.137-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.138-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.138-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.139-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.139-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -271,8 +273,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.138-native
-  TAG: v0.2.0-alpha.5-test.10.138-native
+  VERSION: 0.2.0-alpha.5-test.10.139-native
+  TAG: v0.2.0-alpha.5-test.10.139-native
 
 jobs:
   build-native-preview:
@@ -6130,6 +6132,103 @@ jobs:
 
           Write-Host "Verified exact R-19 code recognition and exact numeric 274-family matching."
 
+      - name: Verify test 10.139 OMSI stock-first reconstruction
+        shell: pwsh
+        run: |
+          $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs -Raw
+          $roadRunner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $buildingRunner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioBuildingBatchReconstructionRunner.cs -Raw
+          $sceneRunner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldSceneReconstructionRunner.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $resolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+          $buildingTests = Get-Content tests/MapStudio.Core.Tests/MapStudioBuildingBatchReconstructionRunnerTests.cs -Raw
+
+          foreach ($required in @(
+            'bestOriginalStrict',
+            'bestOriginalFallback',
+            'bestOriginalStrict ??',
+            'bestOriginalFallback ??',
+            'originalFallbackWidthError',
+            'OriginalOmsiRoad'
+          )) {
+            if (-not $resolver.Contains($required)) {
+              throw "Test 10.139 original OMSI road hard-priority marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'requiresRoadKit',
+            'IsRoadKitSplinePath',
+            'MapStudioRoadKitInstallResult',
+            'Array.Empty<string>()'
+          )) {
+            if (-not $roadRunner.Contains($required)) {
+              throw "Test 10.139 lazy Road Kit marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'installedAssets',
+            'BuildingObject',
+            'SelectInstalledBuildingAsset',
+            'InstalledOmsiBuildingCount',
+            'ProceduralBuildingCount',
+            'MapStudioFootprintBuildingAssetGenerator'
+          )) {
+            if (-not $buildingRunner.Contains($required)) {
+              throw "Test 10.139 stock building marker is missing: $required"
+            }
+          }
+
+          if (-not $sceneRunner.Contains('buildingVisualEvidenceProgress,') -or
+              -not $sceneRunner.Contains('assets)')) {
+            throw "Test 10.139 scene pipeline does not pass indexed OMSI assets into building reconstruction."
+          }
+
+          foreach ($required in @(
+            'InstalledOmsiSplineCount',
+            'RoadKitFallbackSplineCount',
+            'InstalledOmsiBuildingCount',
+            'ProceduralBuildingCount'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.139 visible stock/fallback diagnostics are missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ResolverPrefersOriginalOmsiRoadOverExactAddonAndRoadKitFallback'
+          )) {
+            if (-not $resolverTests.Contains($required)) {
+              throw "Test 10.139 resolver regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadRunnerUsesOriginalOmsiSplineEvenWhenOnlyNearestStockWidthMatches',
+            'RoadKitFallbackSplineCount',
+            'roadKitDirectory'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.139 stock road tile regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAsyncPrefersOriginalOmsiBuildingObjectBeforeProceduralFallback',
+            'Buildings_MC',
+            'InstalledOmsiBuildingCount',
+            'ProceduralBuildingCount',
+            'MapStudio_Buildings'
+          )) {
+            if (-not $buildingTests.Contains($required)) {
+              throw "Test 10.139 stock building tile regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified original OMSI roads/buildings are hard-priority and Road Kit remains a real fallback."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6322,11 +6421,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.138-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.139-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.138-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.139-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
