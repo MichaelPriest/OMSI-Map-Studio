@@ -1156,6 +1156,10 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                 result.InstalledOmsiJunctionCount);
 
             Assert.Equal(
+                1,
+                result.FunctionalStockTrafficControlledJunctionCount);
+
+            Assert.Equal(
                 0,
                 result.GeneratedJunctionCount);
         }
