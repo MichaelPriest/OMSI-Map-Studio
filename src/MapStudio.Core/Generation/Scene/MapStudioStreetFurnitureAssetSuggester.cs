@@ -36,6 +36,11 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                                 .Classify(
                                     asset),
                             point.Kind))
+                .Where(
+                    asset =>
+                        TrafficSignReferenceMatches(
+                            asset.RelativePath,
+                            point))
                 .Select(
                     asset =>
                         (
@@ -58,6 +63,114 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
         return candidates.Length == 0
             ? null
             : candidates[0].Asset;
+    }
+
+    private static bool TrafficSignReferenceMatches(
+        string path,
+        MapStudioGeoStreetFurniturePoint point)
+    {
+        if (
+            point.Kind !=
+                MapStudioOsmStreetFurnitureKind
+                    .TrafficSign ||
+            string.IsNullOrWhiteSpace(
+                point.Reference))
+        {
+            return true;
+        }
+
+        var normalizedPath =
+            Normalize(
+                path);
+
+        var normalizedReference =
+            Normalize(
+                point.Reference);
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                normalizedReference) &&
+            normalizedPath.Contains(
+                normalizedReference,
+                StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (
+            string.Equals(
+                normalizedReference,
+                "stop",
+                StringComparison.Ordinal))
+        {
+            return
+                ContainsToken(
+                    normalizedPath,
+                    "stop") ||
+                ContainsToken(
+                    normalizedPath,
+                    "206");
+        }
+
+        if (
+            normalizedReference is
+                "give way" or
+                "yield")
+        {
+            return
+                ContainsToken(
+                    normalizedPath,
+                    "give way") ||
+                ContainsToken(
+                    normalizedPath,
+                    "yield") ||
+                ContainsToken(
+                    normalizedPath,
+                    "205");
+        }
+
+        var numericTokens =
+            Tokenize(
+                point.Reference)
+                .Where(
+                    token =>
+                        token.Length >=
+                            2 &&
+                        token.All(
+                            char.IsDigit))
+                .ToArray();
+
+        if (numericTokens.Length > 0)
+        {
+            return numericTokens
+                .All(
+                    token =>
+                        ContainsToken(
+                            normalizedPath,
+                            token));
+        }
+
+        var descriptiveTokens =
+            Tokenize(
+                point.Reference)
+                .Where(
+                    token =>
+                        token.Length >=
+                            4 &&
+                        token is not
+                            "traffic" and not
+                            "sign")
+                .ToArray();
+
+        return
+            descriptiveTokens.Length >
+                0 &&
+            descriptiveTokens
+                .Any(
+                    token =>
+                        ContainsToken(
+                            normalizedPath,
+                            token));
     }
 
     private static bool IsAllowedGroup(
