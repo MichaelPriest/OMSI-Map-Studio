@@ -179,6 +179,9 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
             "yield") ||
         ContainsToken(
             normalizedPath,
+            "vorfahrtgew") ||
+        ContainsToken(
+            normalizedPath,
             "205");
 
     private static bool IsAllowedGroup(
