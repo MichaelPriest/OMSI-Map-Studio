@@ -131,6 +131,120 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
     }
 
     [Fact]
+    public void ImporterCanonicalizesExplicitMaximumSpeedSigns()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="10" lat="-23.5500" lon="-46.6300">
+                <tag k="traffic_sign" v="maxspeed"/>
+                <tag k="maxspeed" v="50"/>
+                <tag k="direction" v="90"/>
+              </node>
+              <node id="20" lat="-23.5501" lon="-46.6301">
+                <tag k="traffic_sign" v="BR:R-19[30]"/>
+                <tag k="direction" v="180"/>
+              </node>
+              <node id="30" lat="-23.5502" lon="-46.6302">
+                <tag k="traffic_sign" v="BR:R-19"/>
+                <tag k="maxspeed" v="60 km/h"/>
+                <tag k="direction" v="270"/>
+              </node>
+              <node id="40" lat="-23.5503" lon="-46.6303">
+                <tag k="traffic_sign" v="maxspeed"/>
+                <tag k="maxspeed" v="implicit"/>
+                <tag k="direction" v="0"/>
+              </node>
+            </osm>
+            """;
+
+        var points =
+            new MapStudioOsmStreetFurnitureImporter()
+                .Parse(
+                    xml)
+                .Points;
+
+        Assert.Equal(
+            4,
+            points.Count);
+
+        Assert.Equal(
+            "maxspeed 50",
+            points.Single(
+                point =>
+                    point.Id ==
+                        "osm-street-furniture-10")
+                .Reference);
+
+        Assert.Equal(
+            "maxspeed 30",
+            points.Single(
+                point =>
+                    point.Id ==
+                        "osm-street-furniture-20")
+                .Reference);
+
+        Assert.Equal(
+            "maxspeed 60",
+            points.Single(
+                point =>
+                    point.Id ==
+                        "osm-street-furniture-30")
+                .Reference);
+
+        Assert.Null(
+            points.Single(
+                point =>
+                    point.Id ==
+                        "osm-street-furniture-40")
+                .Reference);
+    }
+
+    [Fact]
+    public void ExplicitMaximumSpeedWithoutNumericValueNeedsReview()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="10" lat="-23.55" lon="-46.63">
+                <tag k="traffic_sign" v="maxspeed"/>
+                <tag k="maxspeed" v="implicit"/>
+                <tag k="direction" v="90"/>
+              </node>
+            </osm>
+            """;
+
+        var point =
+            Assert.Single(
+                new MapStudioOsmStreetFurnitureImporter()
+                    .Parse(
+                        xml)
+                    .Points);
+
+        Assert.Null(
+            point.Reference);
+
+        var candidate =
+            Assert.Single(
+                new MapStudioOsmStreetFurnitureReconstructionAdapter()
+                    .BuildCandidates(
+                        [point]));
+
+        var decision =
+            Assert.Single(
+                new MapStudioSceneReconstructionPlanBuilder()
+                    .Build(
+                        [candidate])
+                    .Features);
+
+        Assert.False(
+            decision.AutoGenerate);
+
+        Assert.True(
+            decision.NeedsReview);
+    }
+
+    [Fact]
     public void ExplicitTrafficSignEvidenceCanAutoGenerate()
     {
         var candidate =
