@@ -35,7 +35,7 @@ public sealed class MapStudioLayeredOsmSceneClient
         2;
 
     private const string CacheSchemaVersion =
-        "osm-layers-v2";
+        "osm-layers-v3";
 
     private static readonly TimeSpan
         EndpointAttemptTimeout =
@@ -1753,6 +1753,8 @@ public sealed class MapStudioLayeredOsmSceneClient
                     $"node[\"crossing\"]({bbox});" +
                     $"node[\"traffic_sign\"]({bbox});" +
                     $"node[\"highway\"=\"traffic_sign\"]({bbox});" +
+                    $"node[\"highway\"=\"stop\"]({bbox});" +
+                    $"node[\"highway\"=\"give_way\"]({bbox});" +
                     $"node[\"highway\"=\"bus_stop\"]({bbox});" +
                     $"node[\"public_transport\"=\"platform\"]({bbox});" +
                     $"node[\"amenity\"=\"shelter\"]({bbox});" +
