@@ -7,7 +7,7 @@ namespace MapStudio.Core.Tests;
 public sealed class MapStudioRealWorldAssetCatalogLoaderTests
 {
     [Fact]
-    public async Task LoadAsyncReusesPersistentIndexAndSupportsForcedRefresh()
+    public async Task LoadAsyncRefreshesPersistentIndexAndReturnsSceneryObjects()
     {
         var root =
             Path.Combine(
