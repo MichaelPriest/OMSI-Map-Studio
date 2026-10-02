@@ -433,7 +433,7 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
                     <tag k="direction" v="90"/>
                   </node>
                   <node id="20" lat="-23.55002" lon="-46.62998">
-                    <tag k="traffic_sign" v="BR:R-1"/>
+                    <tag k="traffic_sign" v="BR:R-3"/>
                     <tag k="direction" v="0"/>
                   </node>
                 </osm>
