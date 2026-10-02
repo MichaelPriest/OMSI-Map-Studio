@@ -594,6 +594,7 @@ public sealed class MapStudioRealWorldMapPipeline
                     $"Vias montadas · {roads.InstalledOmsiSplineCount} trecho(s) com SLI instalada do OMSI · " +
                     $"{roads.RoadKitFallbackSplineCount} fallback(s) do Road Kit · " +
                     $"{roads.InstalledOmsiJunctionCount} cruzamento(s) stock OMSI · " +
+                    $"{roads.FunctionalStockTrafficControlledJunctionCount} junction(s) stock com controle semafórico OMSI · " +
                     $"{roads.GeneratedJunctionCount} cruzamento(s) gerado(s) · " +
                     $"{roads.InstalledTrafficSignalCount} semáforo(s) stock · " +
                     $"{roads.InstalledCrosswalkCount} travessia(s) stock."));
