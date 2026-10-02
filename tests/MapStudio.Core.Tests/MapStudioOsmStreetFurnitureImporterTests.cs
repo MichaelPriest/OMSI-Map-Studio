@@ -166,6 +166,113 @@ public sealed class MapStudioOsmStreetFurnitureImporterTests
     }
 
     [Fact]
+    public void ImporterResolvesForwardAndBackwardTrafficSignDirectionFromRoadWay()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="-23.5500" lon="-46.6302"/>
+              <node id="10" lat="-23.5500" lon="-46.6300">
+                <tag k="highway" v="stop"/>
+                <tag k="direction" v="forward"/>
+              </node>
+              <node id="20" lat="-23.5500" lon="-46.6298">
+                <tag k="highway" v="give_way"/>
+                <tag k="direction" v="backward"/>
+              </node>
+              <node id="30" lat="-23.5500" lon="-46.6296"/>
+              <way id="100">
+                <nd ref="1"/>
+                <nd ref="10"/>
+                <nd ref="20"/>
+                <nd ref="30"/>
+                <tag k="highway" v="residential"/>
+              </way>
+            </osm>
+            """;
+
+        var points =
+            new MapStudioOsmStreetFurnitureImporter()
+                .Parse(
+                    xml)
+                .Points;
+
+        var stop =
+            Assert.Single(
+                points,
+                point =>
+                    point.Reference ==
+                        "stop");
+
+        var giveWay =
+            Assert.Single(
+                points,
+                point =>
+                    point.Reference ==
+                        "give_way");
+
+        Assert.NotNull(
+            stop.DirectionDegrees);
+
+        Assert.NotNull(
+            giveWay.DirectionDegrees);
+
+        Assert.InRange(
+            stop.DirectionDegrees!.Value,
+            89.0,
+            91.0);
+
+        Assert.InRange(
+            giveWay.DirectionDegrees!.Value,
+            269.0,
+            271.0);
+    }
+
+    [Fact]
+    public void ImporterKeepsAmbiguousWayRelativeTrafficSignDirectionUnresolved()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="-23.5500" lon="-46.6302"/>
+              <node id="2" lat="-23.5500" lon="-46.6298"/>
+              <node id="3" lat="-23.5502" lon="-46.6300"/>
+              <node id="4" lat="-23.5498" lon="-46.6300"/>
+              <node id="10" lat="-23.5500" lon="-46.6300">
+                <tag k="highway" v="stop"/>
+                <tag k="direction" v="forward"/>
+              </node>
+              <way id="100">
+                <nd ref="1"/>
+                <nd ref="10"/>
+                <nd ref="2"/>
+                <tag k="highway" v="residential"/>
+              </way>
+              <way id="200">
+                <nd ref="3"/>
+                <nd ref="10"/>
+                <nd ref="4"/>
+                <tag k="highway" v="secondary"/>
+              </way>
+            </osm>
+            """;
+
+        var sign =
+            Assert.Single(
+                new MapStudioOsmStreetFurnitureImporter()
+                    .Parse(
+                        xml)
+                    .Points);
+
+        Assert.Equal(
+            "stop",
+            sign.Reference);
+
+        Assert.Null(
+            sign.DirectionDegrees);
+    }
+
+    [Fact]
     public void ExplicitTrafficSignWithoutResolvedDirectionNeedsReview()
     {
         var candidate =
