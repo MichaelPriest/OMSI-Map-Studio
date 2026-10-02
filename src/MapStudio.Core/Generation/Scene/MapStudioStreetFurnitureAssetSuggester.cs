@@ -116,6 +116,16 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                 normalizedPath);
         }
 
+        if (
+            TryParseMaxSpeedReference(
+                normalizedReference,
+                out var speedKph))
+        {
+            return MatchesMaxSpeedSignAsset(
+                normalizedPath,
+                speedKph);
+        }
+
         var numericTokens =
             Tokenize(
                 point.Reference)
@@ -183,6 +193,80 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
         ContainsToken(
             normalizedPath,
             "205");
+
+    private static bool TryParseMaxSpeedReference(
+        string normalizedReference,
+        out int speedKph)
+    {
+        speedKph =
+            0;
+
+        var tokens =
+            normalizedReference
+                .Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries |
+                    StringSplitOptions.TrimEntries);
+
+        return
+            tokens.Length ==
+                2 &&
+            string.Equals(
+                tokens[0],
+                "maxspeed",
+                StringComparison.Ordinal) &&
+            int.TryParse(
+                tokens[1],
+                out speedKph) &&
+            speedKph is
+                >= 5 and <= 200;
+    }
+
+    private static bool MatchesMaxSpeedSignAsset(
+        string normalizedPath,
+        int speedKph)
+    {
+        var speedToken =
+            speedKph.ToString(
+                CultureInfo.InvariantCulture);
+
+        var tokens =
+            Tokenize(
+                normalizedPath)
+                .ToHashSet(
+                    StringComparer.Ordinal);
+
+        if (!tokens.Contains(
+                speedToken))
+        {
+            return false;
+        }
+
+        return
+            ContainsToken(
+                normalizedPath,
+                "274") ||
+            ContainsToken(
+                normalizedPath,
+                "tempo") ||
+            ContainsToken(
+                normalizedPath,
+                "speed") ||
+            ContainsToken(
+                normalizedPath,
+                "geschw") ||
+            ContainsToken(
+                normalizedPath,
+                "maxspeed") ||
+            (
+                ContainsToken(
+                    normalizedPath,
+                    "r") &&
+                ContainsToken(
+                    normalizedPath,
+                    "19")
+            );
+    }
 
     private static bool IsAllowedGroup(
         OmsiAssetLibraryGroup group,
