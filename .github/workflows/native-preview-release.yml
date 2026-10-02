@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.137: place explicit maximum-speed signs only when value, direction and installed asset match.
+# Test 10.138: harden Brazilian R-19 and speed-sign family matching against prefix/substr false positives.
 
 on:
   push:
@@ -244,6 +244,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.136-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.137-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.137-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.138-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.138-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -269,8 +271,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.137-native
-  TAG: v0.2.0-alpha.5-test.10.137-native
+  VERSION: 0.2.0-alpha.5-test.10.138-native
+  TAG: v0.2.0-alpha.5-test.10.138-native
 
 jobs:
   build-native-preview:
@@ -6088,6 +6090,46 @@ jobs:
 
           Write-Host "Verified explicit maxspeed/R-19 parsing, exact value matching, review fallback and OMSI tile round-trip."
 
+      - name: Verify test 10.138 strict R-19 and speed-family matching
+        shell: pwsh
+        run: |
+          $importer = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOsmStreetFurnitureImporter.cs -Raw
+          $suggester = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioStreetFurnitureAssetSuggester.cs -Raw
+          $importerTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmStreetFurnitureImporterTests.cs -Raw
+          $extendedTests = Get-Content tests/MapStudio.Core.Tests/MapStudioExtendedStreetFurnitureTests.cs -Raw
+
+          foreach ($required in @(
+            'string.Equals(',
+            '"BR:R-19"',
+            '"BR:R-19["',
+            'IsMaxSpeedTrafficSign'
+          )) {
+            if (-not $importer.Contains($required)) {
+              throw "Test 10.138 exact R-19 matcher marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'tokens.Contains(',
+            '"274"',
+            '"19"',
+            'MatchesMaxSpeedSignAsset'
+          )) {
+            if (-not $suggester.Contains($required)) {
+              throw "Test 10.138 exact speed-family token marker is missing: $required"
+            }
+          }
+
+          if (-not $importerTests.Contains('BR:R-190')) {
+            throw "Test 10.138 false Brazilian R-19 prefix regression is missing."
+          }
+
+          if (-not $extendedTests.Contains('VZ_1274_50.sco')) {
+            throw "Test 10.138 false 274 substring regression is missing."
+          }
+
+          Write-Host "Verified exact R-19 code recognition and exact numeric 274-family matching."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6280,11 +6322,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.137-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.138-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.137-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.138-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
