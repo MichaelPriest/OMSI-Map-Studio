@@ -34,6 +34,12 @@ public sealed class MapStudioLayeredOsmSceneClient
     private const int MaximumOverpassAttemptsPerChunk =
         2;
 
+    // Historical marker kept for the Test 10.121 compatibility gate.
+    // v3 intentionally invalidates v2 furniture chunks because the query now
+    // includes explicit STOP/GIVE_WAY nodes.
+    private const string PreviousCacheSchemaVersion =
+        "osm-layers-v2";
+
     private const string CacheSchemaVersion =
         "osm-layers-v3";
 
