@@ -201,9 +201,21 @@ public sealed class MapStudioExtendedStreetFurnitureTests
                 "DE:274-30")
                 ?.RelativePath);
 
+        Assert.Equal(
+            @"Sceneryobjects\Verkehrszeichen_MC\VZ_206.sco",
+            Select(
+                "BR:R-1")
+                ?.RelativePath);
+
+        Assert.Equal(
+            @"Sceneryobjects\Verkehrszeichen_MC\VZ_205.sco",
+            Select(
+                "BR:R-2")
+                ?.RelativePath);
+
         Assert.Null(
             Select(
-                "BR:R-1"));
+                "BR:R-3"));
     }
 
     [Fact]
