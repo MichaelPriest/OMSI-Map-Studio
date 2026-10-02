@@ -103,6 +103,12 @@ public sealed class MapStudioLayeredOsmSceneClientTests
                     StringComparison.Ordinal) &&
                 query.Contains(
                     "node[\"highway\"=\"crossing\"]",
+                    StringComparison.Ordinal) &&
+                query.Contains(
+                    "node[\"highway\"=\"stop\"]",
+                    StringComparison.Ordinal) &&
+                query.Contains(
+                    "node[\"highway\"=\"give_way\"]",
                     StringComparison.Ordinal));
 
         Assert.DoesNotContain(
