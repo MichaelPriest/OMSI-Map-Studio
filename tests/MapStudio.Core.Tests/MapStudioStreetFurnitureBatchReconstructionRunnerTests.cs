@@ -497,6 +497,121 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
     }
 
     [Fact]
+    public async Task RunAsyncPlacesWayRelativeStopSignWithResolvedRotation()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-furniture-way-stop-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                Path.Combine(
+                    root,
+                    "maps",
+                    "FurnitureWayStopTest");
+
+            Directory.CreateDirectory(
+                mapDirectory);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    mapDirectory,
+                    "global.cfg"),
+                "[name]\r\nFurniture Way Stop Test\r\n" +
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n",
+                Encoding.UTF8);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            await File.WriteAllTextAsync(
+                tilePath,
+                "[version]\r\n14\r\n",
+                Encoding.UTF8);
+
+            var assets =
+                new List<OmsiAssetIndexEntry>();
+
+            AddAsset(
+                root,
+                assets,
+                @"Sceneryobjects\Verkehrszeichen_MC\VZ_206.sco");
+
+            const string xml =
+                """
+                <osm version="0.6">
+                  <node id="1" lat="-23.55000" lon="-46.63020"/>
+                  <node id="10" lat="-23.55000" lon="-46.63000">
+                    <tag k="highway" v="stop"/>
+                    <tag k="direction" v="forward"/>
+                  </node>
+                  <node id="20" lat="-23.55000" lon="-46.62980"/>
+                  <way id="100">
+                    <nd ref="1"/>
+                    <nd ref="10"/>
+                    <nd ref="20"/>
+                    <tag k="highway" v="residential"/>
+                  </way>
+                </osm>
+                """;
+
+            var result =
+                await new MapStudioStreetFurnitureBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        xml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50),
+                        assets);
+
+            var placement =
+                Assert.Single(
+                    result.Placements);
+
+            Assert.EndsWith(
+                @"Verkehrszeichen_MC\VZ_206.sco",
+                placement.SceneryObjectPath,
+                StringComparison.OrdinalIgnoreCase);
+
+            Assert.Empty(
+                result.MissingAssetFeatureIds);
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        tilePath);
+
+            var sign =
+                Assert.Single(
+                    content.Objects);
+
+            Assert.InRange(
+                sign.Rotation,
+                89.0,
+                91.0);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task RunAsyncReportsMissingFurnitureAssetWithoutChangingMap()
     {
         var root =
