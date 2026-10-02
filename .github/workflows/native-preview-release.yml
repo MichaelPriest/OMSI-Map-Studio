@@ -6053,6 +6053,7 @@ jobs:
             'ImporterCanonicalizesExplicitMaximumSpeedSigns',
             'ExplicitMaximumSpeedWithoutNumericValueNeedsReview',
             'BR:R-19[30]',
+            'BR:R-190',
             '60 km/h',
             'implicit'
           )) {
@@ -6065,7 +6066,8 @@ jobs:
             'SuggesterMatchesExplicitPrioritySignsAndRejectsUnrelatedStockSign',
             'maxspeed 30',
             'maxspeed 50',
-            'VZ_274_30.sco'
+            'VZ_274_30.sco',
+            'VZ_1274_50.sco'
           )) {
             if (-not $extendedTests.Contains($required)) {
               throw "Test 10.137 exact speed-value matcher regression is missing: $required"
