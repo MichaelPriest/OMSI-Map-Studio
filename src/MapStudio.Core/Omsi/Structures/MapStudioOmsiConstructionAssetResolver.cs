@@ -610,9 +610,9 @@ public sealed class MapStudioOmsiRoadSplineResolver
 
                 var originalFallbackWidthError =
                     Math.Max(
-                        5.0,
+                        2.5,
                         profile.TotalWidthMeters *
-                        0.75);
+                        0.30);
 
                 if (
                     candidate.OriginalOmsiRoad &&
