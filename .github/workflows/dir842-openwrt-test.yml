@@ -152,6 +152,34 @@ jobs:
         run: |
           set -euxo pipefail
           cd dir842-port
+
+          # Bullseye is archived now; keep the old userspace/toolchain generation
+          # required by this 2020 OpenWrt tree, but point APT at Debian's archive
+          # instead of stale security mirror indices.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("Dockerfile")
+          s = p.read_text()
+          needle = "FROM debian:bullseye\n"
+          archive = """FROM debian:bullseye
+
+RUN printf '%s\\n' \\
+      'deb [check-valid-until=no] http://archive.debian.org/debian bullseye main' \\
+      'deb [check-valid-until=no] http://archive.debian.org/debian-security bullseye-security main' \\
+      > /etc/apt/sources.list && \\
+    rm -f /etc/apt/sources.list.d/*
+"""
+          if s.count(needle) != 1:
+              raise SystemExit("Dockerfile base image marker not found exactly once")
+          s = s.replace(needle, archive, 1)
+          s = s.replace(
+              "RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install",
+              "RUN apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update && DEBIAN_FRONTEND=noninteractive apt-get install",
+              1,
+          )
+          p.write_text(s)
+          PY
+
           docker build             --build-arg U="$(id -u)"             --build-arg G="$(id -g)"             -t owrt-dir842-test .
           docker run --rm             -v "$PWD":/build             -w /build             owrt-dir842-test             ./build.sh 2>&1 | tee build.log
 
