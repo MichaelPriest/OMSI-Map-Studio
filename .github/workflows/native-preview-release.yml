@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.141: preserve physically safe stock junction fits on nearby intersections.
+# Test 10.142: continuous OMSI road arcs and automatic terrain-to-road conform.
 
 on:
   push:
@@ -252,6 +252,11 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.140-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.141-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.141-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.142-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.142-native.md"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioRoadArcGeometry.cs"
+      - "src/MapStudio.Core/Omsi/Structures/MapStudioRoadTerrainConformBatchApplier.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadCurveAndTerrainTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -277,8 +282,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.141-native
-  TAG: v0.2.0-alpha.5-test.10.141-native
+  VERSION: 0.2.0-alpha.5-test.10.142-native
+  TAG: v0.2.0-alpha.5-test.10.142-native
 
 jobs:
   build-native-preview:
@@ -6336,6 +6341,69 @@ jobs:
 
           Write-Host "Verified offset-center round-trip, oversized-junction fallback and connector preservation between nearby stock junctions."
 
+      - name: Verify test 10.142 continuous road arcs and terrain conform
+        shell: pwsh
+        run: |
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $arc = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadArcGeometry.cs -Raw
+          $terrain = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadTerrainConformBatchApplier.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadCurveAndTerrainTests.cs -Raw
+
+          foreach ($required in @(
+            'BuildPlacementGeometries',
+            'TryBuildGroundCurveGeometry',
+            'RadiusMeters',
+            'MapStudioRoadArcGeometry',
+            'ValidateStraightSplineEndpoint'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.142 road-curve marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioRoadArcPlacement',
+            'SweepDegrees',
+            'ResolveEndPoint'
+          )) {
+            if (-not $arc.Contains($required)) {
+              throw "Test 10.142 arc geometry marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadSurfaceClearanceMeters',
+            'ConformToSpline',
+            'PhysicalWidthMeters',
+            'featherWidth'
+          )) {
+            if (-not $terrain.Contains($required)) {
+              throw "Test 10.142 terrain conform marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioRoadTerrainConformBatchApplier',
+            'Ajustando o terreno ao corredor físico das vias'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.142 real-map terrain integration marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadRunnerWritesContinuousOmsiArcForDegreeTwoBend',
+            'RoadTerrainConformBatchFollowsRoadAndLeavesFarTerrainUntouched',
+            'RoadArcGeometryRoundTripsCurvedEndpoint'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.142 road/terrain regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified real OMSI curved spline placement and automatic terrain-to-road corridor conform."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6528,11 +6596,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.141-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.142-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.141-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.142-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
