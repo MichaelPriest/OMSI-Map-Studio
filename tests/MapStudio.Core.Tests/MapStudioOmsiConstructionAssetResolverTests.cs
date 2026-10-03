@@ -129,14 +129,7 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
                             Path.DirectorySeparatorChar));
 
             var originalSource =
-                Path.Combine(
-                    root,
-                    MapStudioStandardRoadCatalog
-                        .RoadTwoLaneWithSidewalk
-                        .RelativePath
-                        .Replace(
-                            '\\',
-                            Path.DirectorySeparatorChar));
+                exactAddonSource;
 
             var addonRelativePath =
                 @"Splines\Addon\road_exact_7m.sli";
@@ -159,7 +152,7 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
                     true);
 
             var originalRelativePath =
-                @"Splines\Marcel\str_2spur_11m_SeeburgerStr1.sli";
+                @"Splines\Marcel\str_2spur_7m_Test.sli";
 
             var originalPath =
                 Path.Combine(
@@ -224,6 +217,137 @@ public sealed class MapStudioOmsiConstructionAssetResolverTests
             Assert.DoesNotContain(
                 MapStudioRoadKitGenerator
                     .PackFolderName,
+                match.Value.RelativePath,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ResolverRejectsMateriallyOversizedOriginalOmsiRoadForExactInstalledAddon()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-physical-fit-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            await new MapStudioRoadKitGenerator()
+                .InstallOrUpdateAsync(
+                    root);
+
+            var exactSource =
+                Path.Combine(
+                    root,
+                    MapStudioStandardRoadCatalog
+                        .RoadTwoLane
+                        .RelativePath
+                        .Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+            var oversizedSource =
+                Path.Combine(
+                    root,
+                    MapStudioStandardRoadCatalog
+                        .RoadTwoLaneWithSidewalk
+                        .RelativePath
+                        .Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+            var addonRelativePath =
+                @"Splines\Addon\road_exact_7m.sli";
+
+            var addonPath =
+                Path.Combine(
+                    root,
+                    addonRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    addonPath)!);
+
+            File.Copy(
+                exactSource,
+                addonPath,
+                overwrite:
+                    true);
+
+            var originalRelativePath =
+                @"Splines\Marcel\str_2spur_11m_SeeburgerStr1.sli";
+
+            var originalPath =
+                Path.Combine(
+                    root,
+                    originalRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    originalPath)!);
+
+            File.Copy(
+                oversizedSource,
+                originalPath,
+                overwrite:
+                    true);
+
+            OmsiAssetIndexEntry Entry(
+                string relativePath,
+                string fullPath) =>
+                new(
+                    relativePath,
+                    OmsiAssetKind.Spline,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(
+                        fullPath)
+                        .Ticks);
+
+            var matches =
+                await new MapStudioOmsiRoadSplineResolver()
+                    .ResolveAsync(
+                        root,
+                        [
+                            Entry(
+                                originalRelativePath,
+                                originalPath),
+                            Entry(
+                                addonRelativePath,
+                                addonPath)
+                        ],
+                        [
+                            MapStudioStandardRoadCatalog
+                                .RoadTwoLane
+                        ]);
+
+            var match =
+                Assert.Single(
+                    matches);
+
+            Assert.Equal(
+                addonRelativePath,
+                match.Value.RelativePath,
+                ignoreCase:
+                    true);
+
+            Assert.DoesNotContain(
+                "str_2spur_11m",
                 match.Value.RelativePath,
                 StringComparison.OrdinalIgnoreCase);
         }
