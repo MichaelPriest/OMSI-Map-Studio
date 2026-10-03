@@ -1,0 +1,31 @@
+From: OpenAI-assisted development
+Subject: [PATCH 10/10] rtl819x: fix recovery guidance and detector window logging
+
+Two diagnostic strings in v1.4.1 contradict the implemented recovery:
+
+* the FCS detector samples ~2.5 s windows but still prints "in 10s";
+* the RX-STALL detector tells the operator to use fabric_reset=2 when
+  level 2 was explicitly measured NOT to clear this stall; level 3 does.
+
+These messages are used during serial recovery, so wrong instructions can turn
+a recoverable event into repeated ineffective resets.
+
+--- a/files/target/linux/realtek/files-4.14/drivers/net/ethernet/rtl819x/rtl819x-eth.c
++++ b/files/target/linux/realtek/files-4.14/drivers/net/ethernet/rtl819x/rtl819x-eth.c
+@@ -1074,7 +1074,7 @@ static void rtl819x_hang_check(struct rtl819x_eth_priv *priv)
+ 				}
+ 			} else if (dfail >= 4 && dfail >= 4 * dok) {
+-				pr_err("rtl819x: FABRIC WEDGE detected (large-frame FCS fail=%u ok=%u in 10s)%s\n",
++				pr_err("rtl819x: FABRIC WEDGE detected (large-frame FCS fail=%u ok=%u in ~2.5s)%s\n",
+ 				       dfail, dok,
+ 				       fabric_autoreset ? " - auto recovery" : " - set fabric_reset=3 to recover");
+ 				/* !fcs_last_auto == "never fired" (INITIAL_JIFFIES on
+@@ -1150,7 +1150,7 @@ static void rtl819x_hang_check(struct rtl819x_eth_priv *priv)
+ 				pr_err("rtl819x: RX-STALL WEDGE detected (USEDDSC=%u, rx_packets frozen at %lu)%s\n",
+ 				       used, rx,
+ 				       fabric_autoreset ? " - auto recovery"
+-							        : " - set fabric_reset=2 to recover");
++							        : " - set fabric_reset=3 to recover");
+ 				/* Same holdoff convention as the FCS path above:
+ 				 * !stall_last_auto means "never fired" (INITIAL_JIFFIES
+ 				 * on MIPS would otherwise defer the first one), |1 keeps
