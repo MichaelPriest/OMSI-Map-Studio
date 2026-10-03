@@ -158,7 +158,7 @@ jobs:
           cat > Dockerfile.ci <<'EOF'
           FROM debian:bullseye
 
-          RUN printf '%s\\n' \
+          RUN printf '%s\n' \
                 'deb [check-valid-until=no] http://archive.debian.org/debian bullseye main' \
                 'deb [check-valid-until=no] http://archive.debian.org/debian-security bullseye-security main' \
                 > /etc/apt/sources.list && \
