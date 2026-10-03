@@ -32,6 +32,9 @@ public sealed class MapStudioLayeredOsmSceneClient
         2;
 
     private const int MaximumOverpassAttemptsPerChunk =
+        8;
+
+    private const int MaximumLayerRecoveryPasses =
         2;
 
     // Historical marker kept for the Test 10.121 compatibility gate.
@@ -50,6 +53,10 @@ public sealed class MapStudioLayeredOsmSceneClient
     private static readonly TimeSpan
         EndpointConnectTimeout =
             TimeSpan.FromSeconds(8);
+
+    private static readonly TimeSpan
+        LayerRecoveryBaseDelay =
+            TimeSpan.FromMilliseconds(1500);
 
     private static readonly HttpClient
         SharedHttpClient =
@@ -388,6 +395,140 @@ public sealed class MapStudioLayeredOsmSceneClient
                         tasks)
                     .ConfigureAwait(false);
 
+            for (
+                var recoveryPass = 1;
+                recoveryPass <=
+                    MaximumLayerRecoveryPasses &&
+                layerResults.Any(
+                    result =>
+                        result.FailedChunkCount >
+                            0);
+                recoveryPass++)
+            {
+                var failedPrimaryCount =
+                    layerResults.Count(
+                        result =>
+                            result.FailedChunkCount >
+                                0);
+
+                var delay =
+                    TimeSpan.FromMilliseconds(
+                        LayerRecoveryBaseDelay
+                            .TotalMilliseconds *
+                        recoveryPass *
+                        recoveryPass);
+
+                progress?.Report(
+                    new MapStudioOverpassSceneDownloadProgress(
+                        primaryChunks.Count,
+                        primaryChunks.Count,
+                        System.Threading.Volatile
+                            .Read(
+                                ref reportedSuccessfulLeafChunks),
+                        System.Threading.Volatile
+                            .Read(
+                                ref reportedFailedLeafChunks),
+                        System.Threading.Volatile
+                            .Read(
+                                ref reportedRequestAttempts),
+                        $"OpenStreetMap → {layer.DisplayName} → recuperação {recoveryPass}/{MaximumLayerRecoveryPasses}: repetindo apenas {failedPrimaryCount} bloco(s) incompleto(s) em {delay.TotalSeconds:0.0}s; cache parcial será reutilizado"));
+
+                await Task
+                    .Delay(
+                        delay,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                var retryTasks =
+                    layerResults
+                        .Select(
+                            (
+                                previous,
+                                index) =>
+                            {
+                                if (
+                                    previous
+                                        .FailedChunkCount ==
+                                    0)
+                                {
+                                    return Task
+                                        .FromResult(
+                                            previous);
+                                }
+
+                                var primaryNumber =
+                                    index +
+                                    1;
+
+                                return DownloadChunkWithRecoveryAsync(
+                                    layer,
+                                    primaryChunks[index],
+                                    primaryNumber,
+                                    primaryChunks.Count,
+                                    primaryNumber
+                                        .ToString(
+                                            CultureInfo
+                                                .InvariantCulture),
+                                    depth:
+                                        0,
+                                    cacheRoot,
+                                    requestConcurrency,
+                                    attempt =>
+                                    {
+                                        var attempts =
+                                            System.Threading.Interlocked
+                                                .Increment(
+                                                    ref reportedRequestAttempts);
+
+                                        progress?.Report(
+                                            new MapStudioOverpassSceneDownloadProgress(
+                                                primaryChunks.Count,
+                                                primaryChunks.Count,
+                                                System.Threading.Volatile
+                                                    .Read(
+                                                        ref reportedSuccessfulLeafChunks),
+                                                System.Threading.Volatile
+                                                    .Read(
+                                                        ref reportedFailedLeafChunks),
+                                                attempts,
+                                                $"OpenStreetMap → {layer.DisplayName} → recuperação {recoveryPass}/{MaximumLayerRecoveryPasses} → bloco {attempt.ChunkLabel}/{primaryChunks.Count} → servidor {attempt.Endpoint.Host} → tentativa {attempt.Attempt}/{attempt.TotalAttempts}"));
+                                    },
+                                    status =>
+                                        progress?.Report(
+                                            new MapStudioOverpassSceneDownloadProgress(
+                                                primaryChunks.Count,
+                                                primaryChunks.Count,
+                                                System.Threading.Volatile
+                                                    .Read(
+                                                        ref reportedSuccessfulLeafChunks),
+                                                System.Threading.Volatile
+                                                    .Read(
+                                                        ref reportedFailedLeafChunks),
+                                                System.Threading.Volatile
+                                                    .Read(
+                                                        ref reportedRequestAttempts),
+                                                status)),
+                                    cancellationToken);
+                            })
+                        .ToArray();
+
+                layerResults =
+                    await Task
+                        .WhenAll(
+                            retryTasks)
+                        .ConfigureAwait(false);
+
+                reportedSuccessfulLeafChunks =
+                    layerResults.Sum(
+                        result =>
+                            result.SuccessfulChunkCount);
+
+                reportedFailedLeafChunks =
+                    layerResults.Sum(
+                        result =>
+                            result.FailedChunkCount);
+            }
+
             var layerFailures =
                 new List<string>();
 
@@ -404,9 +545,6 @@ public sealed class MapStudioLayeredOsmSceneClient
 
                 failedChunks +=
                     result.FailedChunkCount;
-
-                requestAttempts +=
-                    result.RequestAttemptCount;
 
                 layerCacheHits +=
                     result.CacheHitCount;
@@ -433,6 +571,11 @@ public sealed class MapStudioLayeredOsmSceneClient
                 layerFailures.AddRange(
                     result.Failures);
             }
+
+            requestAttempts +=
+                System.Threading.Volatile
+                    .Read(
+                        ref reportedRequestAttempts);
 
             if (
                 layerResults.Sum(
@@ -462,9 +605,9 @@ public sealed class MapStudioLayeredOsmSceneClient
                         result =>
                             result.SuccessfulChunkCount),
                     0,
-                    layerResults.Sum(
-                        result =>
-                            result.RequestAttemptCount),
+                    System.Threading.Volatile
+                        .Read(
+                            ref reportedRequestAttempts),
                     $"OpenStreetMap → {layer.DisplayName} → {primaryChunks.Count}/{primaryChunks.Count} blocos validados · cache {layerCacheHits} · rede {layerNetworkChunks}"));
         }
 
@@ -2228,9 +2371,12 @@ public sealed class MapStudioLayeredOsmSceneClient
                         _score -
                         20);
 
+                // A timeout on a parent bbox must not quarantine the server
+                // from the smaller recovery children. Smaller Overpass
+                // queries often succeed immediately after the parent timed
+                // out. Only explicit 429 responses impose a hard cooldown.
                 _cooldownUntil =
-                    DateTimeOffset.UtcNow +
-                    TimeSpan.FromSeconds(20);
+                    DateTimeOffset.MinValue;
             }
         }
 
