@@ -409,7 +409,7 @@ public sealed class MapStudioRealWorldRoadPipelineTests
 
             var sourceRelativePath =
                 MapStudioStandardRoadCatalog
-                    .RoadTwoLaneWithSidewalk
+                    .LocalWithSidewalk
                     .RelativePath;
 
             var sourcePath =
@@ -420,7 +420,7 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                         Path.DirectorySeparatorChar));
 
             var installedRelativePath =
-                @"Splines\Marcel\str_2spur_11m_SeeburgerStr1.sli";
+                @"Splines\Marcel\str_2spur_8_5m_Test.sli";
 
             var installedPath =
                 Path.Combine(
@@ -538,6 +538,151 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                         spline.SplinePath,
                         ignoreCase:
                             true));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task RoadRunnerRejectsOversizedStockSplineAndUsesRoadKitFallback()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-oversized-stock-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            await new MapStudioRoadKitGenerator()
+                .InstallOrUpdateAsync(
+                    root);
+
+            var oversizedSource =
+                Path.Combine(
+                    root,
+                    MapStudioStandardRoadCatalog
+                        .RoadTwoLaneWithSidewalk
+                        .RelativePath
+                        .Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar));
+
+            var installedRelativePath =
+                @"Splines\Marcel\str_2spur_11m_SeeburgerStr1.sli";
+
+            var installedPath =
+                Path.Combine(
+                    root,
+                    installedRelativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(
+                    installedPath)!);
+
+            File.Copy(
+                oversizedSource,
+                installedPath,
+                overwrite:
+                    true);
+
+            var roadKitDirectory =
+                Path.Combine(
+                    root,
+                    "Splines",
+                    MapStudioRoadKitGenerator
+                        .PackFolderName);
+
+            Directory.Delete(
+                roadKitDirectory,
+                recursive:
+                    true);
+
+            var entry =
+                new OmsiAssetIndexEntry(
+                    installedRelativePath,
+                    OmsiAssetKind.Spline,
+                    new FileInfo(
+                        installedPath)
+                        .Length,
+                    File.GetLastWriteTimeUtc(
+                        installedPath)
+                        .Ticks);
+
+            const string serviceRoadXml =
+                """
+                <osm version="0.6">
+                  <node id="1" lat="-23.55000" lon="-46.63000"/>
+                  <node id="2" lat="-23.55000" lon="-46.62990"/>
+                  <node id="3" lat="-23.55000" lon="-46.62980"/>
+                  <way id="100">
+                    <nd ref="1"/><nd ref="2"/><nd ref="3"/>
+                    <tag k="highway" v="service"/>
+                    <tag k="lanes" v="2"/>
+                    <tag k="width" v="7"/>
+                  </way>
+                </osm>
+                """;
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        serviceRoadXml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50),
+                        installedRoadSplines:
+                            [entry]);
+
+            Assert.True(
+                result.PlacedSplineCount >
+                0);
+
+            Assert.Equal(
+                0,
+                result.InstalledOmsiSplineCount);
+
+            Assert.Equal(
+                result.PlacedSplineCount,
+                result.RoadKitFallbackSplineCount);
+
+            Assert.True(
+                Directory.Exists(
+                    roadKitDirectory));
+
+            Assert.All(
+                result.Placements,
+                placement =>
+                    Assert.Contains(
+                        MapStudioRoadKitGenerator
+                            .PackFolderName,
+                        placement.SplinePath,
+                        StringComparison.OrdinalIgnoreCase));
+
+            Assert.DoesNotContain(
+                result.Placements,
+                placement =>
+                    placement.SplinePath.Contains(
+                        "str_2spur_11m",
+                        StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
