@@ -45,8 +45,8 @@ jobs:
 
           for p in             08-dir842-bridge-role-reset.patch             09-dir842-explicit-radio0-reset.patch             10-rtl819x-recovery-diagnostics.patch             11-rtl819x-bridge-hwnat-recovery-gate.patch
           do
-            git apply --check "$GITHUB_WORKSPACE/.ci/dir842/$p"
-            git apply "$GITHUB_WORKSPACE/.ci/dir842/$p"
+            git apply --recount --check "$GITHUB_WORKSPACE/.ci/dir842/$p"
+            git apply --recount "$GITHUB_WORKSPACE/.ci/dir842/$p"
           done
 
           git diff --check
