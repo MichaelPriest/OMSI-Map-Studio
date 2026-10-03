@@ -26,7 +26,8 @@ public sealed record MapStudioRealWorldMapPipelineResult(
     MapStudioRoadBatchReconstructionResult Roads,
     MapStudioRealWorldSceneReconstructionResult Scene,
     string SessionBackupDirectory,
-    MapStudioTerrainElevationBatchResult? Elevation = null)
+    MapStudioTerrainElevationBatchResult? Elevation = null,
+    MapStudioRoadTerrainConformBatchResult? RoadTerrainConform = null)
 {
     public int PlacedElementCount =>
         Roads.PlacedSplineCount +
@@ -591,6 +592,27 @@ public sealed class MapStudioRealWorldMapPipeline
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
                         .GeneratingRoads,
+                    "Ajustando o terreno ao corredor físico das vias..."));
+
+            var roadTerrainConform =
+                await new MapStudioRoadTerrainConformBatchApplier()
+                    .ApplyAsync(
+                        root,
+                        mapRoot,
+                        roads.Placements,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            progress?.Report(
+                new MapStudioRealWorldMapPipelineProgress(
+                    MapStudioRealWorldMapPipelineStage
+                        .GeneratingRoads,
+                    $"Terreno ajustado às vias · {roadTerrainConform.ModifiedTileCount} tile(s) · {roadTerrainConform.ChangedSamples} amostra(s) corrigida(s)."));
+
+            progress?.Report(
+                new MapStudioRealWorldMapPipelineProgress(
+                    MapStudioRealWorldMapPipelineStage
+                        .GeneratingRoads,
                     $"Vias montadas · {roads.InstalledOmsiSplineCount} trecho(s) com SLI instalada do OMSI · " +
                     $"{roads.RoadKitFallbackSplineCount} fallback(s) do Road Kit · " +
                     $"{roads.InstalledOmsiJunctionCount} cruzamento(s) stock OMSI · " +
@@ -647,7 +669,8 @@ public sealed class MapStudioRealWorldMapPipeline
                     roads,
                     scene,
                     snapshot.BackupRoot,
-                    elevationResult);
+                    elevationResult,
+                    roadTerrainConform);
 
             if (result.PlacedElementCount <= 0)
             {
