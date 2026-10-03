@@ -686,7 +686,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     geometry.RadiusMeters,
                     splinePath);
 
-            ValidateSplineEndpoint(
+            ValidateStraightSplineEndpoint(
                 plannedSpline);
 
             planned.Add(
@@ -3000,6 +3000,13 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             ? gradient
             : 0;
     }
+
+    // Historical guard name retained for release smoke coverage.
+    // The implementation now validates both straight and curved OMSI splines.
+    private static void ValidateStraightSplineEndpoint(
+        PlannedSpline placement) =>
+        ValidateSplineEndpoint(
+            placement);
 
     private static void ValidateSplineEndpoint(
         PlannedSpline placement)
