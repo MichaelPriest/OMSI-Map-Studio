@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.139: enforce original OMSI stock-first roads/buildings and lazy Road Kit fallback.
+# Test 10.140: physically fit stock OMSI roads/junctions and compensate offset SCO origins.
 
 on:
   push:
@@ -248,6 +248,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.138-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.139-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.139-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.140-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.140-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -273,8 +275,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.139-native
-  TAG: v0.2.0-alpha.5-test.10.139-native
+  VERSION: 0.2.0-alpha.5-test.10.140-native
+  TAG: v0.2.0-alpha.5-test.10.140-native
 
 jobs:
   build-native-preview:
@@ -5599,8 +5601,9 @@ jobs:
           $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
 
           foreach ($required in @(
-            'BuildMouths',
+            'BuildJunctionGeometry',
             'BuildEndpoint',
+            'ResolveJunctionCenter',
             'MaximumArmAngularErrorDegrees',
             'MouthHeadingClusterDegrees',
             'OutwardHeadingDegrees',
@@ -6229,6 +6232,77 @@ jobs:
 
           Write-Host "Verified original OMSI roads/buildings are hard-priority and Road Kit remains a real fallback."
 
+      - name: Verify test 10.140 physically safe stock OMSI fitting
+        shell: pwsh
+        run: |
+          $junctionResolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiJunctionResolver.cs -Raw
+          $roadResolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs -Raw
+          $roadRunner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiJunctionResolverTests.cs -Raw
+          $roadResolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+
+          foreach ($required in @(
+            'BuildJunctionGeometry',
+            'ResolveJunctionCenter',
+            'LocalCenterX',
+            'LocalCenterY',
+            'maximumReasonableMouthDistance',
+            'mouthDistanceError',
+            'CandidateSignature'
+          )) {
+            if (-not $junctionResolver.Contains($required)) {
+              throw "Test 10.140 fitted stock-junction marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ResolveInstalledJunctionOrigin',
+            'junctionPlacementPoint',
+            'installedJunction.LocalCenterX',
+            'installedJunction.LocalCenterY'
+          )) {
+            if (-not $roadRunner.Contains($required)) {
+              throw "Test 10.140 stock-junction origin compensation marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'originalFallbackWidthError',
+            '2.5',
+            '0.30'
+          )) {
+            if (-not $roadResolver.Contains($required)) {
+              throw "Test 10.140 physically compatible stock-road tolerance marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ResolverTracksLogicalCenterWhenStockSceneryOriginIsOffset',
+            'ResolverRejectsStockJunctionWhosePhysicalRadiusIsTooLargeForRoadWidth',
+            'offsetX',
+            'offsetY'
+          )) {
+            if (-not $junctionTests.Contains($required)) {
+              throw "Test 10.140 stock-junction geometry regression is missing: $required"
+            }
+          }
+
+          if (-not $roadResolverTests.Contains('ResolverRejectsMateriallyOversizedOriginalOmsiRoadForExactInstalledAddon')) {
+            throw "Test 10.140 oversized stock-road resolver regression is missing."
+          }
+
+          foreach ($required in @(
+            'RoadRunnerOffsetsStockJunctionOriginToItsFittedPathCenter',
+            'RoadRunnerRejectsOversizedStockSplineAndUsesRoadKitFallback'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.140 OMSI tile round-trip regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified stock junction logical-center fitting, oversize rejection, origin compensation and physically safe road fallback."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6421,11 +6495,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.139-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.140-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.139-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.140-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
