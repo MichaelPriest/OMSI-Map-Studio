@@ -1,0 +1,70 @@
+From: OpenAI-assisted development
+Subject: [PATCH 11/11] rtl819x: do not re-arm HW NAT during bridge recovery
+
+dir842-asic deliberately leaves HW NAT disabled in bridge role, but the
+level-3 recovery path unconditionally calls rtl819x_hwnat_start() after the
+fabric reset.  A bridge that hits the RX-stall detector can therefore come
+back with the routing/NAT offload engine armed even though gw_rearm is
+correctly skipped.
+
+Add an independent fabric_hwnat_rearm gate, defaulting to 1 for compatibility.
+dir842-asic sets it together with fabric_gw_rearm:
+  router: hwnat_rearm=1, gw_rearm=1
+  bridge: hwnat_rearm=0, gw_rearm=0
+
+Also make bridge role explicitly write hwnat=0 at the end of bring-up, so the
+role is idempotent even after manual experiments.
+
+--- a/files/target/linux/realtek/files-4.14/drivers/net/ethernet/rtl819x/rtl819x-eth.c
++++ b/files/target/linux/realtek/files-4.14/drivers/net/ethernet/rtl819x/rtl819x-eth.c
+@@ -925,6 +925,11 @@ static int fabric_gw_rearm = 1;
+ module_param(fabric_gw_rearm, int, 0644);
+ MODULE_PARM_DESC(fabric_gw_rearm, "level-3 recovery re-arms the ASIC gw program (default 1; set 0 in bridge role)");
+ 
++static int fabric_hwnat_rearm = 1;
++module_param(fabric_hwnat_rearm, int, 0644);
++MODULE_PARM_DESC(fabric_hwnat_rearm,
++		 "level-3 recovery re-arms hardware NAT (default 1; set 0 in bridge role)");
++
+ static int fabric_reset_mode;	/* latched ladder level for the queued hang_work */
+ 
+ static void rtl819x_hang_work(struct work_struct *w)
+@@ -1004,7 +1009,13 @@ static void rtl819x_hang_work(struct work_struct *w)
+ 	mutex_unlock(&rtl865x_hal_lock);
+ 
+ 	if (mode >= 3) {
+-		rtl819x_hwnat_start(priv->dev);
++		if (fabric_hwnat_rearm) {
++			rtl819x_hwnat_start(priv->dev);
++		} else {
++			pr_err("rtl819x: HW NAT re-arm SKIPPED (fabric_hwnat_rearm=0, bridge role)\n");
++		}
++
+ 		/*
+ 		 * M7 self-heal: FULL_RST wiped the ASIC TLU tables (netif MACs,
+ 		 * L2/L3 routes, nexthops, ACL permits) — without them the ASIC
+--- a/files/target/linux/realtek/base-files/etc/init.d/dir842-asic
++++ b/files/target/linux/realtek/base-files/etc/init.d/dir842-asic
+@@ -190,10 +190,12 @@ asic_up() {
+ 	# and fabric_gw_rearm=0 keeps the bridge-unsafe half switched off.
+ 	if [ "$ROLE" = "bridge" ]; then
+ 		echo 3 > /sys/module/rtl819x/parameters/fabric_autoreset 2>/dev/null
++		echo 0 > /sys/module/rtl819x/parameters/fabric_hwnat_rearm 2>/dev/null
+ 		echo 0 > /sys/module/rtl819x/parameters/fabric_gw_rearm 2>/dev/null
+ 	else
+ 		echo 3 > /sys/module/rtl819x/parameters/fabric_autoreset 2>/dev/null
++		echo 1 > /sys/module/rtl819x/parameters/fabric_hwnat_rearm 2>/dev/null
+ 		echo 1 > /sys/module/rtl819x/parameters/fabric_gw_rearm 2>/dev/null
+ 	fi
+ 
+@@ -216,8 +218,11 @@ asic_up() {
+ 	# hwnat is a NAT/routing offload; a bridge never routes. Leave it disarmed.
+ 	if [ "$ROLE" = "router" ]; then
+ 		echo 1 > /sys/module/rtl819x/parameters/hwnat 2>/dev/null
++	else
++		# Be explicit/idempotent: a previous router role or manual experiment
++		# must not leak an armed NAT engine into bridge operation.
++		echo 0 > /sys/module/rtl819x/parameters/hwnat 2>/dev/null
+ 	fi
+ 	logger -t dir842-asic "ASIC up ($ROLE): netif MAC $(cat /sys/class/net/eth0.2/address 2>/dev/null), hwnat=$(cat /sys/module/rtl819x/parameters/hwnat 2>/dev/null)"
+ }
