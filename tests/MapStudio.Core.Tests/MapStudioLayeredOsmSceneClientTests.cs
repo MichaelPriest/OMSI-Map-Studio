@@ -138,6 +138,137 @@ public sealed class MapStudioLayeredOsmSceneClientTests
     }
 
     [Fact]
+    public async Task DownloaderTriesAllConfiguredEndpointsBeforeSubdividing()
+    {
+        var counts =
+            new ConcurrentDictionary<string, int>(
+                StringComparer.OrdinalIgnoreCase);
+
+        using var httpClient =
+            new HttpClient(
+                new DelegateHandler(
+                    request =>
+                    {
+                        var host =
+                            request.RequestUri!
+                                .Host;
+
+                        counts.AddOrUpdate(
+                            host,
+                            1,
+                            (
+                                _,
+                                count) =>
+                                count + 1);
+
+                        return host ==
+                            "third.test"
+                                ? XmlResponse(
+                                    SampleSceneOsm)
+                                : new HttpResponseMessage(
+                                    HttpStatusCode
+                                        .ServiceUnavailable);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(5)
+            };
+
+        var result =
+            await new MapStudioLayeredOsmSceneClient(
+                    httpClient,
+                    [
+                        new Uri(
+                            "https://first.test/api/interpreter"),
+                        new Uri(
+                            "https://second.test/api/interpreter"),
+                        new Uri(
+                            "https://third.test/api/interpreter")
+                    ])
+                .DownloadAsync(
+                    -23.5510,
+                    -46.6340,
+                    -23.5500,
+                    -46.6330);
+
+        Assert.True(
+            counts["first.test"] >
+                0);
+
+        Assert.True(
+            counts["second.test"] >
+                0);
+
+        Assert.True(
+            counts["third.test"] >
+                0);
+
+        Assert.Equal(
+            0,
+            result.FailedChunkCount);
+
+        Assert.True(
+            result.SuccessfulChunkCount >=
+                5);
+    }
+
+    [Fact]
+    public async Task DownloaderAllowsSmallerRecoveryChunksAfterParentTimeout()
+    {
+        var requestCount =
+            0;
+
+        using var httpClient =
+            new HttpClient(
+                new DelegateHandler(
+                    _ =>
+                    {
+                        var number =
+                            Interlocked
+                                .Increment(
+                                    ref requestCount);
+
+                        if (number == 1)
+                        {
+                            throw new TaskCanceledException(
+                                "simulated parent timeout");
+                        }
+
+                        return XmlResponse(
+                            SampleSceneOsm);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(5)
+            };
+
+        var result =
+            await new MapStudioLayeredOsmSceneClient(
+                    httpClient,
+                    [
+                        new Uri(
+                            "https://timeout.test/api/interpreter")
+                    ])
+                .DownloadAsync(
+                    -23.5510,
+                    -46.6340,
+                    -23.5500,
+                    -46.6330);
+
+        Assert.Equal(
+            0,
+            result.FailedChunkCount);
+
+        Assert.True(
+            requestCount >=
+                9);
+
+        Assert.True(
+            result.SuccessfulChunkCount >
+                5);
+    }
+
+    [Fact]
     public async Task DownloaderHonorsRetryAfterByCoolingRateLimitedEndpoint()
     {
         var counts =
