@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.140: physically fit stock OMSI roads/junctions and compensate offset SCO origins.
+# Test 10.141: preserve physically safe stock junction fits on nearby intersections.
 
 on:
   push:
@@ -250,6 +250,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.139-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.140-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.140-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.141-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.141-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioOsmJunctionControlReaderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs"
@@ -275,8 +277,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.140-native
-  TAG: v0.2.0-alpha.5-test.10.140-native
+  VERSION: 0.2.0-alpha.5-test.10.141-native
+  TAG: v0.2.0-alpha.5-test.10.141-native
 
 jobs:
   build-native-preview:
@@ -6303,6 +6305,37 @@ jobs:
 
           Write-Host "Verified stock junction logical-center fitting, oversize rejection, origin compensation and physically safe road fallback."
 
+      - name: Verify test 10.141 nearby stock junction trim safety
+        shell: pwsh
+        run: |
+          $roadRunner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+
+          foreach ($required in @(
+            'FitInstalledJunctionTrimsToSegment',
+            'minimumConnectorLength',
+            'maximumCombinedTrim'
+          )) {
+            if (-not $roadRunner.Contains($required)) {
+              throw "Test 10.141 nearby-junction trim marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadRunnerOffsetsStockJunctionOriginToItsFittedPathCenter',
+            'physicalCenterX',
+            'physicalCenterY',
+            'RoadRunnerRejectsOversizedStockJunctionAndGeneratesFallbackAtThatNode',
+            'RoadRunnerKeepsConnectorBetweenNearbyValidatedStockJunctions',
+            'NearbyJunctionsXml'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.141 geometric regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified offset-center round-trip, oversized-junction fallback and connector preservation between nearby stock junctions."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6495,11 +6528,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.140-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.141-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.140-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.141-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
