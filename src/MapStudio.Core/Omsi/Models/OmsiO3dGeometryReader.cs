@@ -158,11 +158,9 @@ public sealed class OmsiO3dGeometryReader
                                 ref v);
 
                             // O3D binary vertices are already stored in
-                            // OMSI's runtime model axes (Y-up). Babylon
-                            // also renders Y-up, so swapping Y/Z here puts
-                            // buildings on their side. Keep the native
-                            // vertex axes and only convert map/SCO placement
-                            // coordinates at the scene-composition layer.
+                            // OMSI's runtime model axes (Y-up). Keep those
+                            // native axes here; only map/SCO placement data
+                            // needs coordinate conversion at scene level.
                             var p = checked((int)index * 3);
                             positions[p] = x;
                             positions[p + 1] = y;

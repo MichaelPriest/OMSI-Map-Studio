@@ -1059,3 +1059,20 @@ Priority is based on the first approximate surface reached by the ray, reducing 
 A second selection path now works independently from triangle raycasting. The editor projects real OMSI mesh bounding boxes into CSS viewport coordinates and directly checks whether the pointer is over the object's visible screen area. This removes scaling differences between WebView2, Windows DPI and Babylon's framebuffer.
 
 For splines, the real axis is projected to screen space and pointer-to-segment distance is measured in pixels. Selection is also committed on left-button press with pointer capture, since the selection layer no longer rebuilds the structural scene. This makes clicking immediate and closer to the original OMSI editor behavior.
+
+
+## Native hybrid visual architecture — Desktop, phase 1
+
+The native WinUI 3 interface has started converging the four design references into one coherent system. Desktop mode combines the **World Builder** structure with **Studio Panels** flexibility without returning to React/WebView.
+
+The Desktop shell now uses a compact global bar: **Save**, **Undo**, **Redo**, and **F11** stay on the left; **WORKSPACE / Map Studio** status is centered; **Day/night**, **Workspace**, **Open OMSI**, and the map catalog stay on the right. The standalone Workspace remains the primary flow, while optional OMSI access remains explicit.
+
+Explorer now exposes direct modes for **Scene**, **Assets**, **Map**, and **Transport**. Side panels remain resizable and collapsible through the same native structures; no Library, transport, or editing capability was removed.
+
+The lower dock was simplified into a 3D-editor category bar. Large textual grouping blocks were replaced by subtle separators. Secondary actions remain available through context without removing their native handlers.
+
+A new **context palette** sits above the main dock and changes with the active tool. It already provides functional states for Selection, Objects, Roads, Bridges/Tunnels, Buildings, Vegetation, Junctions, Terrain, Water, Traffic, and Transport. Under Roads, **Easy Road**, **Straight**, **Curve**, and **Height** presets reuse the real spline pipeline and existing native controls; they are not visual mocks.
+
+The Inspector has also moved to a contextual card structure. Item identity, transform, spline geometry/links, actions, and terrain tools are shown according to context. The terrain card is activated by the Terrain tool, while object and spline cards reuse the viewport's real selection/picking state.
+
+This is the first redesign phase. The next stage applies the same model to **F11**, combining **Creator Focus** with **Minimal Floating Panels**: a dominant viewport plus movable Explorer/Library/Inspector panels instead of merely stretching the Desktop layout.

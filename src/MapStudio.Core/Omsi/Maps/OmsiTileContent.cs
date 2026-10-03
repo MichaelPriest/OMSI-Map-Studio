@@ -6,10 +6,14 @@ public sealed record OmsiTileContent(
     IReadOnlyList<OmsiPlacedSpline> Splines,
     OmsiTerrainGrid? Terrain = null,
     OmsiTerrainRenderDataSummary? TerrainRenderData = null,
-    IReadOnlyList<OmsiTerrainTextureMask>? TerrainTextureMasks = null)
+    IReadOnlyList<OmsiTerrainTextureMask>? TerrainTextureMasks = null,
+    IReadOnlyList<OmsiPlacedAttachment>? Attachments = null,
+    OmsiWaterGrid? Water = null)
 {
     public static OmsiTileContent Missing { get; } = new(
         OmsiTileSummary.Missing,
         Array.Empty<OmsiPlacedObject>(),
-        Array.Empty<OmsiPlacedSpline>());
+        Array.Empty<OmsiPlacedSpline>(),
+        Attachments:
+            Array.Empty<OmsiPlacedAttachment>());
 }

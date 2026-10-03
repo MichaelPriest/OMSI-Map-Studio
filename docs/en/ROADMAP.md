@@ -111,7 +111,7 @@ The index never replaces OMSI files. It is derived data and can be rebuilt.
 
 The persistent foundation uses one local SQLite database per OMSI installation. Refresh runs in the background and does not block editing. On an installation that has already been indexed, unchanged files are reused; an index failure never prevents direct reading of OMSI files.
 
-Automatic tile streaming is now the default when opening maps: rings 0–1 receive full content, ring 2 receives lightweight summary/metadata, heavy terrain outside the active region is evicted from UI state, and stale regional responses are invalidated by generation so they cannot overwrite the camera's current area. **Full map** remains available as an explicit diagnostics mode. Derived caching, a complete priority queue, and GPU resource management/LOD are still required to finish Phase A.
+Automatic tile streaming is now the default when opening maps: rings 0–1 receive full content, ring 2 receives lightweight summary/metadata, heavy terrain outside the active region is evicted from UI state, and stale regional responses are invalidated by generation so they cannot overwrite the camera's current area. **Full map** remains available as an explicit diagnostics mode. The first in-memory derived-cache stage reuses SCO, SLI, O3D, and X parsing while each file fingerprint remains valid. The renderer also keeps a bounded GPU warm cache of up to 64 stale textures or 128 MiB. Full tile content used by streaming now has a 32-entry LRU cache fingerprinted across its dependent files, allowing overlapping tiles in a moving 3×3 window to be reused without rereading all of them from disk. 3×3 navigation now also uses a visible-first transition: when the target tile is already in the current snapshot it is focused immediately and the new surrounding region is completed afterward; jumps outside the loaded area render the center tile before its neighbors. Persistent/broader caching, a complete priority queue, and global-budget GPU resource management/LOD are still required to finish Phase A.
 
 ### 3.2 Derived cache
 
@@ -239,32 +239,32 @@ Legend:
 | Modern library / preview | ✅ |
 | Batch construction tools | ✅ |
 | Coordinates / real reference / elevation | ✅/🟡 |
-| Create/delete tiles | ⬜ |
+| Create/delete tiles | 🟡 — creation and safe deletion are integrated; intermediate-tile deletion remains blocked until dependent references can be reindexed |
 | Full tile properties | ⬜ |
-| Native tile/map water | ⬜ |
+| Native tile/map water | ✅ |
 | Tile lightmap / lighting | ⬜ |
 | Attach object → spline | 🟡 |
 | Attach object → object | 🟡 |
 | Editable parent/hierarchy | ⬜ |
 | Object-specific labels/options | ⬜ |
-| Spline Mirror | ⬜ |
-| Cant start/end | ⬜ |
-| Complete to… | ⬜ |
-| Spline export | ⬜ |
+| Spline Mirror | ✅ |
+| Cant start/end | ✅ |
+| Complete to… | ✅ — connects compatible end→start pairs with straight/arc solver, maximum radius, transactional links and backup |
+| Spline export | ✅ — multi-select loaded splines and export real DirectX `.x` geometry with UVs for Blender |
 | Editable paths | 🟡 |
-| Traffic Rules | ⬜ |
-| Speed limits | ⬜ |
-| Traffic density | ⬜ |
-| Vehicle restrictions | ⬜ |
-| Road priorities | ⬜ |
+| Traffic Rules | ✅ |
+| Speed limits | ✅ — `speedlimit` preset with a custom value per path and vehicle group |
+| Traffic density | ✅ — `trafficdensity` presets including unscheduled-traffic blocking and graduated density values |
+| Vehicle restrictions | ✅ — OMSI `no_cars`, `truck`, `bus`, and `overtaking_prohib` presets with `[rule]`/`[kill_rule]` support |
+| Road priorities | ✅ — high/low `priority` presets per path, persisted with backup |
 | AI paths / crossing behavior | ⬜ |
-| Traffic lights / signal phases | ⬜ |
-| Tracks | ⬜ |
-| Trips | ⬜ |
-| Stops/stations | ⬜ |
-| StationLinks | ⬜ |
-| Time profiles | ⬜ |
-| Timetable editor | ⬜ |
+| Traffic lights / signal phases | ✅ |
+| Tracks | ✅ |
+| Trips | ✅ |
+| Stops/stations | ✅ |
+| StationLinks | ✅ |
+| Time profiles | ✅ — the native visual editor creates/deletes profiles, adjusts total duration and accumulated stop times while preserving raw OMSI data |
+| Timetable editor | 🟡 — Route Studio and the detachable Timetable window now edit Tracks/Trips/Stops/StationLinks/Lines/Tours and profiles; Lines/Tours have a departure table with add/remove/reorder actions, and Trips can be edited without leaving Timetable. Chrono, service/calendar concepts, and advanced workflows still evolve |
 | Signal Routes | ⬜ |
 | Railway priorities/switches | ⬜ |
 | Environment settings | ⬜ |
@@ -292,7 +292,7 @@ Current Phase A status:
 - ⬜ complete internal map-opening metrics;
 - 🟡 cache diagnostics: Asset Index progress and counts are already shown on the OMSI installation screen.
 
-Derived geometry/material/thumbnail caching plus full GPU resource eviction/LOD are still required before Phase A can be marked ✅.
+Initial derived caching, LRU tile-content caching, and bounded GPU LRU retention are now in place. Persistent/broader caching, a complete priority queue, and global-budget GPU eviction/LOD are still required before Phase A can be marked ✅.
 
 Completion criteria:
 
@@ -379,6 +379,8 @@ Create a visual line editor:
 
     path → track → stops → trip → profile → timetable
 
+Current Route Studio state: visual Track, Trip, StationLink, and Line/Tours previews; navigable real `ID:pathIndex` segment list; viewport segment focus; optional OMSI Paths overlay; and preservation-safe editing of existing TTData files. The detachable Timetable window edits Trips and profiles directly, plus Lines/Tours through a departure table with add, remove, and reorder actions.
+
 Completion criteria:
 
 - a bus line can be built and validated in Map Studio without returning to the old editor for the main operational workflow.
@@ -422,7 +424,8 @@ Continue features that need not exist in the original editor:
 - replace tool;
 - visual elevation/depression;
 - cuts/embankments;
-- bridges/tunnels;
+- bridges;
+- ✅ real-SLI parametric tunnels with generated profile and traffic paths;
 - lots;
 - procedural vegetation;
 - distribution rules;
@@ -685,3 +688,55 @@ Babylon/WebView2 will only be replaced if an isolated prototype, with React no l
 - hundreds of selectable objects without noticeable degradation.
 
 If those criteria fail in the minimal runtime, replacement should target **only the renderer/viewport**, preserving MapStudio.Core, formats, cache, persistence and the rest of the product.
+
+
+## New native differentiators — procedural generation and AI
+
+Beyond parity with the legacy editor, the roadmap now officially includes:
+
+- **automatic road generation** from user-drawn traces over the terrain;
+- **georeferenced reference-assisted generation**, converting a vector graph into real OMSI splines;
+- **automatic junctions/intersections** derived from the same graph with snapping and connectivity validation;
+- an original **Map Studio Road Kit**, with no mandatory dependency on third-party content;
+- **Building Studio** for houses, buildings, and other volumes, generating editable SCO/O3D assets;
+- optional use of photos as facade reference/texture;
+- **adapter-based connectable AI**, with no mandatory provider;
+- AI analysis used only as structured, reviewable suggestions;
+- future multi-photo support for footprint, scale, facade, roof, material, vegetation, and street-furniture estimation;
+- mandatory preview before automatic generation is persisted into a real map.
+
+Implementation should keep one geometric engine: manual tracing, vector data, and AI must feed the same generation pipeline instead of creating parallel formats.
+
+
+---
+
+## Architecture update — the native host is the current direction
+
+The historical **“Viewport stabilization phase”** section above records the analysis that led to the architecture change. The later decision has already been executed: the production viewport now uses **WinUI 3 + Direct3D 11**. React/WebView2 is no longer the direction of the primary renderer.
+
+Current state of the new differentiators:
+
+- ✅ standalone editor with its own Workspace, native template/terrain, and map creation/editing without an OMSI installation;
+- ✅ optional SCO/SLI item-folder import into the Workspace library;
+- ✅ **Open OMSI** preserved as an optional map/asset content source;
+- ✅ reshaped native chrome with desktop menu + command ribbon and a dedicated fullscreen editor bar;
+- ✅ original Road Kit;
+- ✅ parametric SLI tunnel creator with roadway, markings, walls, arched ceiling, traffic paths, and Easy Road curve/gradient placement;
+- ✅ advanced Cant/Mirror exposed in the native Inspector with preservation-safe persistence and backup;
+- ✅ native Complete to with a conservative tangent solver, radius limit, and transactional Previous/Next linkage;
+- ✅ native `.x` Spline Export with multi-selection, real SLI mesh geometry, and UVs for Blender;
+- ✅ procedural road graph;
+- ✅ manual tracing;
+- ✅ georeferenced GeoJSON;
+- ✅ georeferenced OSM XML;
+- ✅ AI road analysis from the Google reference;
+- ✅ D3D11 preview before persistence;
+- ✅ auto-linking across safe linear continuity;
+- ✅ original procedural junctions;
+- ✅ transactional batch persistence with backup/rollback;
+- ✅ procedural Building Studio with O3D/SCO output;
+- ✅ multiple roof types and facade openings;
+- ✅ vendor-neutral AI contracts;
+- ✅ commercial/entitlement layer prepared, with no Alpha billing enforcement yet.
+
+Intermediate-tile deletion intentionally remains blocked until a reindexer can prove and update every tile-index-dependent reference. This limitation must not be bypassed by simply deleting a `[map]` section.

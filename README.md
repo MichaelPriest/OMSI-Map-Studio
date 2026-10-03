@@ -34,6 +34,11 @@ All official project documentation must exist, at minimum, in:
 See the English version for full details.
 
 
+## Manual do Usuário / User Manual
+
+- 🇧🇷 [Manual do Usuário](docs/pt-BR/USER_MANUAL.md)
+- 🇬🇧 [User Manual](docs/en/USER_MANUAL.md)
+
 ## Roadmap / Roadmap
 
 - 🇧🇷 [Roadmap técnico e funcional](docs/pt-BR/ROADMAP.md)

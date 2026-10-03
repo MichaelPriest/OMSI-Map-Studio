@@ -67,6 +67,15 @@ Architecture documentation:
 Alpha.4 also scans `OMSI 2/Splines` on demand and can preview installed `.sli` files. The library offers **Normal** and **Height** creation. Persistence is enabled only when the map contains a real neutral template of the same type: five explicit zero extras for `[spline]` and six for `[spline_h]`. Header and extras are copied from that template.
 
 
+## User Manual
+
+The current editor usage guide is available at:
+
+- [User Manual — English](docs/en/USER_MANUAL.md)
+- [Manual do Usuário — Português](docs/pt-BR/USER_MANUAL.md)
+
+The native build also bundles an offline copy available from the **Help** menu.
+
 ## Project roadmap
 
 The official technical and functional direction is documented in:

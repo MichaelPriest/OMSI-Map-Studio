@@ -1,0 +1,885 @@
+# OMSI Map Studio native migration
+
+This track rebuilds the editor on the native Windows architecture without discarding the OMSI domain already implemented.
+
+## Target stack
+
+- .NET 10;
+- WinUI 3 / Windows App SDK;
+- Direct3D 11;
+- Vortice.Windows;
+- MapStudio.Core remains the authority for formats, reading, validation and persistence;
+- SQLite/cache remain reusable;
+- no WebView2 in the primary viewport;
+- React does not control renderer lifetime.
+
+The foundation uses Windows App SDK 2.5.1 and Vortice.Direct3D11 3.8.3.
+
+## Strategy
+
+Migration runs in parallel with the current editor.
+
+### Phase N0 — foundation
+
+- new `MapStudio.Renderer` project;
+- new `MapStudio.Native` project;
+- Direct3D 11 initialized in its own runtime;
+- mouse input received directly by WinUI;
+- stable picking ID registry;
+- ID-buffer codec;
+- dedicated Windows CI.
+
+### Phase N1 — minimal OMSI viewport
+
+- connect `SwapChainPanel` to a DXGI swap chain;
+- perspective/top camera;
+- Gundorf terrain;
+- real O3D objects;
+- splines;
+- ID buffer;
+- hover and selection;
+- DPI validation at 100/125/150/200%.
+
+### Phase N2 — editing
+
+- move gizmo;
+- rotate gizmo;
+- snap;
+- Inspector;
+- save through MapStudio.Core;
+- undo/redo.
+
+### Phase N3 — complete interface
+
+- native Explorer;
+- libraries;
+- previews;
+- construction tools;
+- terrain;
+- real-map tools;
+- diagnostics/Map Health;
+- fullscreen;
+- shortcuts.
+
+### Phase N4 — replacement
+
+The native version replaces the WebView2 host only after sufficient functional parity and real-world validation. Until then, the current application remains available for comparison.
+
+## Selection
+
+Native selection will not depend on object material, transparency or texture. Every OMSI entity receives a `PickingId`. A dedicated pass writes that ID into an integer render target. The pixel under the pointer directly identifies the selected entity.
+
+This removes the fallback chain that became necessary in the WebView2/Babylon viewport.
+
+
+### Checkpoint N0.1 — Direct3D presentation
+
+The foundation now creates an `IDXGISwapChain1` for composition, associates it with the `SwapChainPanel` through `ISwapChainPanelNative`, creates the backbuffer/RTV and presents a real first Direct3D 11 frame.
+
+Backbuffer sizing uses WinUI `CompositionScaleX/Y`, so the renderer works in physical pixels and reacts to DPI/window-size changes without CSS/WebView2.
+
+
+### Checkpoint N0.2 — native OMSI session
+
+The WinUI host now opens the real OMSI folder and a map folder using the native Windows picker. `MapStudio.Core` is called directly, without a WebView2 bridge, to discover maps, open `global.cfg`, choose the initial tile and load the real 3×3 region.
+
+The native UI already displays real counts for loaded tiles, objects, splines and terrain grids. The next checkpoint converts this Core snapshot into GPU buffers.
+
+
+### Checkpoint N1.1 — native GPU navigation
+
+The native overview now has a viewport transform executed by the vertex shader. Mouse-wheel zoom and right/middle-button pan update only a Direct3D constant buffer; O3D geometry is not rebuilt on every movement.
+
+The same transform is used by both the visible pass and the ID-buffer pass, keeping selection pixels aligned with objects after navigating the map.
+
+
+### Checkpoint N1.2 — real OMSI terrain
+
+The native renderer now converts each tile's real height grid into GPU triangles. The first visualization mode remains top-down, but it already uses real elevation data for color/depth and prepares the same mesh for the upcoming perspective camera.
+
+SCO objects that do not use `[absheight]` also receive bilinear terrain interpolation before O3D transforms, preserving the existing editor rule.
+
+
+### Checkpoint N1.3 — real depth for viewport and ID buffer
+
+Both the visible viewport and the selection pass now have their own Direct3D depth buffer. Selection no longer depends on triangle submission order: when objects/proxies overlap, the picking pixel keeps the nearest surface according to depth.
+
+The same depth rule is used by the visible frame and the ID buffer, bringing selector behavior closer to a native 3D editor.
+
+
+### Checkpoint N1.4 — perspective 3D camera and world-space geometry
+
+The native viewport no longer pre-projects terrain, splines, and O3D meshes into a 2D overview. GPU buffers now preserve real X/Y/Z world coordinates and the vertex shader receives a perspective `ViewProjection` matrix.
+
+The camera frames the loaded OMSI region, uses the mouse wheel for dolly/zoom, the middle button for map-plane panning, and the right button for 3D orbiting. Resize and DPI changes recalculate projection without rebuilding geometry.
+
+Terrain uses the OMSI elevation as the real Y axis. O3D objects keep SCO/O3D transforms and bilinear terrain placement before reaching the GPU. Splines and selection proxies are world-space as well.
+
+The visible frame and ID Buffer use the exact same camera matrix and their independent depth buffers, so picking remains aligned in 3D perspective.
+
+
+### Checkpoint N1.5 — real SLI profile splines
+
+The native renderer now reads every `.sli` through `MapStudio.Core` and extrudes the real surfaces defined by `[profile]` / `[profilepnt]` along each spline's length and curvature.
+
+The mesh uses the real profile width and height together with instance radius, rotation, and start/end gradients. Longitudinal elevation integrates the percentage gradient along the spline instead of flattening it onto terrain.
+
+The height rule was also corrected: OMSI splines use their own absolute elevation, while terrain interpolation remains specific to relative scenery objects. The ID Buffer receives the same real spline mesh, keeping the proxy only as an auxiliary click area.
+
+At this checkpoint the profile geometry is real; SLI texture application remains a following material refinement.
+
+
+### Checkpoint N1.6 — blue hover and red selection with depth
+
+The native viewport now mirrors the OMSI editor interaction behavior: an item under the pointer receives a blue highlight and the selected item receives a red highlight.
+
+Hover and selection use the same `PickingId` as the ID Buffer and prefer real O3D or spline geometry; proxies remain only as a selection fallback. Hover is cleared when the pointer leaves the viewport or camera pan/orbit begins.
+
+Because the viewport now has a real depth buffer, highlight copies receive a very small offset toward the camera. This keeps overlays visible without relying on draw order or disabling scene depth.
+
+
+### Checkpoint N2.1 — native move and rotate gizmos
+
+The editing phase has started in the Direct3D viewport. Selecting an object or spline now creates a real 3D gizmo at the entity insertion point, with dedicated handles in the same ID Buffer used by the rest of the scene.
+
+**Move** exposes X/Y/Z and constrains each drag to the chosen axis. **Rotate** exposes X/Y/Z for SCO/O3D objects; splines use Y rotation only, matching the rotation field available in the OMSI map format.
+
+During drag, the red selected geometry receives a preview transform without rebuilding the entire map for every pointer pixel. On release, the transform is applied to the snapshot entity and converted directly into an `OmsiObjectTransformEdit` or `OmsiSplineTransformEdit`, becoming a real edit pending Core persistence.
+
+Gizmo handles use `PickingKind.Gizmo` and dedicated IDs, so they cannot collide with object or spline IDs even when drawn in front of the same geometry.
+
+
+### Checkpoint N2.2 — transactional transform persistence
+
+Transforms produced by the gizmos can now be accumulated by the native host and saved into the real OMSI map. The host deduplicates successive edits to the same entity and groups changes by tile before writing.
+
+Persistence reuses `OmsiTileObjectEditor` and `OmsiTileSplineEditor`; no parallel format is introduced. Every modified tile is processed through `SafeFileTransaction`, which creates a backup under `.mapstudio-backups`, stages a temporary file, and performs atomic replacement with rollback on failure.
+
+After a successful write, affected tiles are read again through `MapStudio.Core` and pending state is cleared. The WinUI interface exposes **Save changes** only while transforms are pending.
+
+
+### Checkpoint N2.3 — native undo/redo and snapping
+
+The runtime keeps transform history as before/after pairs using the same `OmsiObjectTransformEdit` and `OmsiSplineTransformEdit` types used for persistence. **Undo** and **Redo** reapply these states to the snapshot, rebuild the required renderer state, and stage the resulting version again for safe persistence.
+
+Snapping can be toggled from the native UI. The initial configuration quantizes movement to **0.25 m** and rotation to **5°**. The snapped value drives the red preview, the gizmo, and the final OMSI edit so the saved result matches what was displayed during dragging.
+
+
+### Checkpoint N2.4 — native Inspector bound to real selection state
+
+The WinUI Inspector now consumes the selected entity state directly from the renderer. For objects it shows ID, tile, SCO path, OMSI coordinates, rotation, pitch, and bank. For splines it shows the SLI path, OMSI coordinates, rotation, length, radius, and start/end gradients.
+
+The Inspector refreshes after ID-buffer selection, gizmo move/rotation, and undo/redo operations. There is no duplicate XAML-side model: displayed values come from the same native snapshot that produces geometry and persisted edits.
+
+
+### Checkpoint N2.5 — numeric editing through the Inspector
+
+The native Inspector is no longer read-only and can edit the selected entity transform. Objects expose X/Y/Z, rotation, pitch, and bank. Splines expose X/Y/Z, rotation, length, radius, and start/end gradients.
+
+Pressing **Apply values** updates the same snapshot used by the viewport, creates a before/after history pair, refreshes native geometry, stages the OMSI transform for persistence, and remains compatible with Undo/Redo and Save changes.
+
+Gizmo and Inspector are therefore two interfaces over the same native editing model, with no duplicated state.
+
+
+### Checkpoint N3.1 — native Explorer with selection and focus
+
+N3 starts with a WinUI Explorer fed directly by the renderer snapshot. Real objects and splines are listed with type, ID, asset path, and tile, without a parallel inventory model.
+
+Search filters the display name, asset path, and tile coordinates. Selecting an Explorer item uses the same scene `PickingId` and updates the red highlight, gizmo, and Inspector. Double-clicking also repositions the 3D camera over the entity insertion point.
+
+Selections made directly in the viewport are synchronized back into the list and scrolled into view, keeping Explorer and viewport as two views over the same native state.
+
+
+### Checkpoint N3.2 — native library backed by the existing SQLite index
+
+The WinUI asset library reuses `OmsiAssetIndex` from `MapStudio.Core`. Its SQLite database is stored in the user-local cache and separated per OMSI installation, avoiding a full installation scan every time the editor starts.
+
+The interface switches between **Scene** and **Library**, can filter all assets or only SCO, SLI, models, and textures, and searches by relative path. The **Refresh** action runs the incremental index refresh and reports real examined-file and candidate counts.
+
+When a library asset is already used in the loaded region, double-clicking finds its first scene usage and focuses the 3D camera. Assets not yet used remain available in the catalog for the following native preview/placement stage.
+
+
+### Checkpoint N3.3 — native 3D library preview
+
+The indexed library now has real visual preview support for **SCO/O3D objects** and **SLI splines**. Selecting a compatible asset loads the actual OMSI installation file directly, without creating a fake map entity and without replacing the currently open map snapshot.
+
+For SCO assets, the preview uses the real O3D/X meshes, SCO-declared transforms, LOD selection, and diffuse material colors. For SLI assets, the renderer extrudes the real `[profile]/[profilepnt]` profile into a navigable 3D sample.
+
+The viewport temporarily enters preview mode and frames the asset bounds. Orbit, pan, and zoom keep using the same Direct3D camera. Returning to **Scene** restores the map buffers from the in-memory snapshot and already loaded assets, without reopening the whole map.
+
+Standalone models and textures remain available in the index, but this checkpoint intentionally limits visual preview to SCO/O3D and SLI; those categories will expand together with materials/textures and placement.
+
+
+### Checkpoint N3.4 — native SCO object placement
+
+The library can now start placement of a SCO object directly on the open map. The viewport restores the scene, loads the asset's real geometry, and shows a separate **blue 3D ghost** outside the ID Buffer, so the preview cannot be mistaken for an existing entity.
+
+The pointer is converted into a perspective-camera world ray. Intersection is refined against the loaded terrain's real height and, when snapping is enabled, X/Z are quantized to 0.25 m before the final height sample. Placement is accepted only inside an actually loaded tile.
+
+On click, the host converts the world position into OMSI tile-local coordinates and uses `OmsiTileObjectInserter` to append a real `[object]` section. The next ID is computed across objects and splines from every map tile to avoid collisions. When the same asset already exists in the map, its header and extra values are preserved as a template; tree assets without a template use the real texture/height/aspect metadata declared by the SCO.
+
+Insertion is persisted immediately through `SafeFileTransaction`, with a backup under `.mapstudio-backups`, and the changed tile is read back through Core before the viewport is refreshed. Splines remain outside this checkpoint because correct spline placement needs a point/curve construction tool rather than treating them as ordinary objects.
+
+
+### Checkpoint N3.5 — native spline construction with points and curves
+
+The SLI library can now start a construction tool directly in the Direct3D viewport. The selected asset uses the real `.sli` profile to render a 3D ghost before anything is written.
+
+Two workflows are available:
+
+- **Straight:** the first click defines the start and the second click defines the end.
+- **Curve:** the first click defines the start, the second locks the end, and a third point controls curvature. The editor solves the circle through all three points and converts it into the actual OMSI fields: initial rotation, arc length, and signed radius.
+
+Points come from the perspective camera raycast against the real terrain height. The 0.25 m snap is also applied during construction. Height difference between start and end is converted into start/end percentage gradient, allowing the spline to follow elevation instead of being flattened.
+
+Insertion uses `OmsiTileSplineInserter`. The new ID is calculated globally across objects and splines from all map tiles. When a compatible spline exists, its header and extra values are reused; otherwise Core looks for a neutral normal-spline template. Writing goes through `SafeFileTransaction`, creates a backup, and reloads the modified tile before refreshing the scene.
+
+This checkpoint establishes the foundation for a city-editor-style road tool. Next refinements are segment continuity, editable post-placement handles, snapping to existing endpoints, and sequential construction without leaving the tool.
+
+
+### Checkpoint N3.6 — snapping to spline endpoints
+
+The construction tool snap now recognizes the actual endpoints of already loaded splines. While creating a new road/spline, the pointer position still comes from terrain intersection and the 0.25 m grid, but it also searches existing spline starts and ends within a camera-distance-aware tolerance.
+
+When an endpoint is found, the new point uses that endpoint's exact X/Z position and Y height. This prevents small gaps and vertical mismatches when starting or ending a segment near an existing road.
+
+The final endpoint is calculated from the spline's real parametric geometry through NativeSplinePathMath, so curved and graded segments are supported as well.
+
+
+### Checkpoint N3.7 — sequential spline construction
+
+The SLI tool now has a **Continue segments** mode, enabled by default in the library. After a segment is persisted and the tile is reloaded, the viewport restarts the same tool and uses the previous segment's exact `EndWorld` as the next segment start.
+
+This removes the need to return to the library and click the joint again. In straight mode, each following segment only needs its new endpoint. In curve mode, the start is already fixed and the user defines the new end plus the curvature control point.
+
+This checkpoint guarantees geometric position and height continuity. Automatic `PreviousSplineId` / `NextSplineId` rewriting remains a separate Core refinement because the current editor validates those links but does not rewrite them yet.
+
+
+### Checkpoint N3.8 — logical Previous/Next chaining
+
+Sequential construction now also preserves the logical links used by the OMSI format. The next segment request carries the previous spline ID. During insertion, the new `[spline]` section receives that value as `PreviousSplineId`, while the previous spline is updated to point to the new ID through `NextSplineId`.
+
+Core now has a dedicated spline-link editor. It validates ordinal, path, ID, and the original Previous/Next values before writing, preventing silent edits when a source file changed after it was read.
+
+When both segments live in the same tile, insertion and link update are combined in the same document. When they span different tiles, both files are included in the same `SafeFileTransaction`; each receives a backup and the operation is handled as one transactional write.
+
+This means continuous construction no longer creates only geometrically touching segments: the sequence is also linked through the OMSI map IDs.
+
+
+### Checkpoint N3.9 — native fullscreen and shortcuts
+
+The WinUI host now provides real Windows fullscreen through `AppWindowPresenterKind.FullScreen`, toggled with **F11**. **Esc** exits fullscreen and also immediately cancels an active placement/construction tool before affecting the window state.
+
+Core editor shortcuts now live directly in the native host:
+
+- **W** activates the Move gizmo;
+- **E** activates the Rotate gizmo;
+- **Ctrl+S** saves pending transforms through the same safe backup workflow;
+- **Ctrl+Z** undoes the last transform;
+- **Ctrl+Y** redoes the transform;
+- **F11** toggles fullscreen;
+- **Esc** cancels placement/construction or exits fullscreen.
+
+W/E and Ctrl+Z/Ctrl+Y do not intercept keys while focus is inside a `TextBox`, `RichEditBox`, `PasswordBox`, or `NumberBox`, preserving typing and Inspector field editing. Focus is resolved through `FocusManager` using the window `XamlRoot`.
+
+
+### Checkpoint N3.10 — resizable and collapsible native panels
+
+The WinUI workspace no longer relies on rigid widths for Explorer and Inspector. Two native separators between the side panels and the viewport let users resize them by dragging without affecting the Direct3D surface architecture.
+
+Explorer can range from 220 to 520 px and Inspector from 240 to 560 px, with additional limits that preserve a useful minimum viewport area. The latest widths are kept in memory when a panel is collapsed.
+
+The **View** menu can now toggle Explorer and Inspector independently. Collapsing sets both the panel and splitter column to zero width; restoring brings the panel back at its last used width. The `SwapChainPanel` continues reacting to `SizeChanged`, so the Direct3D backbuffer immediately follows the newly available space.
+
+### Checkpoint N3.11 — safe native object and spline deletion
+
+Entity deletion from the React editor has been migrated into the WinUI host. The Inspector now exposes **Delete selected**, and the **Delete** key triggers the same flow whenever focus is not inside a text input.
+
+For objects, the host validates tile, ID, SCO path, and source section ordinal before removing the `[object]` section through `OmsiTileObjectDeleter`.
+
+For splines, the operation reads map-wide IDs, rejects duplicate spline IDs, and uses `OmsiSplineLinkPlanner` to safely release reciprocal Previous/Next links on neighboring splines before removing the selected spline section. Changes spanning multiple tiles are committed in a single `SafeFileTransaction`.
+
+Deletion is blocked while transforms are pending or while a placement/construction tool is active. The UI asks for confirmation before writing and states that a backup will be created under `.mapstudio-backups`.
+
+After completion, affected loaded tiles are read back through Core so the viewport, Explorer, and Inspector return to the real persisted map state.
+
+### Checkpoint N3.12 — native object copy with real placement
+
+The React editor's **Place copy** flow has been migrated into the WinUI Inspector. When a real object is selected, the **Place copy** button and **Ctrl+D** start a new placement using the same SCO file.
+
+The copy initially preserves the selected object's real transform fields: **Z, rotation, pitch, and bank**. The next terrain click defines the new horizontal X/Y position. For relative objects, the ghost adds the preserved Z offset to the real terrain height; for absolute-height objects it keeps the selected absolute Z.
+
+The 3D ghost uses the same rotation/pitch/bank that will be persisted, avoiding a mismatch between preview and saved output. The new instance still receives a free global ID and is written through the existing `OmsiTileObjectInserter` + `SafeFileTransaction` flow with automatic backup.
+
+Ctrl+D does not intercept typing while focus is inside an editable field, and the flow remains disabled for `worldcoordinates` maps until the dedicated georeferencing migration is implemented.
+
+### Checkpoint N3.13 — disconnected spline copy and native link editor
+
+The WinUI Inspector now migrates two more real-spline workflows from the React editor.
+
+**Place copy** / **Ctrl+D** also works when a spline is selected. The tool reuses the same real SLI as its template, automatically starts straight or curved construction based on the selected radius, and creates the new spline disconnected with Previous/Next initialized to `-1`. Height splines remain blocked until the dedicated `[spline_h]` flow is migrated.
+
+The spline Inspector now also exposes **Previous ID** and **Next ID**. **Save links** runs `OmsiSplineLinkPlanner` against map-wide IDs, validates reciprocal links and endpoint availability, then applies every required change through `OmsiTileSplineLinkEditor`.
+
+When a change touches splines in different tiles, every affected file participates in the same `SafeFileTransaction` and receives a backup. After writing, affected loaded tiles are read back and the edited spline is reselected in the viewport/Explorer with its new links.
+
+### Checkpoint N3.14 — terrain leveling in the native host
+
+The first real terrain editing tool from the React editor has been migrated into the WinUI Inspector.
+
+The **Terrain** section can activate **Pick point on map**. The next viewport click casts the Direct3D camera ray against the real terrain height and resolves the tile, local coordinates, and current elevation. The Inspector automatically initializes the target height with the sampled value.
+
+The user can then edit **target height**, **brush radius**, and **feather**. **Apply leveling** runs `OmsiTerrainLeveler.LevelCircularBrush` against the real `.terrain` file and writes the result through `SafeFileTransaction`, creating a backup before replacement.
+
+After writing, the tile is read back through `MapStudio.Core` and the viewport is rebuilt using the new topography. The operation is blocked while object/spline transforms are pending so two different edit transactions are not mixed.
+
+This checkpoint covers circular leveling. Raise/lower dragging, terrain texture painting, tile creation/removal, and DEM import are still pending.
+
+### Checkpoint N3.15 — full map, 3×3 performance mode, and tile navigator
+
+The WinUI host now migrates both map loading modes from the React editor. **Full map** is the native architecture default and loads every map tile; **3×3 performance mode** keeps only the radius-1 region around the active tile.
+
+Full-map reading is capped at six concurrent tile loads so large maps do not launch hundreds of file reads/parses at once.
+
+The **Map** menu can switch between both modes without reopening the map. Switching is blocked while transforms are pending so unsaved edits are not discarded.
+
+The Explorer gains a tile navigator with X/Y fields, a **Go** action, and four directional controls. In full-map mode, navigation only changes the active tile and focuses the camera on its center. In 3×3 mode, navigation reloads the region around the new tile and rebuilds the viewport with that area's real objects, splines, and terrain.
+
+After any reload, the Inspector, visual history, and terrain tool are synchronized with the new real Core snapshot.
+
+### Checkpoint N3.16 — O3D diffuse textures in Direct3D 11
+
+The native renderer no longer treats every O3D mesh only as a diffuse color. The vertex pipeline now preserves real model UV coordinates and groups triangles into material/texture batches.
+
+`NativeSceneryAssetLoader` resolves real texture files declared by O3D materials through `OmsiTextureAssetPathResolver`, including the Core's safe DDS replacement lookup.
+
+Direct3D 11 loads textures that Windows Imaging Component can decode, creates `ID3D11Texture2D`/Shader Resource Views, and uses a textured pixel shader with a linear-wrap sampler. Low alpha is clipped in the shader so basic fence, vegetation, and masked-material cutouts are no longer rendered as fully opaque blocks.
+
+Missing or undecodable textures do not break the map: the batch falls back to the O3D diffuse color. The cache keeps only textures requested by the current scene and caps the first pass at 256 distinct paths to avoid unbounded memory use on large maps.
+
+This checkpoint covers base diffuse textures for O3D objects. Advanced SCO overrides (`[matl]`, night maps, bump/environment/light maps), spline textures, and terrain paint remain for later checkpoints.
+
+### Checkpoint N3.17 — real SLI spline textures
+
+The native renderer now preserves the texture parameters declared by `[profilepnt]` and applies the real textures used by SLI surfaces.
+
+Each `NativeSplineAsset` resolves texture files through `OmsiTextureAssetPathResolver.TryResolveSplineTexture`. During tessellation, horizontal UV comes from `TextureX` and longitudinal UV follows `distance × TextureScale`, matching the OMSI spline format's longitudinal tiling semantics.
+
+Surfaces are grouped into material/texture batches and use the same WIC/Direct3D 11 cache introduced for O3D objects. If a texture is missing or cannot be decoded, the spline keeps rendering through the untextured fallback instead of disappearing or aborting map loading.
+
+This allows roads, sidewalks, curbs, and other SLI surfaces to stop relying on the generic gray color in the native viewport.
+
+### Checkpoint N3.18 — real base terrain texture
+
+The native renderer now uses the first real `[groundtex]` entry from `global.cfg` as the terrain base texture.
+
+`NativeTerrainTriangleGeometryBuilder` receives the real map descriptor and OMSI root, resolves `MainTexturePath` through `OmsiTextureAssetPathResolver.TryResolveGroundTexture`, and generates per-tile UVs using the declared `MainTextureRepeating` value.
+
+The texture is sent through the same WIC/Direct3D 11 cache already used by O3D and SLI rendering. If the file is missing or cannot be resolved, terrain keeps the height-color fallback instead of failing.
+
+Mapping restarts on each tile and spans the 0–300 m tile area using the map-defined repeat value, preserving the OMSI scale.
+
+This checkpoint covers the base layer. Additional `tile_*.map.N.dds` paint masks, secondary detail texture, and paint editing remain for the next step.
+
+### Checkpoint N3.19 — painted terrain layers with DDS masks
+
+The native renderer now also applies terrain layers painted by OMSI through `tile_*.map.N.dds` files.
+
+Each valid mask uses its `LayerIndex` to select the matching `[groundtex]` entry from `global.cfg`. The layer's main texture keeps its own repeat value while the mask uses normalized 0–1 UV coordinates across the 300 m tile.
+
+Native vertices now carry two UV sets: one for the repeated material texture and one dedicated to the tile mask. The `PSTerrainLayer` shader combines the layer texture with mask alpha and alpha-blends it over the base terrain.
+
+OMSI A8 DDS masks are read directly by the renderer and expanded into an RGBA GPU texture, avoiding dependence on variable WIC support for that format. An invalid mask or texture simply skips that layer.
+
+To avoid z-fighting between base and overlays without changing map data, each overlay receives only a renderer-side millimeter-scale height offset. No persisted `.terrain` elevation is changed.
+
+Secondary `[groundtex]` detail textures and mask painting/editing are still pending.
+
+### Checkpoint N3.20 — native OMSI sky and day/night preview
+
+The WinUI host now renders the real OMSI sky in Direct3D 11 instead of relying only on the viewport clear color.
+
+The runtime looks for `Texture\himmel01.bmp` for daytime preview and `Texture\himmel05.bmp` for nighttime preview. When those files are absent, it keeps compatibility with the React implementation and falls back to `Texture\skybox\day01.bmp` or `night01.bmp`.
+
+The sky is rendered on a textured sphere centered on the camera. Its geometry stays outside the ID Buffer and uses a no-depth-write state, so it does not affect selection and cannot occlude distant objects, splines, or terrain.
+
+Horizontal mapping mirrors the React viewport orientation while vertical sampling is clamped at the texture edge to avoid pole seams.
+
+The native host top bar now exposes a **Night** option that switches between daytime and nighttime sky immediately without reloading the map.
+
+### Checkpoint N3.21 — SCO nightmap/lightmap overrides in the native renderer
+
+The native pipeline now loads SCO material overrides for each mesh and material index.
+
+`NativeSceneryAssetLoader` uses the `MaterialOverrides` already parsed by `MapStudio.Core` and resolves `[matl_nightmap]` and `[matl_lightmap]` through the same safe scenery texture resolver used by normal O3D materials.
+
+Material batches now preserve the base texture, night map, light map, and the `matl_alpha` value for following stages. Day mode keeps the current diffuse rendering behavior. When **Night** is enabled, the renderer selects the night map first and falls back to the light map when no night map exists.
+
+The night shader combines the base texture with the secondary texture without changing map files. The same **Night** control that swaps the sky can therefore also preview façades, signs, and other surfaces that provide nighttime material maps.
+
+This checkpoint does not yet change depth state or blending for `matl_alpha`, `matl_noZwrite`, and `matl_noZcheck`; bump maps and environment maps remain for a separate checkpoint.
+
+### Checkpoint N3.22 — native matl_alpha and noZ states
+
+The native renderer now honors all three SCO alpha modes:
+
+- `matl_alpha 0`: opaque material; texture alpha does not cut holes in geometry.
+- `matl_alpha 1`: binary alpha cutout; pixels below the alpha threshold are discarded and remaining pixels stay opaque.
+- `matl_alpha 2`: partial transparency with alpha blending.
+
+The same modes are also applied when a material has a night map/light map, through equivalent nighttime shaders.
+
+`matl_noZwrite` now uses a read-only depth state, keeping scene depth testing without writing depth. `matl_noZcheck` disables depth testing for that material batch. After each batch, the renderer restores default states so terrain, splines, and other objects are not affected.
+
+Flags are loaded directly from Core `MaterialOverrides` and remain associated with the correct material in each mesh.
+
+### Checkpoint N3.23 — native terrain mask painting
+
+The WinUI host now edits the same A8 DDS masks OMSI uses to paint additional `[groundtex]` layers.
+
+`MapStudio.Core` now provides alpha-pixel reading, valid A8 DDS writing, and a circular brush with radius, target alpha, and feather. The brush works in the tile's real 0–300 m local coordinates and interpolates existing alpha toward the requested value, allowing a layer to be painted or erased.
+
+In the Inspector, the same point selected by the terrain tool can be used with **Paint texture at point**. The user chooses the `groundtex` layer index, alpha from 0–255, radius, and feather. Layer 0 remains the base texture; painting only targets layers 1 and above.
+
+When `tile_*.map.N.dds` already exists, it is replaced through `SafeFileTransaction` with an automatic backup. When the layer has no mask yet, the editor creates a new DDS using the mask resolution declared by the `[groundtex]` `ResolutionCode` and publishes it atomically through a temporary file + rename.
+
+After writing, the tile is read back through Core and the Direct3D viewport immediately rebuilds the painted layers. The UI never supplies an arbitrary output path: mask name and destination are derived from the real tile and validated layer.
+
+### Checkpoint N3.24 — complete [groundtex] detail texture support
+
+The native terrain material now also uses each `[groundtex]` entry's `DetailTexturePath` and `DetailTextureRepeating`.
+
+The Direct3D vertex now carries a third dedicated UV set so it can preserve at the same time:
+- main terrain texture UVs;
+- normalized 0–1 DDS mask UVs;
+- independent detail texture UVs.
+
+Both main and detail textures are resolved through the same `OmsiTextureAssetPathResolver`. Base terrain and painted layers can therefore use different repeat counts exactly as declared by `global.cfg`.
+
+The `PSTerrainBaseDetail` and `PSTerrainLayerDetail` shaders modulate detail over the main material without changing paint-mask alpha. If a detail texture is missing or cannot be decoded, rendering falls back to the previous non-detail path.
+
+The GPU texture cache now also tracks detail texture files and releases them when the map/scene changes.
+
+### Checkpoint N3.25 — Top/Perspective camera in the native host
+
+The camera mode switch already present in the React editor has been migrated into the WinUI host's **View** menu.
+
+**Top view** preserves the current target and camera distance while moving pitch close to 90°, with a small safety margin that avoids the `CreateLookAt` singularity caused by a direction exactly parallel to the Y axis.
+
+**Perspective** restores the editor's default orientation without changing the focused point or current zoom. This makes it possible to work on the same tile/object while switching between a near-orthographic overhead inspection and 3D navigation.
+
+Both modes reuse the same camera, ID Buffer, and raycasts; there is no parallel viewport or hidden React state.
+
+### Checkpoint N3.26 — real Terrain, Objects, and Splines visibility
+
+The React editor's scene visibility controls have been migrated into the WinUI host's **View** menu.
+
+**Terrain**, **Objects**, and **Splines** can now be shown or hidden independently without unloading the map or rebuilding the Core snapshot.
+
+Visibility also controls the ID Buffer. When Objects or Splines are hidden:
+- their geometry is no longer drawn;
+- proxies and real triangles from that category are removed from the picking buffer;
+- hover and selection for that category are cleared;
+- gizmos do not remain active on an invisible entity;
+- Explorer selection is rejected while the category is hidden.
+
+This prevents an invisible entity from still blocking clicks on visible geometry behind it.
+
+Terrain does not participate in the object/spline ID Buffer; hiding it affects rendering only. Terrain editing tools continue to use mathematical raycasts against the real loaded terrain mesh.
+
+### Checkpoint N3.27 — native category selection filter
+
+The React editor's selection filter has been migrated into the WinUI host's top toolbar.
+
+The user can switch between:
+- **Select: all**;
+- **Objects only**;
+- **Splines only**.
+
+The filter does not change scene visibility. It rebuilds only the ID Buffer used by hover/click, removing excluded categories. For example, in **Splines only** a visible object in front no longer blocks selecting a spline behind it.
+
+The current selection, hover, and gizmos are cleared when they are no longer valid for the new filter. Explorer selection follows the same filter so the list and viewport cannot enter different selection states.
+
+Terrain mode remains separate because native terrain editing uses the dedicated leveling/painting raycast rather than the object/spline ID Buffer.
+
+### Checkpoint N3.28 — grid independent from scene guides
+
+The React editor's **Grid** control has been migrated into the WinUI host's **View** menu.
+
+The renderer's previous combined line buffer has been split into three sets:
+- tile borders / terrain subdivision grid;
+- object guide markers;
+- spline guide lines.
+
+As a result, disabling **Grid** hides only the terrain reference mesh. Object markers and spline guides continue to follow their own category visibility.
+
+The change does not rebuild the map or alter picking, materials, or OMSI geometry; it only enables/disables the Direct3D 11 grid line buffer.
+
+### Checkpoint N3.29 — view shortcut and selection-focus parity
+
+The native toolbar now migrates the quick shortcuts used by the React version:
+
+- **F** focuses the camera on the selected object or spline;
+- **N** toggles transform snapping;
+- **T** toggles terrain visibility;
+- **G** toggles only the grid;
+- **O** toggles objects;
+- **L** toggles splines;
+- **P** toggles only the real 3D spline profiles.
+
+Focus uses the native ID-buffer selection and the same anchor used by gizmos, without creating a second camera or parallel state.
+
+**Real spline profiles** is now separate from logical spline visibility. Turning P off hides the textured SLI mesh while spline guide lines remain visible and selectable as long as Splines itself is enabled. This more closely matches the React viewport toolbar workflow.
+
+Shortcuts do not intercept typing when focus is inside TextBox, RichEditBox, PasswordBox, or NumberBox controls.
+
+### Checkpoint N3.30 — Q/Alt+1…4 selection modes and fit-map
+
+The React editor's quick selection modes have been migrated to the WinUI host:
+
+- **Q** returns to general selection;
+- **Alt+1** selects all categories;
+- **Alt+2** filters objects only;
+- **Alt+3** filters splines only;
+- **Alt+4** activates terrain/tile selection;
+- **Home** frames the loaded map.
+
+The native selection filter now includes a `Terrain` mode. In this mode objects, splines, and gizmos are removed from the picking ID Buffer and clicks use the real terrain-mesh raycast instead. The mode remains active after each click until the user changes filters.
+
+Entering Terrain automatically makes the terrain layer visible if it had been hidden. The selected point feeds the same Inspector already used by leveling and DDS-mask painting, so selection and editing share the same real state.
+
+The **Fit** button and Home key use `NativeViewportNavigation.FitToScene`, keeping a single camera and recalculating framing from the real loaded-scene bounds.
+
+### Checkpoint N3.31 — final camera-shortcut and Escape parity
+
+The remaining React toolbar shortcuts have also been migrated:
+
+- **1** switches immediately to the perspective camera;
+- **2** switches to top view;
+- **Esc**, when it is not cancelling placement or leaving fullscreen, returns to **Select / all** mode.
+
+Keys 1 and 2 use the exact same native methods already exposed by the View menu. There is no parallel camera or duplicated state between shortcuts and menu actions.
+
+Escape keeps the native host's safety priority: it first cancels placement/construction tools, then exits fullscreen, and only then restores the general selection filter.
+
+### Checkpoint N3.32 — double-sided terrain in the native rasterizer
+
+Alpha.4 Test 1 validation showed that terrain geometry could exist and be counted by the renderer while remaining invisible in the viewport. Once the OMSI sky was enabled this became obvious because clouds were visible through the grid, making them look like a ground texture.
+
+The React version already rendered terrain with `backFaceCulling = false`. The Direct3D 11 host was still using the default rasterizer state, which may cull the visible terrain face depending on the effective mesh/camera winding.
+
+The terrain pass now uses a dedicated `ID3D11RasterizerState` with `RasterizerDescription.CullNone`. This state is active only while terrain is drawn and is restored immediately afterwards, so objects, splines, sky, and gizmos keep their normal rasterizer behavior.
+
+No `.terrain` data, UVs, textures, or masks are modified; this is a rendering-only fix that restores parity with the behavior already validated in the React viewport.
+
+
+
+## Building Studio, Road Kit, and provider-neutral AI
+
+The native architecture now also provides the foundation for original content authored by Map Studio itself.
+
+### Map Studio Road Kit
+
+Core can generate an original spline pack under `Splines/MapStudio_RoadKit`, using real OMSI profiles and traffic/pedestrian paths. The initial pack includes one-way road, two-lane road, road with sidewalks, four-lane avenue, divided avenue with median, and pedestrian way. Textures are generated by Map Studio as well. Updates preserve the previous installed version in a backup.
+
+### Building Studio
+
+Core now has an editable O3D writer and a procedural building generator. The initial workflow outputs real `.sco` + `.o3d` assets from dimensions, floor count, roof type/height, and an optional facade reference image. WinUI exposes this through **Tools → Building Studio** and reindexes the generated asset into the library.
+
+Generation is deterministic and local. AI never writes O3D directly.
+
+### Provider-neutral AI
+
+`MapStudio.Core.AI` defines vendor-neutral contracts for building, road, and scene reference analysis. No AI vendor is authoritative over the domain and Core has no required vendor SDK.
+
+Rules:
+
+- users may connect the AI provider they prefer;
+- cloud providers, local/offline models, and custom endpoints use the same domain contract;
+- adapters can be added without changing Building Studio, Road Kit, or OMSI formats;
+- AI returns structured suggestions such as dimensions, floor count, roof, materials, and road polylines;
+- returned values are normalized and validated before reaching generators;
+- users review and may edit the parameters before generation;
+- all generators continue to work manually when no provider is connected;
+- production never fabricates provider responses;
+- keys/tokens must not be written into maps, `.sco`, `.o3d`, or generated assets;
+- final output remains real, inspectable OMSI data and does not depend on the AI service that helped create it.
+
+
+## Advanced parity and procedural road generation
+
+Native migration now also covers advanced workflows that previously remained React-only:
+
+- **Easy Road editable preview before save**: start/end coordinates can be adjusted, curve offset updates the preview, and persistence only happens after explicit confirmation;
+- **searchable installed-map catalog**;
+- **library drag-and-drop onto the map**;
+- **real persistent geometry thumbnails** for SCO/SLI assets in Explorer, generated from native geometry;
+- **level selected spline to real terrain height**;
+- native **[spline_h]** creation/copy/template validation;
+- per-layer **terrain paint visibility**.
+
+### Procedural road graph
+
+The procedural generator uses one simulator-independent road graph.
+
+Current inputs:
+
+1. manual tracing by clicking the terrain;
+2. georeferenced GeoJSON (`LineString` and `MultiLineString`);
+3. georeferenced OSM XML;
+4. structured AI output from a connected provider.
+
+The graph:
+
+- detects X and T intersections;
+- splits roads at intersection nodes;
+- preserves lane/width/one-way metadata;
+- smooths polylines before building the persistent graph while preserving control points;
+- builds the D3D11 preview from the same geometry that will be persisted, following real terrain height;
+- plans auto-links across safe degree-2 linear nodes, including continuity assembled from separate traces;
+- never links through degree 3/4 nodes with `Previous/Next`; those nodes are handled by original junction assets.
+
+### Original Road Kit and junctions
+
+Map Studio generates its own Road Kit and procedural junction assets.
+
+Current pipeline:
+
+1. trace → graph;
+2. graph → OMSI placement requests;
+3. D3D11 preview;
+4. Road Kit generation/update;
+5. transactional batch spline persistence;
+6. safe linear auto-links;
+7. topology-based original junction asset generation;
+8. junction placement as scenery objects;
+9. road rollback if junction placement fails.
+
+### GeoJSON import
+
+GeoJSON uses the anchor stored in `.mapstudio/georeference.json`.
+
+Geographic projection lives in Core and is simulator-independent so future adapters can reuse it.
+
+When present, import reads:
+
+- `highway`;
+- `lanes`;
+- `oneway`;
+- `width`;
+- `name`.
+
+Imported data is classified into Road Kit profiles, enters preview first, and is persisted only when the user chooses **Generate roads**.
+
+### OSM buildings and multipolygons
+
+Building import reads both `way` footprints and `type=multipolygon` relations carrying `building=*`. Outer ways that form a continuous ring are assembled into one footprint while preserving metadata such as `building:levels`, `height`, `roof:shape`, `roof:height`, name, and address.
+
+Relations with `inner` rings are still rejected conservatively because filling a courtyard/hole as a solid volume would generate incorrect geometry. Malformed relations or relations with unresolved references are not persisted either.
+
+### AI profiles
+
+**AI → Configure providers...** stores metadata only:
+
+- profile name;
+- adapter ID;
+- endpoint;
+- model;
+- local/offline flag.
+
+No key/token is persisted in this JSON. On Windows, local credentials are stored separately in Windows Credential Manager; a future commercial backend may resolve its own credentials without placing a secret key in the desktop client.
+
+The host currently implements `openai-compatible`, `ollama`, and `lmstudio` adapters. Other providers remain extensible through the neutral contract and must not be advertised as supported until a real adapter exists.
+
+
+## Native tile management
+
+The WinUI host can now create real OMSI tiles without using the legacy editor.
+
+### Create tile
+
+**Map → Create tile...**:
+
+- uses `template/NewMap` from the active content source: the **Map Studio-owned Workspace template** in standalone mode, or the OMSI installation template when the optional OMSI source is active;
+- copies the template tile `.map`, `.terrain`, lightmap, and associated auxiliary files;
+- skips `.prt`, which is a temporary editor-generated file;
+- appends a new `[map]` section to the end of `global.cfg`, preserving existing order and indices;
+- rejects duplicate coordinates or paths;
+- backs up `global.cfg`;
+- removes newly created files and restores the global file if any step fails;
+- focuses the new tile after reloading the map.
+
+### Delete tile
+
+The initial deletion flow is intentionally conservative.
+
+**Map → Delete active tile...** only writes when all conditions are satisfied:
+
+- the map contains more than one tile;
+- the tile contains no objects or splines;
+- it is the final valid `[map]` entry;
+- no `[entrypoints]` section references that tile index;
+- the `[map]` section list is canonical and can be preserved without reindexing.
+
+All matching `tile_X_Y.map*` files are copied into `.mapstudio-backups` before deletion. If any step fails, both `global.cfg` and tile files are restored.
+
+Arbitrary removal of intermediate tiles remains blocked until a validated reindexer exists for index-based references in `global.cfg` and operational map data.
+
+
+## Standalone Workspace and optional OMSI source
+
+The native editor now starts in its own **Map Studio Workspace** and does not require OMSI to be installed.
+
+The Workspace is an OMSI-compatible content root that automatically creates:
+
+- `maps`;
+- `Sceneryobjects`;
+- `Splines`;
+- `Texture`;
+- `template/NewMap`;
+- private metadata under `.mapstudio`.
+
+The initial map template and flat terrain are generated by Map Studio itself. The Workspace also seeds original assets when missing: Road Kit, a starter tunnel, a starter junction, and a starter house generated by Building Studio.
+
+**File → New map...** creates and opens a project directly inside the Workspace. **File → Add item folder...** copies SCO/SLI packs into the standalone library while preserving each pack's internal structure.
+
+**File → Import existing map...** accepts an external folder containing `global.cfg`, validates it through Core, copies the project into `Workspace\\maps`, and opens it in standalone mode. External SCO/SLI dependencies can then be brought in through **Add item folder...**.
+
+**Open OMSI** remains available in the menu, desktop ribbon, and fullscreen editor bar. It only switches the active content source to a user-selected OMSI installation; it is not required for startup, map creation, or editing.
+
+The UI explicitly shows `WORKSPACE` or `OMSI` so the active source is always clear. The desktop chrome is organized as a menu plus command ribbon, while fullscreen uses its own editor bar with save/undo/redo, new map, Assets, Explorer, Inspector, Workspace, and Open OMSI.
+
+
+## Consolidated native-migration status — 2026-09-21
+
+> “Next checkpoint”, “not included yet”, and similar statements in the historical sections above describe the state when each checkpoint was written. They must not be treated as the current backlog. This section is the latest consolidated reference.
+
+The production editor architecture is **WinUI 3 + Direct3D 11 + MapStudio.Core**. The earlier plan to keep React/WebView2 as the primary viewport has been superseded by the native migration and remains documented only as architectural history.
+
+In addition to the checkpoints already described, the native host currently includes:
+
+- tile creation, safe deletion, and visual tile management;
+- local elevation import from CSV and ESRI ASCII Grid;
+- incremental raise/lower terrain brush, leveling, and real DDS-mask painting;
+- individual `groundtex` layer visibility;
+- persistent geometry thumbnails and visual library cards;
+- native visual previews for BMP/PNG/JPG/TGA and compatible DDS textures, including A8 DDS masks without relying on a WIC codec;
+- native 3D preview for standalone `.o3d` and `.x` model assets without requiring an SCO wrapper;
+- the standalone Workspace seeds its own original content: Road Kit, tunnel, Bridge Kit, junction, building, tree, shrub, `light_enh` street lamp, bench, bus-stop sign, utility cabinet, and editable traffic light, without requiring OMSI 2 files;
+- the native Bridge Creator generates original SLI/textures, backs up an existing bridge before overwrite, and opens the result directly in the Easy Road workflow;
+- the starter traffic light includes a real 60-second OMSI program and a path linked through `use_traffic_light`, so it becomes editable in the native traffic-program editor once placed on a map;
+- an adaptive, scrollable, and movable bottom creation dock, now visually grouped into **Edit / Create / Scenery / Systems**, with visible active-tool state and direct access to the bridge and tunnel creators;
+- the F11 editor bar uses consistent compact controls for project actions, editing, panels, Workspace switching, and the OMSI shortcut;
+- the Traffic panel exposes **Add traffic light...**, opening library signalling assets directly for placement;
+- scenery placement can snap/align to the nearest road using the real tangent of straight or curved splines with a configurable range;
+- Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
+- procedural-road generation with smoothing, one graph, degree-2 continuity auto-linking, original junction assets, and rollback;
+- georeferenced GeoJSON and **OSM XML** import, including roads, building footprints, safe outer multipolygons, and vegetation from points, lines, areas, and safe outer multipolygons;
+- AI analysis of the Google reference for road extraction;
+- Building Studio with original O3D/SCO output, flat/gable/hip/shed roofs, and facade openings;
+- provider-neutral AI configuration and connection probing;
+- real vision adapters for **OpenAI-compatible**, **Ollama**, **LM Studio**, the **Anthropic Messages API**, and **Google Gemini generateContent**, all converging on the same structured building/road parser;
+- the native provider dialog identifies operational adapters, suggests safe default endpoints for known services, and keeps API keys in Windows Credential Manager;
+- the standalone Workspace generates its own day/night sky plus original base/detail terrain textures; new maps start with a functional `[groundtex]` layer without OMSI content;
+- **File → Export map as OMSI package...** builds an independent `maps` / `Sceneryobjects` / `Splines` / texture tree for testing or distribution; the original OMSI installation is never modified automatically;
+- the exporter deliberately excludes `himmel01/himmel05` and `Texture/skybox` so a package cannot replace the game's global environment, while keeping Workspace terrain textures and assets;
+- reading of `attachObj`, `splineAttachment/splineAttachement`, and repeater variants;
+- preservative editing of validated numeric attachment fields with backup and round-trip checks;
+- commercial/entitlement architecture running in Development Preview without enforcement;
+- a formal simulator-adapter boundary; OMSI 2 remains the only operational adapter at this time.
+
+### Preserved limitation: `[worldcoordinates]` maps
+
+Object and spline insertion/copy remains blocked for maps using `[worldcoordinates]`. This restriction already existed in the previous React editor and is not a native-migration regression.
+
+The current renderer still builds editor world space from tile × 300 m plus local coordinates. Enabling writes for `[worldcoordinates]` without a formal, tested conversion could persist incorrect coordinates. The restriction should only be removed after reading, visualization, picking, placement, and write round-trips are covered by dedicated tests.
+
+### OSM import
+
+**Tools → Procedural road generator → Import georeferenced OSM XML...** reads local `.osm`/`.xml` files while prohibiting DTD processing and external entity resolution.
+
+The importer reads ways tagged with `highway`, resolves their nodes, and preserves when present:
+
+- `lanes`;
+- `oneway`, including `-1` by reversing geometry direction;
+- `width`;
+- `name`;
+- the `highway` classification.
+
+WGS84 coordinates are projected through the same `.mapstudio/georeference.json` anchor used by GeoJSON. OSM, GeoJSON, manual tracing, and AI then feed exactly the same `MapStudioRoadGraph`, D3D11 preview, Road Kit, junction planner, and transactional persistence pipeline.
+
+**Tools → Import OSM buildings...** imports `building=*` way footprints and `type=multipolygon` relations when their outer rings can be assembled safely. Relations with inner rings/courtyards remain refused at this stage so holes are not incorrectly filled. The generator preserves height/levels and `roof:shape`/`roof:height`: Gable remains restricted to quadrilateral footprints; Hip — including `pyramidal`/pyramid — is generated for any simple convex footprint with three or more sides; Shed/Skillion uses a planar slope and is also generated for simple irregular or concave footprints. When a requested roof shape cannot be built safely, the top remains flat.
+
+**Tools → Import OSM vegetation...** imports individual `natural=tree` and `natural=shrub` nodes, `natural=tree_row` and `barrier=hedge` ways, plus closed `natural=wood`, `landuse=forest`, and `natural=scrub` ways. `species`, `genus`, `leaf_type`, and `name` are preserved when present.
+
+Tree rows and hedges use the same georeference anchor and are sampled into regular 4 m placement points. Forest/wood areas use deterministic scattering at roughly 14 m spacing and scrub areas at 7 m, while every generated point remains inside the projected OSM polygon. The dialog lets the user choose **two real SCOs** already indexed in the Vegetation category: one for trees/tree rows/forest and one for shrubs/hedges/scrub. The viewport previews those points on loaded terrain; confirmation aligns every placement to the real terrain height and writes both groups through one safe multi-batch transaction with backup. The operational limit remains 256 selected points per execution, and varied rotation remains optional and deterministic per OSM ID/sample.
+
+OSM `type=multipolygon` relations for forest/wood/scrub are now accepted when they can be assembled using safe **outer rings only**; ways consumed by the relation are not duplicated as standalone areas. Relations with `inner` members remain refused at this stage so holes are not filled incorrectly.
+
+The dialog also uses `species`, `genus`, and `leaf_type` as a **suggestion** for preselecting the most compatible real SCO already present in the indexed library. This heuristic never creates assets or prevents manual selection, and an already-selected vegetation asset in the library keeps priority. Points without currently loaded terrain are also not inserted, avoiding invented heights.
+
+### OMSI attachments
+
+The reader preserves recognized attachment variants without rewriting unknown sections. Editing is enabled only for sections parsed as valid, and the writer verifies that the original raw values are still unchanged before applying an edit.
+
+Currently editable:
+
+- rotation, pitch, and bank for `attachObj`;
+- X/Z/Y, rotation, pitch, bank, interval, and distance for spline attachments/repeaters.
+
+Still read-only at this stage:
+
+- IDs;
+- asset path;
+- parent ID;
+- attach point;
+- `varparent`;
+- unknown/extra fields.
+
+Persistence uses `SafeFileTransaction`, creates a backup, and reloads the tile before replacing the live snapshot.
+
+### OMSI transport: Tracks, StationLinks, and type 2 Trips
+
+The native **Transport** workspace operates directly on the real `TTData` files and keeps both OMSI route forms distinct:
+
+- **Type 1 Trip**: references a complete `.ttr`/Track;
+- **Type 2 Trip**: does not depend on a Track and resolves its path from the `[station_typ2]` sequence; every consecutive stop pair must have a matching StationLink in `StnLinks.cfg`.
+
+For type 2 Trips, the model preserves the three raw `[trip]` fields and exposes the effective interpretation used by the editor: destination, line, and no Track. The writer continues to emit the existing OMSI format and does not introduce a custom route format.
+
+The **Route Studio** now:
+
+- previews type 1 Trips through their Track;
+- previews type 2 Trips by concatenating the StationLinks for every consecutive stop pair;
+- applies the same resolution to Lines/Tours that reference those Trips;
+- preserves segment `entityId`, `pathIndex`, and length in the preview;
+- can isolate one selected route segment;
+- synchronizes the selected segment with the matching spline/object and OMSI path lane;
+- when auxiliary path visualization is set to selected-only, can draw only the exact `pathIndex` being edited.
+
+The detachable **Timetable** window is now an operational editor rather than a read-only schedule view: it opens the complete Trip editor in its own `XamlRoot`, reuses the visual profile editor, saves both through the same transactional Core flow, and keeps the catalog synchronized after each write. The **Line/Tours** table can add, remove, and reorder departures; the visible order is the same order persisted as `[addtrip]` entries in the `.ttl` file.
+
+The Trip creator explicitly offers **Type 1 · Track** and **Type 2 · StationLinks**. Type 2 saving is blocked when there are fewer than two stops, an unknown stop, or any consecutive pair without a StationLink.
+
+`TTData` validation now distinguishes:
+
+- broken Trip → Track references;
+- missing type 2 Trip → StationLink pairs;
+- broken StationLink → Stop references;
+- broken Line → Trip references.
+
+At this stage, when multiple base StationLinks exist for the same stop pair, the preview uses the first valid match in the loaded catalog. Chrono-specific StationLink resolution remains a later migration step.
+
+#### Visual StationLink editing
+
+Route Studio also treats StationLinks as editable sequences of real OMSI paths. A selected StationLink can:
+
+- isolate and focus a `pathIndex`;
+- reorder entries;
+- remove entries while keeping at least one entry;
+- append the currently selected path with **+ selected segment**;
+- use **Record path** to append several consecutive paths.
+
+To preserve compatibility, the editor does not invent the less-documented `[StnLink_entry]` fields. Visual append is enabled only when `ID + pathIndex` already has reusable metadata in a loaded Track or StationLink. The lane hint reports **ready for StationLink** or **no safe StationLink metadata**.
+
+The StationLink creator no longer requires a Track specifically. Its initial source can be an existing Track, an existing StationLink, or the currently selected path when safe metadata is already known. Chrono files are not copied automatically into newly created links.

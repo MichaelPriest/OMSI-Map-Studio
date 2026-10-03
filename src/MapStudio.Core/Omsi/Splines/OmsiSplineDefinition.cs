@@ -5,6 +5,10 @@ public sealed record OmsiSplineDefinition(
     IReadOnlyList<string> Textures,
     IReadOnlyList<OmsiSplineSurface> Surfaces)
 {
+    public IReadOnlyList<OmsiSplinePathDefinition>
+        Paths { get; init; } =
+            Array.Empty<OmsiSplinePathDefinition>();
+
     public static OmsiSplineDefinition Missing { get; } = new(
         Exists: false,
         Textures: Array.Empty<string>(),

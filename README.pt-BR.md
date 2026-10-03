@@ -67,6 +67,15 @@ Documentação de arquitetura:
 A Alpha.4 também varre `OMSI 2/Splines` sob demanda e permite pré-visualizar arquivos `.sli` instalados. A biblioteca oferece criação **Normal** e **Altura**. A persistência só é liberada quando o mapa contém um template real neutro do mesmo tipo: cinco extras explícitos zerados para `[spline]` e seis para `[spline_h]`. Header e extras são copiados desse template.
 
 
+## Manual do Usuário
+
+O guia de uso das funções atuais do editor está em:
+
+- [Manual do Usuário — Português](docs/pt-BR/USER_MANUAL.md)
+- [User Manual — English](docs/en/USER_MANUAL.md)
+
+A build nativa também inclui uma cópia local acessível pelo menu **Ajuda**.
+
 ## Roadmap do projeto
 
 A direção técnica e funcional oficial está documentada em:

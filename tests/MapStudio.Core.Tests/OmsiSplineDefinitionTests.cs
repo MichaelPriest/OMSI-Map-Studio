@@ -166,6 +166,45 @@ public sealed class OmsiSplineDefinitionTests
     }
 
     [Fact]
+    public void Reader_ExtractsTrafficPaths()
+    {
+        const string source =
+            "[path]\n" +
+            "0\n-1.5\n0.1\n3.0\n0\n" +
+            "[path]\n" +
+            "1\n4.2\n0.25\n2.0\n2\n";
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    MapStudio.Core.Omsi.Config
+                        .OmsiConfigParser.Parse(
+                            source));
+
+        Assert.Equal(
+            2,
+            definition.Paths.Count);
+
+        var road =
+            definition.Paths[0];
+
+        Assert.Equal(0, road.Type);
+        Assert.Equal(-1.5, road.X);
+        Assert.Equal(0.1, road.Z);
+        Assert.Equal(3.0, road.Width);
+        Assert.Equal(0, road.Direction);
+
+        var pedestrian =
+            definition.Paths[1];
+
+        Assert.Equal(1, pedestrian.Type);
+        Assert.Equal(4.2, pedestrian.X);
+        Assert.Equal(0.25, pedestrian.Z);
+        Assert.Equal(2.0, pedestrian.Width);
+        Assert.Equal(2, pedestrian.Direction);
+    }
+
+    [Fact]
     public void PathResolver_StaysInsideOmsiSplines()
     {
         var root = Path.Combine(

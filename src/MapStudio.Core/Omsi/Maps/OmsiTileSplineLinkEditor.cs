@@ -5,7 +5,7 @@ namespace MapStudio.Core.Omsi.Maps;
 
 public static class OmsiTileSplineLinkEditor
 {
-    public static OmsiTileSplineLinkEditResult ApplyLinks(
+    public static OmsiTileSplineEditResult ApplyLinks(
         OmsiConfigDocument document,
         IReadOnlyList<OmsiSplineLinkEdit> edits)
     {
@@ -14,7 +14,7 @@ public static class OmsiTileSplineLinkEditor
 
         if (edits.Count == 0)
         {
-            return new OmsiTileSplineLinkEditResult(
+            return new OmsiTileSplineEditResult(
                 document.ToBytes(),
                 0);
         }
@@ -22,7 +22,7 @@ public static class OmsiTileSplineLinkEditor
         var lines =
             document.Lines.ToArray();
 
-        var sections =
+        var splineSections =
             document.Sections
                 .Where(
                     OmsiSplineFieldLayout
@@ -42,28 +42,19 @@ public static class OmsiTileSplineLinkEditor
             if (
                 edit.SourceSectionOrdinal < 0 ||
                 edit.SourceSectionOrdinal >=
-                    sections.Length ||
+                    splineSections.Length ||
                 !usedOrdinals.Add(
-                    edit.SourceSectionOrdinal) ||
-                edit.PreviousSplineId ==
-                    edit.SplineId ||
-                edit.NextSplineId ==
-                    edit.SplineId ||
-                (
-                    edit.PreviousSplineId != -1 &&
-                    edit.PreviousSplineId ==
-                        edit.NextSplineId
-                ))
+                    edit.SourceSectionOrdinal))
             {
                 throw new InvalidDataException(
-                    "invalidSplineLinkEdit");
+                    "invalidSplineLinkSection");
             }
 
             var section =
-                sections[
+                splineSections[
                     edit.SourceSectionOrdinal];
 
-            var indices =
+            var dataLineIndices =
                 OmsiSplineFieldLayout
                     .GetDataLineIndices(
                         section);
@@ -71,95 +62,88 @@ public static class OmsiTileSplineLinkEditor
             if (
                 !OmsiSplineFieldLayout.TryCreate(
                     version,
-                    indices.Count,
-                    out var layout))
+                    dataLineIndices.Count,
+                    out var layout) ||
+                layout.NextIndex is not
+                    { } nextIndex)
             {
                 throw new InvalidDataException(
-                    "malformedSplineSection");
+                    "splineLinksUnsupported");
             }
 
-            var values =
-                indices
-                    .Select(index =>
-                        lines[index].Trim())
+            var dataValues =
+                dataLineIndices
+                    .Select(
+                        index =>
+                            lines[index]
+                                .Trim())
                     .ToArray();
 
             var isHeightSpline =
                 string.Equals(
                     section.Keyword,
                     "spline_h",
-                    StringComparison.OrdinalIgnoreCase);
-
-            var sourceNextId = -1;
-
-            if (
-                layout.NextIndex is int nextIndex &&
-                !int.TryParse(
-                    values[nextIndex],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out sourceNextId))
-            {
-                throw new InvalidDataException(
-                    "splineLinkSourceChanged");
-            }
-
-            if (
-                layout.NextIndex is null &&
-                (
-                    edit.OriginalNextSplineId != -1 ||
-                    edit.NextSplineId != -1
-                ))
-            {
-                throw new InvalidDataException(
-                    "splineLinkUnsupportedByVersion");
-            }
+                    StringComparison
+                        .OrdinalIgnoreCase);
 
             if (
                 isHeightSpline !=
                     edit.IsHeightSpline ||
                 !int.TryParse(
-                    values[layout.IdIndex],
+                    dataValues[
+                        layout.IdIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out var sourceId) ||
                 !int.TryParse(
-                    values[layout.PreviousIndex],
+                    dataValues[
+                        layout.PreviousIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
-                    out var sourcePreviousId) ||
+                    out var sourcePrevious) ||
+                !int.TryParse(
+                    dataValues[
+                        nextIndex],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var sourceNext) ||
                 sourceId !=
                     edit.SplineId ||
-                sourcePreviousId !=
-                    edit.OriginalPreviousSplineId ||
-                sourceNextId !=
-                    edit.OriginalNextSplineId ||
+                sourcePrevious !=
+                    edit.PreviousSplineId ||
+                sourceNext !=
+                    edit.NextSplineId ||
                 !string.Equals(
-                    values[layout.PathIndex],
+                    dataValues[
+                        layout.PathIndex],
                     edit.SplinePath,
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison
+                        .OrdinalIgnoreCase))
             {
                 throw new InvalidDataException(
-                    "splineLinkSourceChanged");
+                    "splineSourceChanged");
             }
 
-            lines[indices[layout.PreviousIndex]] =
-                edit.PreviousSplineId
+            lines[
+                dataLineIndices[
+                    layout.PreviousIndex]] =
+                edit.NewPreviousSplineId
                     .ToString(
-                        CultureInfo.InvariantCulture);
+                        CultureInfo
+                            .InvariantCulture);
 
-            if (layout.NextIndex is int writeNextIndex)
-            {
-                lines[indices[writeNextIndex]] =
-                    edit.NextSplineId
-                        .ToString(
-                            CultureInfo.InvariantCulture);
-            }
+            lines[
+                dataLineIndices[
+                    nextIndex]] =
+                edit.NewNextSplineId
+                    .ToString(
+                        CultureInfo
+                            .InvariantCulture);
 
             applied++;
         }
 
-        return new OmsiTileSplineLinkEditResult(
+        return new OmsiTileSplineEditResult(
             Encode(
                 document,
                 lines),
@@ -179,7 +163,8 @@ public static class OmsiTileSplineLinkEditor
             document.HasTrailingNewLine &&
             lines.Count > 0)
         {
-            text += document.NewLine;
+            text +=
+                document.NewLine;
         }
 
         var body =
