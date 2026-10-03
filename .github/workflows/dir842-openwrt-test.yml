@@ -43,11 +43,111 @@ jobs:
 
           install -D -m 0644             "$GITHUB_WORKSPACE/.ci/dir842/07-rtw88-blank-efuse-user-regdomain.patch"             files/package/kernel/mac80211/patches/realtek/07-rtw88-blank-efuse-user-regdomain.patch
 
-          for p in             08-dir842-bridge-role-reset.patch             09-dir842-explicit-radio0-reset.patch             10-rtl819x-recovery-diagnostics.patch             11-rtl819x-bridge-hwnat-recovery-gate.patch
+          for p in             08-dir842-bridge-role-reset.patch             09-dir842-explicit-radio0-reset.patch
           do
             git apply --recount --check "$GITHUB_WORKSPACE/.ci/dir842/$p"
             git apply --recount "$GITHUB_WORKSPACE/.ci/dir842/$p"
           done
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              p = Path(path)
+              s = p.read_text()
+              n = s.count(old)
+              if n != 1:
+                  raise SystemExit(f"{label}: expected exactly 1 match, found {n}")
+              p.write_text(s.replace(old, new, 1))
+              print(f"applied: {label}")
+
+          eth = "files/target/linux/realtek/files-4.14/drivers/net/ethernet/rtl819x/rtl819x-eth.c"
+          asic = "files/target/linux/realtek/base-files/etc/init.d/dir842-asic"
+
+          replace_once(
+              eth,
+              'FABRIC WEDGE detected (large-frame FCS fail=%u ok=%u in 10s)%s',
+              'FABRIC WEDGE detected (large-frame FCS fail=%u ok=%u in ~2.5s)%s',
+              "FCS detector window text",
+          )
+          replace_once(
+              eth,
+              'RX-STALL WEDGE detected (USEDDSC=%u, rx_packets frozen at %lu)%s\\n",\n'
+              '\t\t\t\t       used, rx,\n'
+              '\t\t\t\t       fabric_autoreset ? " - auto recovery"\n'
+              '\t\t\t\t\t\t\t        : " - set fabric_reset=2 to recover");',
+              'RX-STALL WEDGE detected (USEDDSC=%u, rx_packets frozen at %lu)%s\\n",\n'
+              '\t\t\t\t       used, rx,\n'
+              '\t\t\t\t       fabric_autoreset ? " - auto recovery"\n'
+              '\t\t\t\t\t\t\t        : " - set fabric_reset=3 to recover");',
+              "RX stall recovery guidance",
+          )
+          replace_once(
+              eth,
+              'static int fabric_gw_rearm = 1;\n'
+              'module_param(fabric_gw_rearm, int, 0644);\n'
+              'MODULE_PARM_DESC(fabric_gw_rearm, "level-3 recovery re-arms the ASIC gw program (default 1; set 0 in bridge role)");\n',
+              'static int fabric_gw_rearm = 1;\n'
+              'module_param(fabric_gw_rearm, int, 0644);\n'
+              'MODULE_PARM_DESC(fabric_gw_rearm, "level-3 recovery re-arms the ASIC gw program (default 1; set 0 in bridge role)");\n\n'
+              'static int fabric_hwnat_rearm = 1;\n'
+              'module_param(fabric_hwnat_rearm, int, 0644);\n'
+              'MODULE_PARM_DESC(fabric_hwnat_rearm,\n'
+              '\t\t "level-3 recovery re-arms hardware NAT (default 1; set 0 in bridge role)");\n',
+              "HW NAT recovery gate parameter",
+          )
+          replace_once(
+              eth,
+              '\tif (mode >= 3) {\n'
+              '\t\trtl819x_hwnat_start(priv->dev);\n'
+              '\t\t/*\n'
+              '\t\t * M7 self-heal:',
+              '\tif (mode >= 3) {\n'
+              '\t\tif (fabric_hwnat_rearm) {\n'
+              '\t\t\trtl819x_hwnat_start(priv->dev);\n'
+              '\t\t} else {\n'
+              '\t\t\tpr_err("rtl819x: HW NAT re-arm SKIPPED (fabric_hwnat_rearm=0, bridge role)\\n");\n'
+              '\t\t}\n\n'
+              '\t\t/*\n'
+              '\t\t * M7 self-heal:',
+              "gate HW NAT re-arm in level-3 recovery",
+          )
+          replace_once(
+              asic,
+              '\tif [ "$ROLE" = "bridge" ]; then\n'
+              '\t\techo 3 > /sys/module/rtl819x/parameters/fabric_autoreset 2>/dev/null\n'
+              '\t\techo 0 > /sys/module/rtl819x/parameters/fabric_gw_rearm 2>/dev/null\n'
+              '\telse\n'
+              '\t\techo 3 > /sys/module/rtl819x/parameters/fabric_autoreset 2>/dev/null\n'
+              '\t\techo 1 > /sys/module/rtl819x/parameters/fabric_gw_rearm 2>/dev/null\n'
+              '\tfi',
+              '\tif [ "$ROLE" = "bridge" ]; then\n'
+              '\t\techo 3 > /sys/module/rtl819x/parameters/fabric_autoreset 2>/dev/null\n'
+              '\t\techo 0 > /sys/module/rtl819x/parameters/fabric_hwnat_rearm 2>/dev/null\n'
+              '\t\techo 0 > /sys/module/rtl819x/parameters/fabric_gw_rearm 2>/dev/null\n'
+              '\telse\n'
+              '\t\techo 3 > /sys/module/rtl819x/parameters/fabric_autoreset 2>/dev/null\n'
+              '\t\techo 1 > /sys/module/rtl819x/parameters/fabric_hwnat_rearm 2>/dev/null\n'
+              '\t\techo 1 > /sys/module/rtl819x/parameters/fabric_gw_rearm 2>/dev/null\n'
+              '\tfi',
+              "set role-specific HW NAT recovery gate",
+          )
+          replace_once(
+              asic,
+              '\tif [ "$ROLE" = "router" ]; then\n'
+              '\t\techo 1 > /sys/module/rtl819x/parameters/hwnat 2>/dev/null\n'
+              '\tfi\n'
+              '\tlogger -t dir842-asic',
+              '\tif [ "$ROLE" = "router" ]; then\n'
+              '\t\techo 1 > /sys/module/rtl819x/parameters/hwnat 2>/dev/null\n'
+              '\telse\n'
+              '\t\t# Explicit/idempotent: bridge role must never retain NAT offload.\n'
+              '\t\techo 0 > /sys/module/rtl819x/parameters/hwnat 2>/dev/null\n'
+              '\tfi\n'
+              '\tlogger -t dir842-asic',
+              "force HW NAT off in bridge role",
+          )
+          PY
 
           git diff --check
           git status --short
