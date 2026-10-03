@@ -1237,6 +1237,118 @@ public sealed class MapStudioRealWorldRoadPipelineTests
     }
 
     [Fact]
+    public async Task RoadRunnerOffsetsStockJunctionOriginToItsFittedPathCenter()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-stock-junction-offset-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var relativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_Offset_4arm.sco";
+
+            MapStudioOmsiJunctionResolverTests
+                .WriteStockJunction(
+                    root,
+                    relativePath,
+                    [0, 90, 180, 270],
+                    8.0,
+                    offsetX:
+                        18.0,
+                    offsetY:
+                        -11.0);
+
+            var fullPath =
+                Path.Combine(
+                    root,
+                    relativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            var entry =
+                new OmsiAssetIndexEntry(
+                    relativePath,
+                    OmsiAssetKind.SceneryObject,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(
+                        fullPath)
+                        .Ticks);
+
+            var catalog =
+                MapStudioOmsiConstructionAssetClassifier
+                    .Build(
+                        [entry]);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        WideJunctionXml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            150,
+                            150),
+                        installedJunctionObjects:
+                            catalog.JunctionObjects);
+
+            Assert.Equal(
+                1,
+                result.InstalledOmsiJunctionCount);
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        Path.Combine(
+                            mapDirectory,
+                            "tile_0_0.map"));
+
+            var placedObject =
+                Assert.Single(
+                    content.Objects);
+
+            Assert.Equal(
+                relativePath,
+                placedObject.SceneryObjectPath,
+                ignoreCase:
+                    true);
+
+            Assert.InRange(
+                placedObject.X,
+                131.5,
+                132.5);
+
+            Assert.InRange(
+                placedObject.Y,
+                160.5,
+                161.5);
+
+            Assert.InRange(
+                placedObject.Rotation,
+                -0.5,
+                0.5);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task RoadRunnerPlacesStockSignalsAndCrosswalkFromOsmControls()
     {
         var root =
