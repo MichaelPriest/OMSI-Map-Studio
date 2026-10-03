@@ -1,0 +1,65 @@
+From: OpenAI-assisted development
+Subject: [PATCH 08/10] dir842-asic: make router -> bridge restart self-cleaning
+
+The init script still treats router -> bridge as a one-way runtime transition:
+after router mode has run gw_prog(), TEACR/L3 state remains programmed and L2
+aging stays frozen until reboot.
+
+That restriction predates fabric_gw_rearm.  Current v1.4.1 already proves that
+a level-3 fabric reset is safe in bridge role when fabric_gw_rearm=0: the RX
+stall recovery uses exactly that combination and returns the bridge to a healthy
+L2-only datapath without re-running gw_prog().
+
+Set the role-specific fabric_gw_rearm value first (already done by asic_up), then
+run level-3 reset for BOTH roles.  Router mode still follows it with gw_prog;
+bridge mode deliberately does not.  This clears stale router tables/frozen
+aging on a router -> bridge `restart` and makes the role transition symmetric.
+
+--- a/files/target/linux/realtek/base-files/etc/init.d/dir842-asic
++++ b/files/target/linux/realtek/base-files/etc/init.d/dir842-asic
+@@ -100,11 +100,12 @@ wait_netif_mac() {
+ # is NOT: nothing in bridge role clears TEACR bit0, and no userspace knob exists
+ # to unfreeze L2 aging, so a router->bridge flip by `restart` leaves aging FROZEN
+ # and the router L3 tables programmed while the log below claims "L2 aging left
+-# ENABLED". REBOOT after switching router->bridge.
++# ENABLED".  v1.4.1 has fabric_gw_rearm, so asic_program now runs the safe
++# level-3 reset in bridge role too (with gw re-arm disabled), which clears that
++# stale router state before bridge operation resumes.
+ asic_role() {
+ 	local r
+ 	r="$(uci -q get dir842.asic.role)"
+@@ -120,21 +121,21 @@ asic_program() {
+ 	swconfig dev switch0 set apply 1 2>/dev/null
+ 	sleep 1
+ 	# ★ MEASURED-REQUIRED (see header). Level 3 = engine reinit + CPUICR soft-reset +
+ 	# full fabric reset (SIRR FULL_RST -> swcore clock cycle -> MEMCR SRAM re-init ->
+-	# 153-reg restore), and it re-arms the ASIC gw tables in-kernel, which is why
+-	# gw_prog must follow it.
+-	# ⚠ ROUTER ONLY. Level 3 is "+full fabric reset" and, per this file's header,
+-	# "re-arms the ASIC gw tables in-kernel" — it restores the L3 datapath AND
+-	# the TEACR aging freeze even when gw_prog is skipped (verified 2026-08-23:
+-	# routes and MSCR/SWTCR0/TEATCR came back with gw_prog gated off). Running it
+-	# in bridge role recreates the exact condition the bridge path avoids.
+-	# The header's "without it a fresh boot forwards NOTHING" was measured in
+-	# ROUTER mode; in bridge role the ASIC is left in its loader L2 state and
+-	# plain switching works (measured: association, broadcast/multicast and
+-	# client ARP all traverse).
+-	if [ "$ROLE" = "router" ]; then
+-		echo 3 > /sys/module/rtl819x/parameters/fabric_reset 2>/dev/null
+-		sleep 3
+-	fi
++	# 153-reg restore).  Since v1.3 the dangerous half of level 3 — gw_rearm() —
++	# is independently gated by fabric_gw_rearm.  asic_up() sets that to 1 for a
++	# router and 0 for a bridge BEFORE entering here.
++	#
++	# Therefore run the reset in BOTH roles.  In router role gw_rearm/gw_prog
++	# rebuild the L3/L4 tables.  In bridge role the same full reset runs with
++	# gw_rearm SKIPPED, which is the already hardware-validated RX-stall recovery
++	# path.  Besides making bridge startup deterministic, this clears stale
++	# router tables + frozen L2 aging when changing router -> bridge via restart.
++	echo 3 > /sys/module/rtl819x/parameters/fabric_reset 2>/dev/null
++	sleep 3
++
+ 	# read side-effect: gw_prog() programs the whole L3/L4 datapath. NOTE this WIPES
+ 	# the ASIC L2 tables, so the warm-up must come after.
+ 	# gw_prog: L3/L4 datapath + TEACR aging freeze. ROUTER ONLY (see asic_role).
