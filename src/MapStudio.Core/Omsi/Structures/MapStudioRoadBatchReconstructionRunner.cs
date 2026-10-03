@@ -2493,6 +2493,14 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         {
             foreach (var pair in match.TrimDistanceBySegmentId)
             {
+                if (
+                    !double.IsFinite(
+                        pair.Value) ||
+                    pair.Value <= 0.001)
+                {
+                    continue;
+                }
+
                 var segment =
                     segments.FirstOrDefault(
                         segment =>
@@ -2549,10 +2557,20 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             .DistanceTo(
                                 segment.End);
 
+                    if (originalLength <= 0.001)
+                    {
+                        return segment;
+                    }
+
+                    var fittedTrim =
+                        FitInstalledJunctionTrimsToSegment(
+                            trim.Start,
+                            trim.End,
+                            originalLength);
+
                     if (
-                        originalLength <= 0.001 ||
-                        trim.Start + trim.End >=
-                            originalLength - 0.5)
+                        fittedTrim.Start <= 0.001 &&
+                        fittedTrim.End <= 0.001)
                     {
                         return segment;
                     }
@@ -2561,7 +2579,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         MapStudioRoadPoint.Lerp(
                             segment.Start,
                             segment.End,
-                            trim.Start /
+                            fittedTrim.Start /
                                 originalLength);
 
                     var end =
@@ -2569,7 +2587,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             segment.Start,
                             segment.End,
                             1.0 -
-                            trim.End /
+                            fittedTrim.End /
                                 originalLength);
 
                     return segment with
@@ -2584,6 +2602,86 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     };
                 })
             .ToArray();
+    }
+
+    private static (double Start, double End)
+        FitInstalledJunctionTrimsToSegment(
+            double requestedStart,
+            double requestedEnd,
+            double segmentLength)
+    {
+        if (
+            !double.IsFinite(
+                segmentLength) ||
+            segmentLength <= 0.001)
+        {
+            return (
+                0,
+                0);
+        }
+
+        var start =
+            double.IsFinite(
+                requestedStart)
+                ? Math.Clamp(
+                    requestedStart,
+                    0,
+                    segmentLength)
+                : 0;
+
+        var end =
+            double.IsFinite(
+                requestedEnd)
+                ? Math.Clamp(
+                    requestedEnd,
+                    0,
+                    segmentLength)
+                : 0;
+
+        var requestedTotal =
+            start +
+            end;
+
+        if (requestedTotal <= 0.001)
+        {
+            return (
+                0,
+                0);
+        }
+
+        // Keep a short real spline between nearby fitted junction mouths.
+        // Scaling may reduce a trim, but never lets it extend past the
+        // physical mouth distance supplied by the validated stock match.
+        var minimumConnectorLength =
+            Math.Min(
+                4.0,
+                segmentLength *
+                    0.25);
+
+        var maximumCombinedTrim =
+            Math.Max(
+                0,
+                segmentLength -
+                    minimumConnectorLength);
+
+        if (
+            requestedTotal <=
+                maximumCombinedTrim ||
+            maximumCombinedTrim <=
+                0.001)
+        {
+            return (
+                start,
+                end);
+        }
+
+        var scale =
+            maximumCombinedTrim /
+            requestedTotal;
+
+        return (
+            start * scale,
+            end * scale);
     }
 
     private static MapStudioStandardRoadProfile?
