@@ -1,0 +1,50 @@
+From: OpenAI-assisted development
+Subject: [PATCH] rtw88: honor userspace regulatory domain on blank-efuse cards
+
+The DIR-842 R1's RTL8822BE has a blank efuse, including country_code=ff:ff.
+The old rtw88 regulatory path maps that to country 00 and then ignores
+NL80211_REGDOM_SET_BY_USER notifications. As a result, a valid userspace
+country such as BR cannot fully replace the driver's worldwide channel
+flags; UNII-3 channels can remain NO-IR even when the regulatory database
+permits AP operation.
+
+Later upstream rtw88 versions distinguish programmed-country cards from
+worldwide-roaming cards and allow userspace regulatory settings for the
+latter. Backport the minimum safe part of that behavior here:
+
+- preserve the existing "ignore user request" behavior when efuse contains
+  a programmed country;
+- accept the user request when both efuse country bytes are 0xff;
+- re-run the existing beacon/channel flag reconciliation using the active
+  regulatory rules.
+
+This does not raise TX power beyond cfg80211/regdb limits and does not
+hard-code BR. It only lets the configured country take effect on hardware
+whose efuse contains no country.
+
+--- a/drivers/net/wireless/realtek/rtw88/regd.c
++++ b/drivers/net/wireless/realtek/rtw88/regd.c
+@@ -378,8 +378,21 @@ static int rtw_regd_notifier_apply(struct rtw_dev *rtwdev,
+ 				   struct wiphy *wiphy,
+ 				   struct regulatory_request *request)
+ {
+-	if (request->initiator == NL80211_REGDOM_SET_BY_USER)
+-		return 0;
++	/*
++	 * A programmed efuse country remains authoritative, preserving the
++	 * behavior of this old rtw88 backport.  Blank-efuse devices, however,
++	 * are worldwide-roaming hardware: userspace must be allowed to select
++	 * the actual operating country.
++	 *
++	 * The DIR-842 R1 RTL8822BE is exactly this case (country_code ff:ff).
++	 * Ignoring NL80211_REGDOM_SET_BY_USER here leaves the initial "00"
++	 * world-domain NO-IR flags stuck on channels that the selected regdb
++	 * country would otherwise permit for AP operation.
++	 */
++	if (request->initiator == NL80211_REGDOM_SET_BY_USER &&
++	    rtwdev->efuse.country_code[0] != 0xff &&
++	    rtwdev->efuse.country_code[1] != 0xff)
++		return 0;
++
+ 	rtwdev->regd = rtw_regd_find_reg_by_name(request->alpha2);
+ 	rtw_regd_apply_world_flags(wiphy, request->initiator);
