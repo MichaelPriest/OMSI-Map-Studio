@@ -229,6 +229,167 @@ public sealed class MapStudioOmsiJunctionResolverTests
     }
 
     [Fact]
+    public async Task ResolverTracksLogicalCenterWhenStockSceneryOriginIsOffset()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-stock-junction-offset-center-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var relativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_Offset_4arm.sco";
+
+            WriteStockJunction(
+                root,
+                relativePath,
+                [0, 90, 180, 270],
+                8.0,
+                offsetX:
+                    18.0,
+                offsetY:
+                    -11.0);
+
+            var fullPath =
+                Path.Combine(
+                    root,
+                    relativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            var entry =
+                new OmsiAssetIndexEntry(
+                    relativePath,
+                    OmsiAssetKind.SceneryObject,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(
+                        fullPath)
+                        .Ticks);
+
+            var matches =
+                await new MapStudioOmsiJunctionResolver()
+                    .ResolveAsync(
+                        root,
+                        [entry],
+                        [
+                            new MapStudioOmsiJunctionTarget(
+                                120,
+                                [
+                                    new(1, 0, 7, 30),
+                                    new(2, 90, 7, 30),
+                                    new(3, 180, 7, 30),
+                                    new(4, 270, 7, 30)
+                                ])
+                        ]);
+
+            var match =
+                Assert.Single(
+                    matches)
+                    .Value;
+
+            Assert.InRange(
+                match.LocalCenterX,
+                17.5,
+                18.5);
+
+            Assert.InRange(
+                match.LocalCenterY,
+                -11.5,
+                -10.5);
+
+            Assert.All(
+                match.TrimDistanceBySegmentId
+                    .Values,
+                trim =>
+                    Assert.InRange(
+                        trim,
+                        7.5,
+                        8.6));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ResolverRejectsStockJunctionWhosePhysicalRadiusIsTooLargeForRoadWidth()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-stock-junction-oversized-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var relativePath =
+                @"Sceneryobjects\Kreuz_MC\Kreuz_Oversized_4arm.sco";
+
+            WriteStockJunction(
+                root,
+                relativePath,
+                [0, 90, 180, 270],
+                24.0);
+
+            var fullPath =
+                Path.Combine(
+                    root,
+                    relativePath.Replace(
+                        '\\',
+                        Path.DirectorySeparatorChar));
+
+            var entry =
+                new OmsiAssetIndexEntry(
+                    relativePath,
+                    OmsiAssetKind.SceneryObject,
+                    new FileInfo(fullPath).Length,
+                    File.GetLastWriteTimeUtc(
+                        fullPath)
+                        .Ticks);
+
+            var matches =
+                await new MapStudioOmsiJunctionResolver()
+                    .ResolveAsync(
+                        root,
+                        [entry],
+                        [
+                            new MapStudioOmsiJunctionTarget(
+                                121,
+                                [
+                                    new(1, 0, 7, 80),
+                                    new(2, 90, 7, 80),
+                                    new(3, 180, 7, 80),
+                                    new(4, 270, 7, 80)
+                                ])
+                        ]);
+
+            Assert.Empty(
+                matches);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ResolverPrefersFunctionalTrafficControlledStockJunctionWhenRequested()
     {
         var root =
@@ -376,7 +537,9 @@ public sealed class MapStudioOmsiJunctionResolverTests
         string relativePath,
         IReadOnlyList<double> angles,
         double radius,
-        bool withTrafficControl = false)
+        bool withTrafficControl = false,
+        double offsetX = 0,
+        double offsetY = 0)
     {
         var fullPath = Path.Combine(
             root,
@@ -393,9 +556,11 @@ public sealed class MapStudioOmsiJunctionResolverTests
             {
                 var radians = angle * Math.PI / 180.0;
                 var x =
+                    offsetX +
                     Math.Sin(radians) * radius +
                     Math.Cos(radians) * lateralOffset;
                 var y =
+                    offsetY +
                     Math.Cos(radians) * radius -
                     Math.Sin(radians) * lateralOffset;
                 var rotation = (angle + 180.0) % 360.0;
