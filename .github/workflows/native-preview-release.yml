@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.142: continuous OMSI road arcs and automatic terrain-to-road conform.
+# Test 10.143: resilient layered OSM recovery with partial-cache resume.
 
 on:
   push:
@@ -254,6 +254,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.141-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.142-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.142-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.143-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.143-native.md"
       - "src/MapStudio.Core/Generation/Roads/MapStudioRoadArcGeometry.cs"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioRoadTerrainConformBatchApplier.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadCurveAndTerrainTests.cs"
@@ -282,8 +284,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.142-native
-  TAG: v0.2.0-alpha.5-test.10.142-native
+  VERSION: 0.2.0-alpha.5-test.10.143-native
+  TAG: v0.2.0-alpha.5-test.10.143-native
 
 jobs:
   build-native-preview:
@@ -6404,6 +6406,36 @@ jobs:
 
           Write-Host "Verified real OMSI curved spline placement and automatic terrain-to-road corridor conform."
 
+      - name: Verify test 10.143 resilient layered OSM recovery
+        shell: pwsh
+        run: |
+          $client = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioLayeredOsmSceneClient.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioLayeredOsmSceneClientTests.cs -Raw
+
+          foreach ($required in @(
+            'MaximumLayerRecoveryPasses',
+            'LayerRecoveryBaseDelay',
+            'cache parcial será reutilizado',
+            'MaximumOverpassAttemptsPerChunk',
+            'MarkTransportFailure',
+            'Only explicit 429 responses impose a hard cooldown'
+          )) {
+            if (-not $client.Contains($required)) {
+              throw "Test 10.143 layered OSM recovery marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'DownloaderTriesAllConfiguredEndpointsBeforeSubdividing',
+            'DownloaderAllowsSmallerRecoveryChunksAfterParentTimeout'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.143 OSM recovery regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified all-endpoint fallback, timeout subdivision recovery, and partial-cache retry passes."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -6596,11 +6628,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.142-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.143-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.142-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.143-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
