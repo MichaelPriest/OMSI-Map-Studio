@@ -1,0 +1,95 @@
+name: DIR842 OpenWrt Test Build
+
+on:
+  push:
+    branches:
+      - ci/dir842-openwrt-test-20261003
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout helper branch
+        uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        shell: bash
+        run: |
+          set -eux
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
+          docker system prune -af || true
+          df -h
+
+      - name: Clone pinned DIR-842 port
+        shell: bash
+        run: |
+          set -eux
+          git clone https://github.com/ADCDS/openwrt-dlink-dir842-r1.git dir842-port
+          cd dir842-port
+          git checkout 229536d89c25a676417717304fcef386a53a7875
+          test "$(git rev-parse HEAD)" = "229536d89c25a676417717304fcef386a53a7875"
+
+      - name: Apply staged fixes
+        shell: bash
+        run: |
+          set -eux
+          cd dir842-port
+
+          install -D -m 0644             "$GITHUB_WORKSPACE/.ci/dir842/07-rtw88-blank-efuse-user-regdomain.patch"             files/package/kernel/mac80211/patches/realtek/07-rtw88-blank-efuse-user-regdomain.patch
+
+          for p in             08-dir842-bridge-role-reset.patch             09-dir842-explicit-radio0-reset.patch             10-rtl819x-recovery-diagnostics.patch             11-rtl819x-bridge-hwnat-recovery-gate.patch
+          do
+            git apply --check "$GITHUB_WORKSPACE/.ci/dir842/$p"
+            git apply "$GITHUB_WORKSPACE/.ci/dir842/$p"
+          done
+
+          git diff --check
+          git status --short
+          git diff --stat
+
+      - name: Build DIR-842 OpenWrt images
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd dir842-port
+          docker build             --build-arg U="$(id -u)"             --build-arg G="$(id -g)"             -t owrt-dir842-test .
+          docker run --rm             -v "$PWD":/build             -w /build             owrt-dir842-test             ./build.sh 2>&1 | tee build.log
+
+      - name: Collect images and checksums
+        if: always()
+        shell: bash
+        run: |
+          set -eux
+          mkdir -p artifacts
+          if [ -d dir842-port/openwrt/bin/targets/realtek/rtl8197f ]; then
+            find dir842-port/openwrt/bin/targets/realtek/rtl8197f -maxdepth 1 -type f               \( -name '*.bin' -o -name '*.manifest' -o -name '*.buildinfo' -o -name 'sha256sums' \)               -exec cp -v {} artifacts/ \;
+          fi
+          cp -v dir842-port/build.log artifacts/build.log 2>/dev/null || true
+          {
+            echo "DIR-842 R1 OpenWrt test build"
+            echo "Base: ADCDS/openwrt-dlink-dir842-r1"
+            echo "Base commit: 229536d89c25a676417717304fcef386a53a7875 (v1.4.1)"
+            echo "Staged fixes: 07..11"
+            echo
+            echo "SAFETY:"
+            echo "- initramfs-kernel.bin: RAM test image; does not write flash by itself."
+            echo "- squashfs-factory.bin / squashfs-sysupgrade.bin: FLASH images; use only after RAM test passes."
+            echo "- Keep a full 8 MB NOR backup and serial recovery available."
+          } > artifacts/BUILD-NOTES.txt
+          (cd artifacts && sha256sum * > SHA256SUMS-test.txt)
+          ls -lah artifacts
+
+      - name: Upload DIR-842 test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dir842-openwrt-v1.4.1-test-20261003
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
