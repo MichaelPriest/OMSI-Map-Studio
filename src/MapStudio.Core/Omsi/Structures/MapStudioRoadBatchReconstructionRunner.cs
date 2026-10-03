@@ -21,7 +21,19 @@ public sealed record MapStudioRoadBatchPlacement(
     double LengthMeters,
     string SplinePath,
     bool Bridge,
-    bool Tunnel);
+    bool Tunnel)
+{
+    public double RadiusMeters { get; init; }
+
+    public double StartHeightMeters { get; init; }
+
+    public double GradientStartPercent { get; init; }
+
+    public double GradientEndPercent { get; init; }
+
+    public double PhysicalWidthMeters { get; init; } =
+        7.0;
+}
 
 public sealed record MapStudioRoadBatchReconstructionResult(
     IReadOnlyList<MapStudioRoadBatchPlacement> Placements,
@@ -181,6 +193,18 @@ public sealed class MapStudioRoadBatchReconstructionRunner
     private const double
         MaximumStraightSplineEndpointErrorMeters =
             0.02;
+
+    private const double
+        MaximumCurvedSplineEndpointErrorMeters =
+            0.05;
+
+    private const double
+        MinimumCurveSweepDegrees =
+            1.5;
+
+    private const double
+        MaximumCurveSweepDegrees =
+            110.0;
 
     private const double
         MaximumJunctionControlAssociationDistanceMeters =
@@ -531,8 +555,18 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         var skippedOutside =
             0;
 
-        foreach (var segment in placementSegments)
+        var placementGeometries =
+            BuildPlacementGeometries(
+                placementSegments,
+                nodeById);
+
+        foreach (
+            var geometry in
+                placementGeometries)
         {
+            var segment =
+                geometry.Segment;
+
             var startTile =
                 (
                     X:
@@ -579,9 +613,8 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             maximumUsedId++;
 
             var rotation =
-                ResolveRotationDegrees(
-                    segment.Start,
-                    segment.End);
+                geometry
+                    .RotationDegrees;
 
             var (
                 placementBridge,
@@ -650,9 +683,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                     endHeight,
                     gradientPercent,
                     rotation,
+                    geometry.RadiusMeters,
                     splinePath);
 
-            ValidateStraightSplineEndpoint(
+            ValidateSplineEndpoint(
                 plannedSpline);
 
             planned.Add(
@@ -725,7 +759,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                         placement.Rotation,
                                         placement.Segment
                                             .LengthMeters,
-                                        0,
+                                        placement.RadiusMeters,
                                         placement.GradientPercent,
                                         placement.GradientPercent,
                                         false,
@@ -1229,7 +1263,20 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                 .Bridge,
                             ResolvePlacementStructure(
                                 placement.Segment)
-                                .Tunnel))
+                                .Tunnel)
+                        {
+                            RadiusMeters =
+                                placement.RadiusMeters,
+                            StartHeightMeters =
+                                placement.StartHeight,
+                            GradientStartPercent =
+                                placement.GradientPercent,
+                            GradientEndPercent =
+                                placement.GradientPercent,
+                            PhysicalWidthMeters =
+                                ResolvePhysicalRoadWidth(
+                                    placement.Segment)
+                        })
                 .ToArray(),
             sceneryWrite
                 .Placements
@@ -2684,6 +2731,187 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             end * scale);
     }
 
+    private static IReadOnlyList<RoadPlacementGeometry>
+        BuildPlacementGeometries(
+            IReadOnlyList<MapStudioRoadGraphSegment> segments,
+            IReadOnlyDictionary<int, MapStudioRoadGraphNode> nodeById)
+    {
+        var result =
+            new List<RoadPlacementGeometry>(
+                segments.Count);
+
+        foreach (
+            var traceGroup in
+                segments
+                    .GroupBy(
+                        segment =>
+                            segment.TraceId,
+                        StringComparer.OrdinalIgnoreCase))
+        {
+            var ordered =
+                traceGroup
+                    .OrderBy(
+                        segment =>
+                            segment.Id)
+                    .ToArray();
+
+            for (
+                var index = 0;
+                index <
+                    ordered.Length;)
+            {
+                var current =
+                    ordered[index];
+
+                if (
+                    index + 1 <
+                        ordered.Length &&
+                    TryBuildGroundCurveGeometry(
+                        current,
+                        ordered[index + 1],
+                        nodeById,
+                        out var curvedGeometry))
+                {
+                    result.Add(
+                        curvedGeometry!);
+
+                    index +=
+                        2;
+
+                    continue;
+                }
+
+                result.Add(
+                    new RoadPlacementGeometry(
+                        current,
+                        ResolveRotationDegrees(
+                            current.Start,
+                            current.End),
+                        0));
+
+                index++;
+            }
+        }
+
+        return result;
+    }
+
+    private static bool TryBuildGroundCurveGeometry(
+        MapStudioRoadGraphSegment first,
+        MapStudioRoadGraphSegment second,
+        IReadOnlyDictionary<int, MapStudioRoadGraphNode> nodeById,
+        out RoadPlacementGeometry? geometry)
+    {
+        geometry =
+            null;
+
+        if (
+            first.ToNodeId !=
+                second.FromNodeId ||
+            !string.Equals(
+                first.TraceId,
+                second.TraceId,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                first.ProfileId,
+                second.ProfileId,
+                StringComparison.OrdinalIgnoreCase) ||
+            ResolvePlacementStructure(
+                first) !=
+            (
+                false,
+                false
+            ) ||
+            ResolvePlacementStructure(
+                second) !=
+            (
+                false,
+                false
+            ) ||
+            !nodeById.TryGetValue(
+                first.ToNodeId,
+                out var shared) ||
+            shared.IsJunction ||
+            shared.Degree !=
+                2 ||
+            first.End
+                .DistanceTo(
+                    second.Start) >
+                0.05)
+        {
+            return false;
+        }
+
+        if (
+            !MapStudioRoadArcGeometry
+                .TryCreate(
+                    first.Start,
+                    first.End,
+                    second.End,
+                    out var arc) ||
+            arc is null ||
+            arc.SweepDegrees <
+                MinimumCurveSweepDegrees ||
+            arc.SweepDegrees >
+                MaximumCurveSweepDegrees ||
+            Math.Abs(
+                arc.RadiusMeters) <
+                Math.Max(
+                    3.0,
+                    Math.Max(
+                        ResolvePhysicalRoadWidth(
+                            first),
+                        ResolvePhysicalRoadWidth(
+                            second)) *
+                        0.60))
+        {
+            return false;
+        }
+
+        var combined =
+            first with
+            {
+                ToNodeId =
+                    second.ToNodeId,
+                End =
+                    second.End,
+                LengthMeters =
+                    arc.LengthMeters
+            };
+
+        geometry =
+            new RoadPlacementGeometry(
+                combined,
+                arc.RotationDegrees,
+                arc.RadiusMeters);
+
+        return true;
+    }
+
+    private static double ResolvePhysicalRoadWidth(
+        MapStudioRoadGraphSegment segment)
+    {
+        if (
+            segment.WidthMeters is
+                > 0 &&
+            double.IsFinite(
+                segment.WidthMeters.Value))
+        {
+            return Math.Clamp(
+                segment.WidthMeters.Value,
+                3.0,
+                30.0);
+        }
+
+        return Math.Clamp(
+            ResolveProfile(
+                segment.ProfileId)
+                ?.TotalWidthMeters ??
+                7.0,
+            3.0,
+            30.0);
+    }
+
     private static MapStudioStandardRoadProfile?
         ResolveProfile(
             string relativePath) =>
@@ -2773,61 +3001,48 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             : 0;
     }
 
-    private static void ValidateStraightSplineEndpoint(
+    private static void ValidateSplineEndpoint(
         PlannedSpline placement)
     {
-        var yaw =
-            placement.Rotation *
-            Math.PI /
-            180.0;
+        var worldStart =
+            new MapStudioRoadPoint(
+                OmsiTileGrid.GetOriginX(
+                    placement.Tile.X) +
+                    placement.LocalX,
+                OmsiTileGrid.GetOriginZ(
+                    placement.Tile.Y) +
+                    placement.LocalZ);
 
-        var worldStartX =
-            OmsiTileGrid.GetOriginX(
-                placement.Tile.X) +
-            placement.LocalX;
-
-        var worldStartZ =
-            OmsiTileGrid.GetOriginZ(
-                placement.Tile.Y) +
-            placement.LocalZ;
-
-        var calculatedEndX =
-            worldStartX +
-            Math.Sin(
-                yaw) *
-            placement.Segment
-                .LengthMeters;
-
-        var calculatedEndZ =
-            worldStartZ +
-            Math.Cos(
-                yaw) *
-            placement.Segment
-                .LengthMeters;
-
-        var dx =
-            calculatedEndX -
-            placement.Segment
-                .End.X;
-
-        var dz =
-            calculatedEndZ -
-            placement.Segment
-                .End.Z;
+        var calculatedEnd =
+            MapStudioRoadArcGeometry
+                .ResolveEndPoint(
+                    worldStart,
+                    placement.Rotation,
+                    placement.Segment
+                        .LengthMeters,
+                    placement.RadiusMeters);
 
         var error =
-            Math.Sqrt(
-                dx * dx +
-                dz * dz);
+            calculatedEnd
+                .DistanceTo(
+                    placement.Segment
+                        .End);
+
+        var maximumError =
+            Math.Abs(
+                placement.RadiusMeters) >
+                0.001
+                ? MaximumCurvedSplineEndpointErrorMeters
+                : MaximumStraightSplineEndpointErrorMeters;
 
         if (
             !double.IsFinite(
                 error) ||
             error >
-                MaximumStraightSplineEndpointErrorMeters)
+                maximumError)
         {
             throw new InvalidDataException(
-                $"realWorldRoadSplineEndpointMismatch trace={placement.Segment.TraceId} segment={placement.Segment.Id} error={error:G17}");
+                $"realWorldRoadSplineEndpointMismatch trace={placement.Segment.TraceId} segment={placement.Segment.Id} radius={placement.RadiusMeters:G17} error={error:G17}");
         }
     }
 
@@ -2890,7 +3105,13 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         double EndHeight,
         double GradientPercent,
         double Rotation,
+        double RadiusMeters,
         string SplinePath);
+
+    private sealed record RoadPlacementGeometry(
+        MapStudioRoadGraphSegment Segment,
+        double RotationDegrees,
+        double RadiusMeters);
 
     private sealed class TileWrite
     {
