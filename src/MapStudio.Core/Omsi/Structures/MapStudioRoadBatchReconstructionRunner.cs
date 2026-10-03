@@ -980,6 +980,9 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                 string junctionAssetPath;
                 double junctionRotation;
 
+                var junctionPlacementPoint =
+                    junction.Position;
+
                 if (
                     structureKind ==
                         MapStudioJunctionStructureKind.Ground &&
@@ -1002,6 +1005,13 @@ public sealed class MapStudioRoadBatchReconstructionRunner
 
                     junctionRotation =
                         installedJunction.RotationDegrees;
+
+                    junctionPlacementPoint =
+                        ResolveInstalledJunctionOrigin(
+                            junction.Position,
+                            installedJunction.LocalCenterX,
+                            installedJunction.LocalCenterY,
+                            junctionRotation);
                 }
                 else
                 {
@@ -1037,7 +1047,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         "osm-junction-" +
                             junction.NodeId,
                         junctionAssetPath,
-                        junction.Position,
+                        junctionPlacementPoint,
                         HeightMeters:
                             junctionHeight -
                             junctionTerrainHeight,
@@ -2587,6 +2597,56 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         profile.RelativePath,
                         relativePath,
                         StringComparison.OrdinalIgnoreCase));
+
+    private static MapStudioRoadPoint
+        ResolveInstalledJunctionOrigin(
+            MapStudioRoadPoint logicalCenter,
+            double localCenterX,
+            double localCenterY,
+            double rotationDegrees)
+    {
+        if (
+            !double.IsFinite(
+                localCenterX) ||
+            !double.IsFinite(
+                localCenterY) ||
+            !double.IsFinite(
+                rotationDegrees))
+        {
+            return logicalCenter;
+        }
+
+        var radians =
+            rotationDegrees *
+            Math.PI /
+            180.0;
+
+        var cos =
+            Math.Cos(
+                radians);
+
+        var sin =
+            Math.Sin(
+                radians);
+
+        var rotatedX =
+            localCenterX *
+                cos +
+            localCenterY *
+                sin;
+
+        var rotatedZ =
+            -localCenterX *
+                sin +
+            localCenterY *
+                cos;
+
+        return new MapStudioRoadPoint(
+            logicalCenter.X -
+                rotatedX,
+            logicalCenter.Z -
+                rotatedZ);
+    }
 
     private static double ResolveGradientPercent(
         double startHeight,
