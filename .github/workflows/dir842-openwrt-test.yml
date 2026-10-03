@@ -72,14 +72,8 @@ jobs:
           )
           replace_once(
               eth,
-              'RX-STALL WEDGE detected (USEDDSC=%u, rx_packets frozen at %lu)%s\\n",\n'
-              '\t\t\t\t       used, rx,\n'
-              '\t\t\t\t       fabric_autoreset ? " - auto recovery"\n'
-              '\t\t\t\t\t\t\t        : " - set fabric_reset=2 to recover");',
-              'RX-STALL WEDGE detected (USEDDSC=%u, rx_packets frozen at %lu)%s\\n",\n'
-              '\t\t\t\t       used, rx,\n'
-              '\t\t\t\t       fabric_autoreset ? " - auto recovery"\n'
-              '\t\t\t\t\t\t\t        : " - set fabric_reset=3 to recover");',
+              '" - set fabric_reset=2 to recover"',
+              '" - set fabric_reset=3 to recover"',
               "RX stall recovery guidance",
           )
           replace_once(
