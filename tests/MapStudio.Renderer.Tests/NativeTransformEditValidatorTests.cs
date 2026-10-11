@@ -55,9 +55,16 @@ public sealed class NativeTransformEditValidatorTests
                 double.NaN, 2, 3, 0, 0, 0),
             null);
         var empty = new NativePendingTransformEdit(tile, null, null);
+        var missingTilePath = new NativePendingTransformEdit(
+            tile with { RelativeMapPath = " " },
+            new OmsiObjectTransformEdit(
+                0, "Sceneryobjects\\Pack\\tree.sco", 1,
+                1, 2, 3, 0, 0, 0),
+            null);
 
         Assert.True(NativeTransformEditValidator.AreFinite([valid]));
         Assert.False(NativeTransformEditValidator.AreFinite([invalid]));
         Assert.False(NativeTransformEditValidator.AreFinite([empty]));
+        Assert.False(NativeTransformEditValidator.AreFinite([missingTilePath]));
     }
 }
