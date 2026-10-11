@@ -67,4 +67,46 @@ public sealed class NativeTransformEditValidatorTests
         Assert.False(NativeTransformEditValidator.AreFinite([empty]));
         Assert.False(NativeTransformEditValidator.AreFinite([missingTilePath]));
     }
+
+    [Theory]
+    [InlineData(-1, 1, "Sceneryobjects\\\\Pack\\\\tree.sco")]
+    [InlineData(0, -1, "Sceneryobjects\\\\Pack\\\\tree.sco")]
+    [InlineData(0, 1, " ")]
+    public void ObjectEdit_RejectsInvalidIdentity(int sectionOrdinal, int objectId, string path)
+    {
+        var edit = new OmsiObjectTransformEdit(
+            sectionOrdinal, path, objectId,
+            1, 2, 3, 0, 0, 0);
+
+        Assert.False(NativeTransformEditValidator.IsFinite(edit));
+    }
+
+    [Theory]
+    [InlineData(-1, 1, "Splines\\\\Road.sli")]
+    [InlineData(0, -1, "Splines\\\\Road.sli")]
+    [InlineData(0, 1, " ")]
+    public void SplineEdit_RejectsInvalidIdentity(int sectionOrdinal, int splineId, string path)
+    {
+        var edit = new OmsiSplineTransformEdit(
+            sectionOrdinal, path, splineId, -1, -1, false,
+            0, 0, 0, 0, 10, 4, 0, 0);
+
+        Assert.False(NativeTransformEditValidator.IsFinite(edit));
+    }
+
+    [Fact]
+    public void PendingBatch_RejectsEditWithBothPayloads()
+    {
+        var tile = new OmsiTileReference(0, 0, "tile_0_0.map");
+        var objectEdit = new OmsiObjectTransformEdit(
+            0, "Sceneryobjects\\\\Pack\\\\tree.sco", 1,
+            1, 2, 3, 0, 0, 0);
+        var splineEdit = new OmsiSplineTransformEdit(
+            0, "Splines\\\\Road.sli", 1, -1, -1, false,
+            0, 0, 0, 0, 10, 4, 0, 0);
+        var mixed = new NativePendingTransformEdit(tile, objectEdit, splineEdit);
+
+        Assert.False(NativeTransformEditValidator.AreFinite([mixed]));
+    }
+
 }
