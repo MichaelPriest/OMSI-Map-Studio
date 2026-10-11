@@ -1,0 +1,43 @@
+name: Core Editing Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/MapStudio.Core/**"
+      - "tests/MapStudio.Core.Tests/**"
+      - ".github/workflows/core-editing-tests.yml"
+  pull_request:
+    paths:
+      - "src/MapStudio.Core/**"
+      - "tests/MapStudio.Core.Tests/**"
+      - ".github/workflows/core-editing-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-editing-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Core tests (.NET 10)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj
+
+      - name: Run Core tests
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --no-restore
