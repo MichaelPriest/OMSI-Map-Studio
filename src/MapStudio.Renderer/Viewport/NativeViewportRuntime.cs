@@ -8460,6 +8460,23 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
+        // A tile is identified by both its grid coordinates and relative map
+        // path. Matching only coordinates could apply a stale edit to a
+        // different tile after a map reload or tile replacement.
+        if (edits.Any(edit =>
+            !Scene.Tiles.Any(tile =>
+                tile.Reference.X == edit.Tile.X &&
+                tile.Reference.Y == edit.Tile.Y &&
+                string.Equals(
+                    tile.Reference.RelativeMapPath,
+                    edit.Tile.RelativeMapPath,
+                    StringComparison.OrdinalIgnoreCase))))
+        {
+            WriteDiagnostic(
+                "Rejected pending transform edits targeting a tile that is no longer loaded.");
+            return false;
+        }
+
         var appliedCount =
             0;
 
