@@ -109,4 +109,16 @@ public sealed class NativeTransformEditValidatorTests
         Assert.False(NativeTransformEditValidator.AreFinite([mixed]));
     }
 
+
+    [Fact]
+    public void SelectionInfo_RejectsUnknownPickingKind()
+    {
+        var values = new NativeSelectionInfo(
+            (PickingKind)int.MaxValue, 1, 0, 0, "tree.sco",
+            0, 0, 0, 0,
+            null, null, null, null, null, null);
+
+        Assert.False(NativeTransformEditValidator.IsFinite(values));
+    }
+
 }
