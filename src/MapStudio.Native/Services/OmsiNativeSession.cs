@@ -12008,6 +12008,32 @@ public sealed class OmsiNativeSession
             _pendingTransforms.Values
                 .ToArray();
 
+        // Staged edits are tied to a concrete tile identity. Validate the
+        // coordinates and relative path against the current snapshot before
+        // resolving any paths or preparing writes; this prevents stale edits
+        // from being applied after a map/tile reload.
+        if (staged.Any(edit =>
+            edit.Tile is null ||
+            string.IsNullOrWhiteSpace(edit.Tile.RelativeMapPath) ||
+            !snapshot.Tiles.Any(tile =>
+                tile.Reference.X == edit.Tile.X &&
+                tile.Reference.Y == edit.Tile.Y &&
+                string.Equals(
+                    tile.Reference.RelativeMapPath,
+                    edit.Tile.RelativeMapPath,
+                    StringComparison.OrdinalIgnoreCase))))
+        {
+            throw new InvalidDataException(
+                "pendingTransformTileMismatch");
+        }
+
+        if (!staged.All(edit =>
+            (edit.ObjectEdit is null) != (edit.SplineEdit is null)))
+        {
+            throw new InvalidDataException(
+                "pendingTransformMissingEdit");
+        }
+
         var writes =
             new List<
                 PendingFileWrite>();
