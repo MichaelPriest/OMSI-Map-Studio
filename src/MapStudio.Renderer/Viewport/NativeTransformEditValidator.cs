@@ -46,6 +46,8 @@ public static class NativeTransformEditValidator
 
         return edits.All(edit =>
             edit is not null &&
+            edit.Tile is not null &&
+            !string.IsNullOrWhiteSpace(edit.Tile.RelativeMapPath) &&
             (edit.ObjectEdit is null) != (edit.SplineEdit is null) &&
             (edit.ObjectEdit is { } objectEdit
                 ? IsFinite(objectEdit)
