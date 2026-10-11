@@ -113,4 +113,40 @@ public sealed class EditHistoryTests
         Assert.Equal(0, history.UndoCount);
         Assert.Equal(0, history.RedoCount);
     }
+    [Fact]
+    public void CompositeOperation_UndoesInReverseAndRedoesInOrder()
+    {
+        var value = 0;
+        var history = new EditHistory();
+        var group = new CompositeEditOperation("Move and rotate", new IEditOperation[]
+        {
+            new DelegateEditOperation("Move", () => value -= 10, () => value += 10),
+            new DelegateEditOperation("Rotate", () => value -= 1, () => value += 1)
+        });
+
+        history.Execute(group);
+        Assert.Equal(11, value);
+
+        Assert.True(history.Undo());
+        Assert.Equal(0, value);
+
+        Assert.True(history.Redo());
+        Assert.Equal(11, value);
+        Assert.Equal("Move and rotate", history.NextUndoDescription);
+    }
+
+    [Fact]
+    public void CompositeOperation_RollsBackCompletedEditsWhenRedoFails()
+    {
+        var value = 0;
+        var group = new CompositeEditOperation("Partially invalid gesture", new IEditOperation[]
+        {
+            new DelegateEditOperation("First", () => value = 0, () => value = 1),
+            new DelegateEditOperation("Second", () => value = 1, () => throw new InvalidOperationException("Second failed."))
+        });
+
+        Assert.Throws<InvalidOperationException>(() => group.Redo());
+        Assert.Equal(0, value);
+    }
+
 }
