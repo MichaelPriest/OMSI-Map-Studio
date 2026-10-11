@@ -6,6 +6,7 @@
     Title="OMSI Map Studio — World Creator">
 
     <Grid x:Name="MainRoot"
+          Loaded="OnThemeSettingsLoaded"
           RequestedTheme="Default"
           KeyboardAcceleratorPlacementMode="Hidden"
           Background="{ThemeResource MapStudioWindowBackgroundBrush}">
@@ -503,6 +504,17 @@
                     <MenuFlyoutItem
                         Text="Assinatura e licença..."
                         Click="OnCommercialStatusClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="Aparência">
+                    <MenuFlyoutItem
+                        Text="Seguir tema do Windows"
+                        Click="OnThemeSystemClick" />
+                    <MenuFlyoutItem
+                        Text="Tema claro"
+                        Click="OnThemeLightClick" />
+                    <MenuFlyoutItem
+                        Text="Tema escuro"
+                        Click="OnThemeDarkClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Ajuda">
                     <MenuFlyoutItem
