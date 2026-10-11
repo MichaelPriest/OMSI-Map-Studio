@@ -43,6 +43,13 @@ public static class OmsiTileObjectEditor
                     "invalidObjectSection");
             }
 
+            // Never persist NaN or infinities into an OMSI map file.
+            if (!IsFinite(edit))
+            {
+                throw new InvalidDataException(
+                    "invalidObjectTransform");
+            }
+
             var section =
                 objectSections[
                     edit.SourceSectionOrdinal];
@@ -102,6 +109,15 @@ public static class OmsiTileObjectEditor
                 lines),
             applied);
     }
+
+    private static bool IsFinite(
+        OmsiObjectTransformEdit edit) =>
+        double.IsFinite(edit.X) &&
+        double.IsFinite(edit.Y) &&
+        double.IsFinite(edit.Z) &&
+        double.IsFinite(edit.Rotation) &&
+        double.IsFinite(edit.Pitch) &&
+        double.IsFinite(edit.Bank);
 
     private static List<int> GetDataLineIndices(
         OmsiConfigSection section)
