@@ -5029,6 +5029,13 @@ public sealed class NativeViewportRuntime : IDisposable
         ArgumentNullException.ThrowIfNull(
             values);
 
+        if (!NativeTransformEditValidator.IsFinite(values))
+        {
+            WriteDiagnostic(
+                "Rejected a selection edit containing non-finite transform values.");
+            return null;
+        }
+
         CancelGizmoDrag();
 
         if (
@@ -8443,6 +8450,13 @@ public sealed class NativeViewportRuntime : IDisposable
             edits.Count ==
                 0)
         {
+            return false;
+        }
+
+        if (!NativeTransformEditValidator.AreFinite(edits))
+        {
+            WriteDiagnostic(
+                "Rejected pending transform edits containing invalid or non-finite values.");
             return false;
         }
 
