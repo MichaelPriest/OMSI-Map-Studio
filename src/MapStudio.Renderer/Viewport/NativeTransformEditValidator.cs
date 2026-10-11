@@ -14,7 +14,8 @@ public static class NativeTransformEditValidator
     {
         ArgumentNullException.ThrowIfNull(values);
 
-        if (!AllFinite(values.X, values.Y, values.Z, values.Rotation) ||
+        if (!Enum.IsDefined(values.Kind) ||
+            !AllFinite(values.X, values.Y, values.Z, values.Rotation) ||
             !IsFiniteIfPresent(values.Pitch) ||
             !IsFiniteIfPresent(values.Bank) ||
             !IsFiniteIfPresent(values.Length) ||
