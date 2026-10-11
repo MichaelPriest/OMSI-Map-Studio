@@ -12034,6 +12034,14 @@ public sealed class OmsiNativeSession
                 "pendingTransformMissingEdit");
         }
 
+        // Apply the same complete validation at the persistence boundary,
+        // not only when edits first enter the viewport's pending queue.
+        if (!NativeTransformEditValidator.AreFinite(staged))
+        {
+            throw new InvalidDataException(
+                "pendingTransformInvalid");
+        }
+
         var writes =
             new List<
                 PendingFileWrite>();
