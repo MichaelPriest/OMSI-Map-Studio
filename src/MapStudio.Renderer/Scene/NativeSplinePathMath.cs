@@ -148,12 +148,29 @@ public static class NativeSplinePathMath
         ArgumentNullException.ThrowIfNull(
             point);
 
-        return
+        if (
+            !IsFinite(frame.Center) ||
+            !IsFinite(frame.Lateral) ||
+            !double.IsFinite(point.X) ||
+            !double.IsFinite(point.Z) ||
+            Math.Abs(point.X) > float.MaxValue ||
+            Math.Abs(point.Z) > float.MaxValue)
+        {
+            return IsFinite(frame.Center)
+                ? frame.Center
+                : Vector3.Zero;
+        }
+
+        var transformed =
             frame.Center +
             frame.Lateral *
             (float)point.X +
             Vector3.UnitY *
             (float)point.Z;
+
+        return IsFinite(transformed)
+            ? transformed
+            : frame.Center;
     }
 
     public static double GetGradientRise(
