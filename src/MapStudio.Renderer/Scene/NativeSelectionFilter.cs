@@ -14,8 +14,15 @@ public static class NativeSelectionFilterExtensions
 {
     public static bool Allows(
         this NativeSelectionFilter filter,
-        PickingKind kind) =>
-        filter switch
+        PickingKind kind)
+    {
+        if (!Enum.IsDefined(filter))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(filter));
+        }
+
+        return filter switch
         {
             NativeSelectionFilter.Objects =>
                 kind is
@@ -36,4 +43,5 @@ public static class NativeSelectionFilterExtensions
                     PickingKind.Spline or
                     PickingKind.Gizmo
         };
+    }
 }
