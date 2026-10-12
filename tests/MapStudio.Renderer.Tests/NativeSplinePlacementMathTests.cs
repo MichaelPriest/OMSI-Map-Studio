@@ -11,6 +11,57 @@ public sealed class
     NativeSplinePlacementMathTests
 {
     [Fact]
+    public void StraightSplineRejectsNonFiniteCoordinates()
+    {
+        Assert.False(
+            NativeSplinePlacementMath.TryCreateStraight(
+                new Vector3(float.NaN, 0, 0),
+                new Vector3(10, 0, 0),
+                out var invalidStart));
+
+        Assert.Null(invalidStart);
+
+        Assert.False(
+            NativeSplinePlacementMath.TryCreateStraight(
+                Vector3.Zero,
+                new Vector3(float.PositiveInfinity, 0, 0),
+                out var invalidEnd));
+
+        Assert.Null(invalidEnd);
+    }
+
+    [Fact]
+    public void ArcAndControlPointRejectNonFiniteCoordinates()
+    {
+        Assert.False(
+            NativeSplinePlacementMath.TryCreateArc(
+                Vector3.Zero,
+                new Vector3(10, 0, 10),
+                new Vector3(5, float.NaN, 2),
+                out var invalidArc));
+
+        Assert.Null(invalidArc);
+
+        Assert.False(
+            NativeSplinePlacementMath.TryGetCurveOffsetFromControlPoint(
+                Vector3.Zero,
+                new Vector3(10, 0, 0),
+                new Vector3(5, 0, float.PositiveInfinity),
+                out var offset));
+
+        Assert.Equal(0, offset);
+
+        Assert.False(
+            NativeSplinePlacementMath.TryCreateArcFromOffset(
+                new Vector3(float.NaN, 0, 0),
+                new Vector3(10, 0, 0),
+                2,
+                out var invalidOffsetArc));
+
+        Assert.Null(invalidOffsetArc);
+    }
+
+    [Fact]
     public void StraightSplineUsesOmsiYawAndGradient()
     {
         var ok =
