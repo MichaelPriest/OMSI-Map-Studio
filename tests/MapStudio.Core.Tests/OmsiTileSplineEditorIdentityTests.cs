@@ -11,7 +11,7 @@ public sealed class OmsiTileSplineEditorIdentityTests
         "14\r\n" +
         "[spline]\r\n" +
         "0\r\n" +
-        "Splines\\\\Pack\\\\road.sli\r\n" +
+        "Splines\\Pack\\road.sli\r\n" +
         "1\r\n" +
         "-1\r\n" +
         "-1\r\n" +
@@ -45,7 +45,7 @@ public sealed class OmsiTileSplineEditorIdentityTests
         }
 
         Assert.Contains("preserve-this", document.ToText());
-        Assert.Contains("\\r\\n10\\r\\n30\\r\\n20\\r\\n", document.ToText());
+        Assert.Contains("\r\n10\r\n30\r\n20\r\n", document.ToText());
     }
 
     [Fact]
