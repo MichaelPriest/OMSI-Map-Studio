@@ -1,15 +1,25 @@
-# Testes — v0.1.0-alpha.3
+# Testes — build nativa Windows x64
 
 [English](../en/TESTING.md) · **Português (Brasil)**
 
-A **v0.1.0-alpha.3** já permite gravação preservativa experimental de transformações de objetos e splines existentes, além de inserção/cópia/exclusão segura de objetos dentro das limitações documentadas.
+Este roteiro acompanha a build nativa WinUI 3 + Direct3D 11 do OMSI Map Studio. O pacote de teste mais recente é publicado pelo GitHub Actions; a geração confirmada em 12/10/2026 corresponde ao commit `61be4238`.
 
-## Instalação
+## Baixar e iniciar
 
-1. Baixe e extraia o pacote da Alpha.3.
-2. Execute `OMSI Map Studio.exe`.
-3. Clique em **Abrir OMSI** e selecione a pasta raiz do OMSI 2.
-4. Clique em **Abrir mapa** e escolha manualmente uma pasta dentro de `maps`.
+1. Abra [a execução da build nativa no GitHub Actions](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/38295261993).
+2. Em **Artifacts**, baixe `OMSI-Map-Studio-Windows-x64-test` e extraia o ZIP para uma pasta local.
+3. Execute `OMSI Map Studio.exe` dentro da pasta extraída. Mantenha todos os arquivos e subpastas juntos; não execute o EXE isoladamente de dentro do ZIP.
+4. Clique em **Abrir OMSI** e selecione a pasta raiz do OMSI 2.
+5. Clique em **Abrir mapa** e escolha manualmente uma pasta dentro de `maps`.
+6. Se o Windows ou o antivírus bloquear a execução, não desative a proteção automaticamente; confira a origem do pacote e os avisos antes de prosseguir.
+
+> O artefato do GitHub Actions expira após 14 dias. Se o link não mostrar mais o pacote, abra a execução mais recente de **Native Windows CI** na aba Actions do repositório.
+
+## Antes do primeiro teste
+
+- Use uma cópia de um mapa, não o único exemplar de um mapa importante.
+- Confirme que o mapa abre e que tiles, objetos O3D e splines aparecem antes de salvar qualquer alteração.
+- A build gerada com sucesso comprova compilação e empacotamento, não validação manual de todas as ferramentas no OMSI 2.
 
 ## Roteiro principal
 
