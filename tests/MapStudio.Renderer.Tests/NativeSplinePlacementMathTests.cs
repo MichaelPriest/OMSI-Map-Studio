@@ -249,6 +249,19 @@ public sealed class
     }
 
     [Fact]
+    public void UnknownRoadElevationModeFallsBackToTerrainHeight()
+    {
+        var height = NativeSplinePlacementMath.ResolveRoadEndpointHeight(
+            42,
+            100,
+            unchecked((NativeRoadElevationMode)int.MaxValue),
+            25);
+
+        Assert.Equal(42, height);
+        Assert.True(float.IsFinite(height));
+    }
+
+    [Fact]
     public void RoadElevationAlwaysReturnsFiniteHeightForMalformedInputs()
     {
         var invalidTerrain = NativeSplinePlacementMath.ResolveRoadEndpointHeight(
