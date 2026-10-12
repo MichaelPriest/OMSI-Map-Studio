@@ -44,11 +44,22 @@ public static class OmsiTileSplineEditor
                 edit.SourceSectionOrdinal >=
                     splineSections.Length ||
                 !usedOrdinals.Add(
-                    edit.SourceSectionOrdinal) ||
-                !IsFinite(edit))
+                    edit.SourceSectionOrdinal))
             {
                 throw new InvalidDataException(
                     "invalidSplineSection");
+            }
+
+            // Spline IDs and asset paths identify the source record being edited.
+            // Validate them independently of source matching to prevent malformed
+            // edits from ever reaching the serializer.
+            if (
+                edit.SplineId < 0 ||
+                string.IsNullOrWhiteSpace(edit.SplinePath) ||
+                !IsFinite(edit))
+            {
+                throw new InvalidDataException(
+                    "invalidSplineTransform");
             }
 
             var section =
