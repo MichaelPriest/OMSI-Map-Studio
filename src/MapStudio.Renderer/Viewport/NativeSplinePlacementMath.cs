@@ -536,11 +536,16 @@ public static class NativeSplinePlacementMath
 
         var gradient =
             (
-                end.Y -
+                (double)end.Y -
                 start.Y
             ) /
             arcLength *
             100.0;
+
+        if (!double.IsFinite(gradient))
+        {
+            return false;
+        }
 
         shape =
             new NativeSplinePlacementShape(
