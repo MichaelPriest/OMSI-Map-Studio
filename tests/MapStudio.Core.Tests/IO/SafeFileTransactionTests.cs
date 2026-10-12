@@ -168,4 +168,87 @@ public sealed class SafeFileTransactionTests
         }
     }
 
+
+    [Fact]
+    public async Task WriteAllAsync_RejectsDuplicateBackupPathsBeforeWriting()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "MapStudio-SafeFileTransaction-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var firstTarget = Path.Combine(root, "first.map");
+            var secondTarget = Path.Combine(root, "second.map");
+            var sharedBackup = Path.Combine(root, "backups", "shared.bak");
+            var firstOriginal = System.Text.Encoding.UTF8.GetBytes("first-original");
+            var secondOriginal = System.Text.Encoding.UTF8.GetBytes("second-original");
+            await File.WriteAllBytesAsync(firstTarget, firstOriginal);
+            await File.WriteAllBytesAsync(secondTarget, secondOriginal);
+
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => SafeFileTransaction.WriteAllAsync(
+                    [
+                        new PendingFileWrite(firstTarget, sharedBackup, System.Text.Encoding.UTF8.GetBytes("first-updated")),
+                        new PendingFileWrite(secondTarget, sharedBackup, System.Text.Encoding.UTF8.GetBytes("second-updated"))
+                    ]));
+
+            Assert.Equal("duplicateBackup", error.Message);
+            Assert.Equal(firstOriginal, await File.ReadAllBytesAsync(firstTarget));
+            Assert.Equal(secondOriginal, await File.ReadAllBytesAsync(secondTarget));
+            Assert.False(Directory.Exists(Path.Combine(root, "backups")));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task WriteAllAsync_RejectsBackupThatAliasesAnotherTarget()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "MapStudio-SafeFileTransaction-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var firstTarget = Path.Combine(root, "first.map");
+            var secondTarget = Path.Combine(root, "second.map");
+            var firstOriginal = System.Text.Encoding.UTF8.GetBytes("first-original");
+            var secondOriginal = System.Text.Encoding.UTF8.GetBytes("second-original");
+            await File.WriteAllBytesAsync(firstTarget, firstOriginal);
+            await File.WriteAllBytesAsync(secondTarget, secondOriginal);
+
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => SafeFileTransaction.WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            firstTarget,
+                            secondTarget,
+                            System.Text.Encoding.UTF8.GetBytes("first-updated")),
+                        new PendingFileWrite(
+                            secondTarget,
+                            Path.Combine(root, "backups", "second.bak"),
+                            System.Text.Encoding.UTF8.GetBytes("second-updated"))
+                    ]));
+
+            Assert.Equal("backupAliasesTarget", error.Message);
+            Assert.Equal(firstOriginal, await File.ReadAllBytesAsync(firstTarget));
+            Assert.Equal(secondOriginal, await File.ReadAllBytesAsync(secondTarget));
+            Assert.False(Directory.Exists(Path.Combine(root, "backups")));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
 }
