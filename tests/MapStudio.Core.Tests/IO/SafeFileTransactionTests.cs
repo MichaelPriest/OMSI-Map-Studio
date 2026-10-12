@@ -86,7 +86,7 @@ public sealed class SafeFileTransactionTests
     }
 
     [Fact]
-    public async Task WriteAllAsync_DoesNotOverwriteExternalChangeDuringRollback()
+    public async Task WriteAllAsync_RejectsMissingTargetBeforeStagingAnyWrites()
     {
         var root = Path.Combine(
             Path.GetTempPath(),
@@ -98,15 +98,11 @@ public sealed class SafeFileTransactionTests
             var target = Path.Combine(root, "tile.map");
             var backup = Path.Combine(root, "backups", "tile.map.bak");
             var original = System.Text.Encoding.UTF8.GetBytes("original");
-            var external = System.Text.Encoding.UTF8.GetBytes("external change");
             await File.WriteAllBytesAsync(target, original);
 
-            // The second target is intentionally missing. The transaction
-            // replaces the first target, then fails on the second. We change
-            // the first target during the second write's validation window
-            // via an expected snapshot mismatch that prevents any replace,
-            // so this test verifies the transaction does not replace a target
-            // that no longer exists at rollback time.
+            // All targets are validated before any backup or temporary file
+            // is created, so a missing later target cannot partially stage
+            // an otherwise valid earlier write.
             var secondTarget = Path.Combine(root, "missing.map");
             await Assert.ThrowsAsync<FileNotFoundException>(
                 () => SafeFileTransaction.WriteAllAsync(
@@ -125,7 +121,6 @@ public sealed class SafeFileTransactionTests
             // Initial target validation is all-or-nothing: no replacement occurred.
             Assert.Equal(original, await File.ReadAllBytesAsync(target));
             Assert.False(File.Exists(backup));
-            Assert.NotEqual(external, await File.ReadAllBytesAsync(target));
         }
         finally
         {
