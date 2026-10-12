@@ -94,11 +94,16 @@ public static class NativeSplinePlacementMath
 
         var gradient =
             (
-                end.Y -
+                (double)end.Y -
                 start.Y
             ) /
             horizontalLength *
             100.0;
+
+        if (!double.IsFinite(gradient))
+        {
+            return false;
+        }
 
         shape =
             new NativeSplinePlacementShape(
@@ -298,11 +303,16 @@ public static class NativeSplinePlacementMath
 
         var gradient =
             (
-                end.Y -
+                (double)end.Y -
                 start.Y
             ) /
             arcLength *
             100.0;
+
+        if (!double.IsFinite(gradient))
+        {
+            return false;
+        }
 
         shape =
             new NativeSplinePlacementShape(
@@ -357,14 +367,14 @@ public static class NativeSplinePlacementMath
 
         var midX =
             (
-                start.X +
+                (double)start.X +
                 end.X
             ) *
             0.5;
 
         var midZ =
             (
-                start.Z +
+                (double)start.Z +
                 end.Z
             ) *
             0.5;
