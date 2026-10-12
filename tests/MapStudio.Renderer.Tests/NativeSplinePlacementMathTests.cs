@@ -77,6 +77,53 @@ public sealed class
     }
 
     [Fact]
+    public void ExtremeFiniteArcInputsNeverProduceNonFiniteShapeFields()
+    {
+        var maximum = float.MaxValue;
+        var start = new Vector3(-maximum, -maximum, -maximum);
+        var end = new Vector3(maximum, maximum, maximum);
+
+        var straightOk = NativeSplinePlacementMath.TryCreateStraight(
+            start, end, out var straight);
+        if (straightOk)
+        {
+            AssertFiniteShape(straight!);
+        }
+
+        var arcOk = NativeSplinePlacementMath.TryCreateArc(
+            start,
+            end,
+            new Vector3(0, 0, maximum),
+            out var arc);
+        if (arcOk)
+        {
+            AssertFiniteShape(arc!);
+        }
+
+        var offsetArcOk = NativeSplinePlacementMath.TryCreateArcFromOffset(
+            start, end, double.MaxValue, out var offsetArc);
+        if (offsetArcOk)
+        {
+            AssertFiniteShape(offsetArc!);
+        }
+    }
+
+    private static void AssertFiniteShape(NativeSplinePlacementShape shape)
+    {
+        Assert.True(float.IsFinite(shape.Start.X));
+        Assert.True(float.IsFinite(shape.Start.Y));
+        Assert.True(float.IsFinite(shape.Start.Z));
+        Assert.True(float.IsFinite(shape.End.X));
+        Assert.True(float.IsFinite(shape.End.Y));
+        Assert.True(float.IsFinite(shape.End.Z));
+        Assert.True(double.IsFinite(shape.Rotation));
+        Assert.True(double.IsFinite(shape.Length));
+        Assert.True(double.IsFinite(shape.Radius));
+        Assert.True(double.IsFinite(shape.GradientStart));
+        Assert.True(double.IsFinite(shape.GradientEnd));
+    }
+
+    [Fact]
     public void StraightSplineUsesOmsiYawAndGradient()
     {
         var ok =
