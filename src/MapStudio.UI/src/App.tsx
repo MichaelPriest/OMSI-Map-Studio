@@ -6691,7 +6691,11 @@ export function App() {
   ]);
 
   useEffect(() => {
+    // The library preview needs the profile itself before its textures can
+    // be discovered. Prioritize the item being previewed over map selection.
     const splinePath =
+      splineLibraryPreviewAsset?.splinePath ??
+      splinePlacementTemplate?.splinePath ??
       selectedSpline?.splinePath;
 
     if (
@@ -6728,6 +6732,8 @@ export function App() {
     loadingSplineFor,
     preloadingSplineProfileFor,
     selectedSpline,
+    splineLibraryPreviewAsset,
+    splinePlacementTemplate,
     splineProfilesByPath
   ]);
 
