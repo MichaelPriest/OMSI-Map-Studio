@@ -106,7 +106,7 @@ public static class NativeSceneryPlacementPatternBuilder
                     start.Bank));
         }
 
-        return result;
+        return result.FindAll(IsFinitePlacement);
     }
 
     public static IReadOnlyList<
@@ -187,7 +187,7 @@ public static class NativeSceneryPlacementPatternBuilder
                     center.Bank));
         }
 
-        return result;
+        return result.FindAll(IsFinitePlacement);
     }
 
     public static IReadOnlyList<
@@ -290,7 +290,7 @@ public static class NativeSceneryPlacementPatternBuilder
                     center.Bank));
         }
 
-        return result;
+        return result.FindAll(IsFinitePlacement);
     }
 
     public static IReadOnlyList<
@@ -364,7 +364,7 @@ public static class NativeSceneryPlacementPatternBuilder
                     center.Bank));
         }
 
-        return result;
+        return result.FindAll(IsFinitePlacement);
     }
 
     public static IReadOnlyList<
@@ -486,8 +486,17 @@ public static class NativeSceneryPlacementPatternBuilder
                     start.Bank));
         }
 
-        return result;
+        return result.FindAll(IsFinitePlacement);
     }
+
+    private static bool IsFinitePlacement(
+        NativeSceneryPatternPlacement placement) =>
+        double.IsFinite(placement.WorldX) &&
+        double.IsFinite(placement.WorldZ) &&
+        double.IsFinite(placement.Z) &&
+        double.IsFinite(placement.Rotation) &&
+        double.IsFinite(placement.Pitch) &&
+        double.IsFinite(placement.Bank);
 
     private static bool IsFiniteRequest(
         NativeSceneryPlacementRequest? request) =>
