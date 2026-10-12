@@ -61,12 +61,17 @@ public static class NativeSplinePlacementMath
     {
         shape = null;
 
+        if (!IsFinite(start) || !IsFinite(end))
+        {
+            return false;
+        }
+
         var dx =
-            end.X -
+            (double)end.X -
             start.X;
 
         var dz =
-            end.Z -
+            (double)end.Z -
             start.Z;
 
         var horizontalLength =
@@ -75,8 +80,8 @@ public static class NativeSplinePlacementMath
                 dz * dz);
 
         if (
-            horizontalLength <
-            Epsilon)
+            !double.IsFinite(horizontalLength) ||
+            horizontalLength < Epsilon)
         {
             return false;
         }
@@ -118,6 +123,11 @@ public static class NativeSplinePlacementMath
             shape)
     {
         shape = null;
+
+        if (!IsFinite(start) || !IsFinite(end) || !IsFinite(control))
+        {
+            return false;
+        }
 
         var ax = (double)start.X;
         var az = (double)start.Z;
@@ -318,6 +328,11 @@ public static class NativeSplinePlacementMath
         curveOffset =
             0;
 
+        if (!IsFinite(start) || !IsFinite(end) || !IsFinite(control))
+        {
+            return false;
+        }
+
         var dx =
             (double)end.X -
             start.X;
@@ -390,12 +405,17 @@ public static class NativeSplinePlacementMath
     {
         shape = null;
 
+        if (!IsFinite(start) || !IsFinite(end))
+        {
+            return false;
+        }
+
         var dx =
-            end.X -
+            (double)end.X -
             start.X;
 
         var dz =
-            end.Z -
+            (double)end.Z -
             start.Z;
 
         var chordLength =
@@ -404,8 +424,8 @@ public static class NativeSplinePlacementMath
                 dz * dz);
 
         if (
-            chordLength <
-            Epsilon)
+            !double.IsFinite(chordLength) ||
+            chordLength < Epsilon)
         {
             return false;
         }
@@ -526,6 +546,11 @@ public static class NativeSplinePlacementMath
 
         return true;
     }
+
+    private static bool IsFinite(Vector3 value) =>
+        float.IsFinite(value.X) &&
+        float.IsFinite(value.Y) &&
+        float.IsFinite(value.Z);
 
     private static double PositiveAngle(
         double radians)
