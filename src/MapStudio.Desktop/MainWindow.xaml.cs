@@ -1884,7 +1884,9 @@ public partial class MainWindow : Window
                         "newMapTemplateInvalid"
                         ? "newMapTemplateInvalid"
                         : "coordinateMapCreateError",
-                detail = exception.Message
+                detail = exception is UnauthorizedAccessException
+                    ? $"Sem permissão para gravar em '{targetDirectory}'. Verifique as permissões da pasta OMSI 2\\maps e evite uma instalação protegida ou uma pasta redirecionada pelo OneDrive."
+                    : exception.Message
             });
         }
     }
