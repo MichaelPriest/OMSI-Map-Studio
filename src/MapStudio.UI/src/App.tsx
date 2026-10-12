@@ -6811,12 +6811,15 @@ export function App() {
       return;
     }
 
+    // Asset-library previews must load their own materials even when
+    // another object remains selected in the map. Otherwise the preview
+    // geometry is rendered before its textures are ever requested.
     const sceneryObjectPath =
-      selectedObject
+      sceneryLibraryPreviewAsset
         ?.sceneryObjectPath ??
       placementAsset
         ?.sceneryObjectPath ??
-      sceneryLibraryPreviewAsset
+      selectedObject
         ?.sceneryObjectPath;
 
     if (!sceneryObjectPath) {
@@ -6982,12 +6985,14 @@ export function App() {
       return;
     }
 
+    // Prioritize the library preview's profile so its own textures are
+    // requested while the user browses, regardless of map selection.
     const splinePath =
-      selectedSpline
+      splineLibraryPreviewAsset
         ?.splinePath ??
       splinePlacementTemplate
         ?.splinePath ??
-      splineLibraryPreviewAsset
+      selectedSpline
         ?.splinePath;
 
     if (!splinePath) {
