@@ -131,4 +131,41 @@ public sealed class SafeFileTransactionTests
         }
     }
 
+
+    [Fact]
+    public async Task WriteAllAsync_RemainsCompatibleWithoutExplicitSnapshot()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "MapStudio-SafeFileTransaction-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var target = Path.Combine(root, "terrain.terrain");
+            var backup = Path.Combine(root, "backups", "terrain.terrain.bak");
+            var original = System.Text.Encoding.UTF8.GetBytes("terrain-original");
+            var updated = System.Text.Encoding.UTF8.GetBytes("terrain-updated");
+            await File.WriteAllBytesAsync(target, original);
+
+            await SafeFileTransaction.WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backup,
+                        updated)
+                ]);
+
+            Assert.Equal(updated, await File.ReadAllBytesAsync(target));
+            Assert.Equal(original, await File.ReadAllBytesAsync(backup));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
 }
