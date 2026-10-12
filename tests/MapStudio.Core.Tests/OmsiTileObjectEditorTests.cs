@@ -70,6 +70,27 @@ public sealed class OmsiTileObjectEditorTests
     }
 
     [Fact]
+    public void ApplyTransforms_RejectsChangedSourceIdentityWithoutMutatingDocument()
+    {
+        var document = OmsiConfigParser.Parse(Source);
+        var invalidEdits = new[]
+        {
+            CreateEdit() with { ObjectId = 2 },
+            CreateEdit() with { SceneryObjectPath = "Sceneryobjects\\\\Pack\\\\other.sco" }
+        };
+
+        foreach (var edit in invalidEdits)
+        {
+            var error = Assert.Throws<InvalidDataException>(
+                () => OmsiTileObjectEditor.ApplyTransforms(document, [edit]));
+            Assert.Equal("objectSourceChanged", error.Message);
+        }
+
+        Assert.Contains("\\r\\n10\\r\\n20\\r\\n30\\r\\n", document.ToText());
+        Assert.Contains("preserve-this", document.ToText());
+    }
+
+    [Fact]
     public void ApplyTransforms_UpdatesFiniteValuesAndPreservesUnknownSections()
     {
         var document = OmsiConfigParser.Parse(Source);
