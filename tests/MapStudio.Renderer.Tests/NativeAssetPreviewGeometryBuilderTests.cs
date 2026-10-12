@@ -204,4 +204,25 @@ public sealed class
             20,
             preview.Maximum.Z);
     }
+
+    [Fact]
+    public void SplineWithoutDecodedProfileStillGetsSelectablePreviewGeometry()
+    {
+        var asset = new NativeSplineAsset(
+            @"Splines\Legacy\road.sli",
+            @"C:\OMSI\Splines\Legacy\road.sli",
+            new OmsiSplineDefinition(true, [], []),
+            Array.Empty<string?>(),
+            "noRenderableProfile");
+
+        var preview = new NativeAssetPreviewGeometryBuilder()
+            .BuildSpline(asset, 30);
+
+        Assert.True(preview.IsRenderable);
+        Assert.Equal(24, preview.TriangleCount);
+        Assert.Equal(1, preview.SourceMeshCount);
+        Assert.InRange(preview.Minimum.X, -3.501f, -3.499f);
+        Assert.InRange(preview.Maximum.X, 3.499f, 3.501f);
+        Assert.InRange(preview.Maximum.Z, 29.999f, 30.001f);
+    }
 }
