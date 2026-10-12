@@ -99,7 +99,7 @@ public sealed class OmsiTileObjectEditorTests
             document,
             [CreateEdit(x: 11.5, y: 22.5, z: 33.5, rotation: 45)]);
 
-        Assert.Equal(1, result.AppliedCount);
+        Assert.Equal(1, result.AppliedEdits);
         var edited = OmsiConfigParser.ParseBytes(result.Bytes);
         var text = edited.ToText();
 
