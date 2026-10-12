@@ -251,4 +251,48 @@ public sealed class SafeFileTransactionTests
             }
         }
     }
+
+    [Fact]
+    public async Task WriteAllAsync_RejectsExistingBackupBeforeCreatingAnyBackups()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "MapStudio-SafeFileTransaction-" + Guid.NewGuid().ToString("N"));
+        var backupDirectory = Path.Combine(root, "backups");
+        Directory.CreateDirectory(backupDirectory);
+
+        try
+        {
+            var firstTarget = Path.Combine(root, "first.map");
+            var secondTarget = Path.Combine(root, "second.map");
+            var firstBackup = Path.Combine(backupDirectory, "first.bak");
+            var secondBackup = Path.Combine(backupDirectory, "second.bak");
+            var firstOriginal = System.Text.Encoding.UTF8.GetBytes("first-original");
+            var secondOriginal = System.Text.Encoding.UTF8.GetBytes("second-original");
+            await File.WriteAllBytesAsync(firstTarget, firstOriginal);
+            await File.WriteAllBytesAsync(secondTarget, secondOriginal);
+            var protectedBackup = System.Text.Encoding.UTF8.GetBytes("existing-backup");
+            await File.WriteAllBytesAsync(secondBackup, protectedBackup);
+
+            var error = await Assert.ThrowsAsync<IOException>(
+                () => SafeFileTransaction.WriteAllAsync(
+                    [
+                        new PendingFileWrite(firstTarget, firstBackup, System.Text.Encoding.UTF8.GetBytes("first-updated")),
+                        new PendingFileWrite(secondTarget, secondBackup, System.Text.Encoding.UTF8.GetBytes("second-updated"))
+                    ]));
+
+            Assert.Equal("backupAlreadyExists", error.Message);
+            Assert.Equal(firstOriginal, await File.ReadAllBytesAsync(firstTarget));
+            Assert.Equal(secondOriginal, await File.ReadAllBytesAsync(secondTarget));
+            Assert.False(File.Exists(firstBackup));
+            Assert.Equal(protectedBackup, await File.ReadAllBytesAsync(secondBackup));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
 }
