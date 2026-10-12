@@ -19,6 +19,10 @@ public static class SafeFileTransaction
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
 
+        var originalBytesByTarget =
+            new Dictionary<string, byte[]>(
+                StringComparer.OrdinalIgnoreCase);
+
         foreach (var write in writes)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(
@@ -45,6 +49,10 @@ public static class SafeFileTransaction
                     "Target file does not exist.",
                     target);
             }
+
+            var originalBytes = File.ReadAllBytes(target);
+            EnsureExpectedOriginal(write, target, originalBytes);
+            originalBytesByTarget.Add(target, originalBytes);
         }
 
         var staged =
@@ -87,7 +95,9 @@ public static class SafeFileTransaction
                 Directory.CreateDirectory(
                     backupDirectory);
 
-                EnsureExpectedOriginal(write, target);
+                EnsureUnchangedSincePreflight(
+                    target,
+                    originalBytesByTarget[target]);
 
                 File.Copy(
                     target,
@@ -116,9 +126,10 @@ public static class SafeFileTransaction
 
                 // Re-check after staging. This narrows the race window and
                 // refuses to overwrite a file changed by OMSI or another editor.
-                EnsureExpectedOriginal(
-                    item.Write,
-                    item.Write.TargetPath);
+                EnsureUnchangedSincePreflight(
+                    item.Write.TargetPath,
+                    originalBytesByTarget[
+                        Path.GetFullPath(item.Write.TargetPath)]);
 
                 File.Replace(
                     item.TempPath,
@@ -185,23 +196,47 @@ public static class SafeFileTransaction
 
     private static void EnsureExpectedOriginal(
         PendingFileWrite write,
-        string targetPath)
+        string targetPath,
+        byte[] currentBytes)
     {
         if (write.ExpectedOriginalBytes is null)
         {
             return;
         }
 
-        var currentBytes = File.ReadAllBytes(targetPath);
-        var expectedHash = SHA256.HashData(write.ExpectedOriginalBytes);
-        var currentHash = SHA256.HashData(currentBytes);
-
-        if (!CryptographicOperations.FixedTimeEquals(
-                expectedHash,
-                currentHash))
+        if (!HaveSameContent(
+                write.ExpectedOriginalBytes,
+                currentBytes))
         {
             throw new InvalidDataException(
                 "fileChangedExternally");
         }
+    }
+
+    private static void EnsureUnchangedSincePreflight(
+        string targetPath,
+        byte[] originalBytes)
+    {
+        var currentBytes = File.ReadAllBytes(targetPath);
+
+        if (!HaveSameContent(
+                originalBytes,
+                currentBytes))
+        {
+            throw new InvalidDataException(
+                "fileChangedDuringTransaction");
+        }
+    }
+
+    private static bool HaveSameContent(
+        byte[] left,
+        byte[] right)
+    {
+        var leftHash = SHA256.HashData(left);
+        var rightHash = SHA256.HashData(right);
+
+        return CryptographicOperations.FixedTimeEquals(
+            leftHash,
+            rightHash);
     }
 }
