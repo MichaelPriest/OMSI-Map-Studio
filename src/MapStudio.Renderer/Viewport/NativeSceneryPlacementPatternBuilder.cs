@@ -39,17 +39,25 @@ public static class NativeSceneryPlacementPatternBuilder
                 0.5,
                 spacing);
 
-        var segments =
-            Math.Max(
-                1,
-                (int)Math.Ceiling(
-                    distance /
-                    safeSpacing));
+        if (!double.IsFinite(distance))
+        {
+            return Array.Empty<
+                NativeSceneryPatternPlacement>();
+        }
+
+        // Cap before converting to int so extreme world coordinates
+        // cannot overflow the segment count.
+        var requestedSegments =
+            Math.Ceiling(
+                distance /
+                safeSpacing);
 
         var count =
-            Math.Min(
-                256,
-                segments + 1);
+            requestedSegments >= 255
+                ? 256
+                : Math.Max(
+                    2,
+                    (int)requestedSegments + 1);
 
         var heading =
             Math.Atan2(
