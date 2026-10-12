@@ -280,7 +280,7 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
             path.Length >= 3 &&
             char.IsAsciiLetter(path[0]) &&
             path[1] == ':' &&
-            (path[2] == '\\\\' || path[2] == '/')
+            (path[2] == '\\' || path[2] == '/')
         );
 
     private static double ResolvePlacementRotation(
