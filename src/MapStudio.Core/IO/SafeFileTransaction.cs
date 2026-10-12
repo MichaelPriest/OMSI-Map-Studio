@@ -75,6 +75,15 @@ public static class SafeFileTransaction
                 "backupAliasesTarget");
         }
 
+        foreach (var backup in normalizedBackups)
+        {
+            if (File.Exists(backup) || Directory.Exists(backup))
+            {
+                throw new IOException(
+                    "backupAlreadyExists");
+            }
+        }
+
         foreach (var write in writes)
         {
             var target =
