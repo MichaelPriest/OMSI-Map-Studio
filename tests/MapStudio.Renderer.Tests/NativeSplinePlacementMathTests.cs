@@ -85,27 +85,24 @@ public sealed class
 
         var straightOk = NativeSplinePlacementMath.TryCreateStraight(
             start, end, out var straight);
-        if (straightOk)
-        {
-            AssertFiniteShape(straight!);
-        }
+        Assert.True(straightOk);
+        Assert.NotNull(straight);
+        AssertFiniteShape(straight!);
 
         var arcOk = NativeSplinePlacementMath.TryCreateArc(
             start,
             end,
             new Vector3(0, 0, maximum),
             out var arc);
-        if (arcOk)
-        {
-            AssertFiniteShape(arc!);
-        }
+        Assert.True(arcOk);
+        Assert.NotNull(arc);
+        AssertFiniteShape(arc!);
 
         var offsetArcOk = NativeSplinePlacementMath.TryCreateArcFromOffset(
             start, end, double.MaxValue, out var offsetArc);
-        if (offsetArcOk)
-        {
-            AssertFiniteShape(offsetArc!);
-        }
+        Assert.True(offsetArcOk);
+        Assert.NotNull(offsetArc);
+        AssertFiniteShape(offsetArc!);
     }
 
     private static void AssertFiniteShape(NativeSplinePlacementShape shape)
