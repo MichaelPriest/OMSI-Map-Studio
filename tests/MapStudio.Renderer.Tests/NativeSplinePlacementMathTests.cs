@@ -62,6 +62,19 @@ public sealed class
     }
 
     [Fact]
+    public void ArcFromOffsetRejectsNonFiniteGradientFromFiniteExtremeHeights()
+    {
+        var ok = NativeSplinePlacementMath.TryCreateArcFromOffset(
+            new Vector3(0, -float.MaxValue, 0),
+            new Vector3(40, float.MaxValue, 0),
+            8,
+            out var shape);
+
+        Assert.False(ok);
+        Assert.Null(shape);
+    }
+
+    [Fact]
     public void StraightSplineUsesOmsiYawAndGradient()
     {
         var ok =
