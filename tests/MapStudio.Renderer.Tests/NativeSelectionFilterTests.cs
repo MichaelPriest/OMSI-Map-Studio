@@ -54,6 +54,14 @@ public sealed class NativeSelectionFilterTests
     }
 
     [Fact]
+    public void InvalidFilterDoesNotSilentlyAllowPicking()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => ((NativeSelectionFilter)int.MaxValue)
+                .Allows(PickingKind.Object));
+    }
+
+    [Fact]
     public void GizmoRemainsAllowedForSingleCategoryFilters()
     {
         Assert.True(
