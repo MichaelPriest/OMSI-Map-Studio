@@ -35,22 +35,22 @@ public sealed class MapStudioWorkspaceBootstrapper
 {
     public static string GetDefaultWorkspacePath()
     {
-        var documents =
+        // Do not use MyDocuments here: Windows may redirect it to OneDrive,
+        // where folder creation can fail when sync or account access is unavailable.
+        var localApplicationData =
             Environment.GetFolderPath(
                 Environment.SpecialFolder
-                    .MyDocuments);
+                    .LocalApplicationData);
 
         if (string.IsNullOrWhiteSpace(
-                documents))
+                localApplicationData))
         {
-            documents =
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder
-                        .LocalApplicationData);
+            localApplicationData =
+                Path.GetTempPath();
         }
 
         return Path.Combine(
-            documents,
+            localApplicationData,
             "OMSI Map Studio",
             "Workspace");
     }
