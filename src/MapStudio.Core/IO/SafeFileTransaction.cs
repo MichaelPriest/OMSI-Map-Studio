@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace MapStudio.Core.IO;
 
 public static class SafeFileTransaction
@@ -85,6 +87,8 @@ public static class SafeFileTransaction
                 Directory.CreateDirectory(
                     backupDirectory);
 
+                EnsureExpectedOriginal(write, target);
+
                 File.Copy(
                     target,
                     backup,
@@ -109,6 +113,12 @@ public static class SafeFileTransaction
             {
                 cancellationToken
                     .ThrowIfCancellationRequested();
+
+                // Re-check after staging. This narrows the race window and
+                // refuses to overwrite a file changed by OMSI or another editor.
+                EnsureExpectedOriginal(
+                    item.Write,
+                    item.Write.TargetPath);
 
                 File.Replace(
                     item.TempPath,
@@ -160,6 +170,28 @@ public static class SafeFileTransaction
                     // Best effort temp cleanup.
                 }
             }
+        }
+    }
+
+    private static void EnsureExpectedOriginal(
+        PendingFileWrite write,
+        string targetPath)
+    {
+        if (write.ExpectedOriginalBytes is null)
+        {
+            return;
+        }
+
+        var currentBytes = File.ReadAllBytes(targetPath);
+        var expectedHash = SHA256.HashData(write.ExpectedOriginalBytes);
+        var currentHash = SHA256.HashData(currentBytes);
+
+        if (!CryptographicOperations.FixedTimeEquals(
+                expectedHash,
+                currentHash))
+        {
+            throw new InvalidDataException(
+                "fileChangedExternally");
         }
     }
 }
