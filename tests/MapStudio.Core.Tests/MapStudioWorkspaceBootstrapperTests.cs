@@ -321,6 +321,47 @@ public sealed class MapStudioWorkspaceBootstrapperTests
         }
     }
 
+    [Fact]
+    public async Task CreateBlankMapRejectsInvalidDirectoryNameWithStableErrorCode()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-Invalid-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var exception =
+                await Assert.ThrowsAsync<InvalidDataException>(
+                    () => new MapStudioWorkspaceBootstrapper()
+                        .CreateBlankMapAsync(
+                            root,
+                            @"..\escape",
+                            "Mapa inválido"));
+
+            Assert.Equal(
+                "invalidWorkspaceMapRequest",
+                exception.Message);
+
+            Assert.False(
+                Directory.Exists(
+                    Path.Combine(
+                        root,
+                        "maps",
+                        "escape")));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
 [Fact]
     public async Task CreateBlankMapProducesMapReadableByCore()
     {
