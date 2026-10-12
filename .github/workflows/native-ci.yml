@@ -117,6 +117,22 @@ jobs:
       - name: Publish testable Windows x64 build
         run: dotnet publish src/MapStudio.Native/MapStudio.Native.csproj --configuration Release --runtime win-x64 --self-contained true -p:Platform=x64 -p:WindowsAppSDKSelfContained=true --output artifacts/OMSI-Map-Studio-test
 
+      - name: Write build information
+        shell: pwsh
+        run: |
+          $output = "artifacts/OMSI-Map-Studio-test/BUILD-INFO.txt"
+          @(
+            "Product: OMSI Map Studio"
+            "Platform: Windows x64"
+            "Configuration: Release"
+            "Commit: $env:GITHUB_SHA"
+            "Workflow run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            "Run attempt: $env:GITHUB_RUN_ATTEMPT"
+            "Built at (UTC): $([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
+            ""
+            "This file identifies the generated package; it does not certify manual validation inside OMSI 2."
+          ) | Set-Content -Path $output -Encoding utf8
+
       - name: Generate SHA-256 manifest
         shell: pwsh
         run: |
