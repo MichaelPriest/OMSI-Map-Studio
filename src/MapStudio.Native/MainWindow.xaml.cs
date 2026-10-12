@@ -23365,6 +23365,8 @@ public sealed partial class MainWindow : Window
             {
                 Header =
                     "Pasta do projeto",
+                Text =
+                    "Minha_Cidade",
                 PlaceholderText =
                     "Ex.: Minha_Cidade"
             };
@@ -23374,6 +23376,8 @@ public sealed partial class MainWindow : Window
             {
                 Header =
                     "Nome do mapa",
+                Text =
+                    "Minha Cidade",
                 PlaceholderText =
                     "Ex.: Minha Cidade"
             };
