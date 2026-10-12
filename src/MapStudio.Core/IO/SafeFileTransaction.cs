@@ -51,7 +51,7 @@ public static class SafeFileTransaction
             }
 
             var originalBytes = File.ReadAllBytes(target);
-            EnsureExpectedOriginal(write, target, originalBytes);
+            EnsureExpectedOriginal(write, originalBytes);
             originalBytesByTarget.Add(target, originalBytes);
         }
 
@@ -196,7 +196,6 @@ public static class SafeFileTransaction
 
     private static void EnsureExpectedOriginal(
         PendingFileWrite write,
-        string targetPath,
         byte[] currentBytes)
     {
         if (write.ExpectedOriginalBytes is null)
