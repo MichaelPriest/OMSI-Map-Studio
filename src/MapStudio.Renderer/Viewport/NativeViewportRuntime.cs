@@ -6383,6 +6383,12 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         ThrowIfDisposed();
 
+        if (!Enum.IsDefined(filter))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(filter));
+        }
+
         if (_selectionFilter == filter)
         {
             return false;
@@ -6393,33 +6399,55 @@ public sealed class NativeViewportRuntime : IDisposable
         _selectionFilter =
             filter;
 
-        var selectionFiltered =
-            !_selectedPickingId.IsNone &&
-            !IsSelectionKindEnabled(
-                _selectedPickingId.Kind);
+        // Reconcile the complete multi-selection, not only its primary item.
+        // Otherwise hidden/filtered items can remain in the transform group.
+        _selectedPickingIds.RemoveWhere(
+            id =>
+                !IsSelectionKindEnabled(
+                    id.Kind));
 
-        if (selectionFiltered)
+        if (
+            !_selectedPickingId.IsNone &&
+            !_selectedPickingIds.Contains(
+                _selectedPickingId))
+        {
+            _selectedPickingId =
+                _selectedPickingIds
+                    .FirstOrDefault();
+        }
+
+        if (
+            _selectedPickingId.IsNone ||
+            !_selectedPickingIds.Contains(
+                _selectedPickingId))
         {
             _selectedPickingId =
                 PickingId.None;
 
-            _selectedPickingIds
-                .Clear();
-
-            MapRenderer.SetSelection(
-                PickingId.None);
-
-            MapRenderer
-                .SetSelectionPreviewTransform(
-                    Matrix4x4.Identity);
-
-            MapRenderer.SetGizmoGeometry(
-                null);
+            _selectedPickingIds.Clear();
         }
+
+        MapRenderer.SetSelection(
+            _selectedPickingId);
+
+        MapRenderer.SetAdditionalSelections(
+            _selectedPickingIds
+                .Where(
+                    id =>
+                        id !=
+                        _selectedPickingId));
+
+        MapRenderer
+            .SetSelectionPreviewTransform(
+                Matrix4x4.Identity);
+
+        MapRenderer.SetGizmoGeometry(
+            null);
 
         MapRenderer.SetSelectionFilter(
             filter);
 
+        UpdateGizmoGeometry();
         RenderInitialFrame();
 
         return true;
