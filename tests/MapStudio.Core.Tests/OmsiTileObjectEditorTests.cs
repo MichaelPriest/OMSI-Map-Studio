@@ -66,7 +66,7 @@ public sealed class OmsiTileObjectEditorTests
             Assert.Equal("invalidObjectTransform", error.Message);
         }
 
-        Assert.Contains("\\r\\n10\\r\\n20\\r\\n30\\r\\n", document.ToText());
+        Assert.Contains("\r\n10\r\n20\r\n30\r\n", document.ToText());
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class OmsiTileObjectEditorTests
         var invalidEdits = new[]
         {
             CreateEdit() with { ObjectId = 2 },
-            CreateEdit() with { SceneryObjectPath = "Sceneryobjects\\\\Pack\\\\other.sco" }
+            CreateEdit() with { SceneryObjectPath = "Sceneryobjects\\Pack\\other.sco" },
         };
 
         foreach (var edit in invalidEdits)
@@ -86,7 +86,7 @@ public sealed class OmsiTileObjectEditorTests
             Assert.Equal("objectSourceChanged", error.Message);
         }
 
-        Assert.Contains("\\r\\n10\\r\\n20\\r\\n30\\r\\n", document.ToText());
+        Assert.Contains("\r\n10\r\n20\r\n30\r\n", document.ToText());
         Assert.Contains("preserve-this", document.ToText());
     }
 
