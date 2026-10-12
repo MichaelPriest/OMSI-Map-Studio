@@ -1,5 +1,6 @@
 using System.Numerics;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
 using MapStudio.Renderer.Viewport;
@@ -10,6 +11,41 @@ namespace MapStudio.Renderer.Tests;
 public sealed class
     NativeSplinePlacementMathTests
 {
+    [Fact]
+    public void ProfileTransformRejectsNonFiniteAndOutOfRangeCoordinates()
+    {
+        var validFrame = new NativeSplineFrame(
+            new Vector3(4, 5, 6),
+            Vector3.UnitX,
+            Vector3.UnitZ);
+
+        Assert.Equal(
+            validFrame.Center,
+            NativeSplinePathMath.TransformProfilePoint(
+                validFrame,
+                new OmsiSplineProfilePoint(
+                    double.NaN, 0, 0, 1)));
+
+        Assert.Equal(
+            validFrame.Center,
+            NativeSplinePathMath.TransformProfilePoint(
+                validFrame,
+                new OmsiSplineProfilePoint(
+                    double.MaxValue, 0, 0, 1)));
+
+        var invalidFrame = new NativeSplineFrame(
+            new Vector3(float.NaN, 0, 0),
+            Vector3.UnitX,
+            Vector3.UnitZ);
+
+        Assert.Equal(
+            Vector3.Zero,
+            NativeSplinePathMath.TransformProfilePoint(
+                invalidFrame,
+                new OmsiSplineProfilePoint(
+                    1, 2, 0, 1)));
+    }
+
     [Fact]
     public void SplineFrameFallsBackSafelyForNonFiniteSplineData()
     {
