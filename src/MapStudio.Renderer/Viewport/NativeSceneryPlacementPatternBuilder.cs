@@ -35,9 +35,11 @@ public static class NativeSceneryPlacementPatternBuilder
                 dz * dz);
 
         var safeSpacing =
-            Math.Max(
-                0.5,
-                spacing);
+            double.IsFinite(spacing)
+                ? Math.Max(
+                    0.5,
+                    spacing)
+                : 0.5;
 
         if (!double.IsFinite(distance))
         {
