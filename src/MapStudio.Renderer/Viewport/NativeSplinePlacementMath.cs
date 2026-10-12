@@ -23,34 +23,43 @@ public static class NativeSplinePlacementMath
         NativeRoadElevationMode mode,
         double elevationValue)
     {
+        var safeTerrain =
+            float.IsFinite(terrainHeight)
+                ? terrainHeight
+                : 0.0f;
+
+        var safeStart =
+            float.IsFinite(startHeight)
+                ? startHeight
+                : safeTerrain;
+
         var safeValue =
-            double.IsFinite(
-                elevationValue)
-                ? Math.Clamp(
-                    elevationValue,
-                    -100.0,
-                    300.0)
+            double.IsFinite(elevationValue)
+                ? Math.Clamp(elevationValue, -100.0, 300.0)
                 : 0.0;
 
-        return mode switch
-        {
-            NativeRoadElevationMode.Elevate =>
-                startHeight +
-                (float)Math.Abs(
-                    safeValue),
+        var result =
+            mode switch
+            {
+                NativeRoadElevationMode.Elevate =>
+                    (double)safeStart + Math.Abs(safeValue),
 
-            NativeRoadElevationMode.Level =>
-                startHeight,
+                NativeRoadElevationMode.Level =>
+                    safeStart,
 
-            NativeRoadElevationMode.Lower =>
-                startHeight -
-                (float)Math.Abs(
-                    safeValue),
+                NativeRoadElevationMode.Lower =>
+                    (double)safeStart - Math.Abs(safeValue),
 
-            _ =>
-                terrainHeight +
-                (float)safeValue
-        };
+                _ =>
+                    (double)safeTerrain + safeValue
+            };
+
+        // Keep the placement API finite even for malformed input or
+        // float-range overflow; valid normal inputs retain their values.
+        return (float)Math.Clamp(
+            result,
+            -float.MaxValue,
+            float.MaxValue);
     }
 
     public static bool TryCreateStraight(
