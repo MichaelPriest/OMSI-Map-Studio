@@ -63,6 +63,32 @@ public sealed class NativeSceneryPlacementPatternBuilderTests
     }
 
     [Fact]
+    public void LongLineRespectsCapAndStillReachesEndpoint()
+    {
+        var result =
+            NativeSceneryPlacementPatternBuilder
+                .BuildLine(
+                    Request(0, 0),
+                    Request(10000, 0),
+                    1,
+                    false);
+
+        Assert.Equal(
+            256,
+            result.Count);
+
+        Assert.Equal(
+            0,
+            result[0].WorldX,
+            6);
+
+        Assert.Equal(
+            10000,
+            result[^1].WorldX,
+            6);
+    }
+
+    [Fact]
     public void MatrixIsCenteredAndCapped()
     {
         var result =
