@@ -8,6 +8,39 @@ namespace MapStudio.Core.Tests;
 public sealed class MapStudioWorkspaceBootstrapperTests
 {
     [Fact]
+    public void DefaultWorkspaceUsesLocalApplicationDataInsteadOfDocuments()
+    {
+        var workspace =
+            Path.GetFullPath(
+                MapStudioWorkspaceBootstrapper
+                    .GetDefaultWorkspacePath());
+
+        var localApplicationData =
+            Environment.GetFolderPath(
+                Environment.SpecialFolder
+                    .LocalApplicationData);
+
+        if (string.IsNullOrWhiteSpace(localApplicationData))
+        {
+            localApplicationData = Path.GetTempPath();
+        }
+
+        Assert.StartsWith(
+            Path.GetFullPath(localApplicationData)
+                .TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar,
+            workspace,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.EndsWith(
+            Path.Combine("OMSI Map Studio", "Workspace"),
+            workspace,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EnsureCreatesStandaloneContentRootAndOwnTemplate()
     {
         var root =
