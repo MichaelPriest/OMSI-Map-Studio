@@ -74,7 +74,7 @@ public sealed class NativeSplineTriangleGeometryBuilder
                     entity.Spline
                         .SplinePath,
                     out var asset) ||
-                !asset.IsLoaded)
+                !asset.CanPlace)
             {
                 continue;
             }
@@ -103,6 +103,50 @@ public sealed class NativeSplineTriangleGeometryBuilder
             var pickingColor =
                 EncodePickingColor(
                     entity.PickingId);
+
+            // Keep real placed splines visible/selectable even when a legacy
+            // SLI profile cannot be decoded. This neutral strip is viewport-only;
+            // it never changes the OMSI file or claims to be the real surface.
+            if (asset.Definition.Surfaces.Count == 0)
+            {
+                var fallbackSurfaceStart = vertices.Count;
+                const float fallbackHalfWidth = 3.5f;
+
+                for (var segment = 0; segment < segmentCount; segment++)
+                {
+                    var distance0 = length * segment / segmentCount;
+                    var distance1 = length * (segment + 1) / segmentCount;
+                    var frame0 = NativeSplinePathMath.GetFrame(entity, distance0);
+                    var frame1 = NativeSplinePathMath.GetFrame(entity, distance1);
+
+                    AppendQuad(
+                        frame0.Center + frame0.Lateral * fallbackHalfWidth,
+                        frame1.Center + frame1.Lateral * fallbackHalfWidth,
+                        frame1.Center - frame1.Lateral * fallbackHalfWidth,
+                        frame0.Center - frame0.Lateral * fallbackHalfWidth,
+                        Vector2.Zero,
+                        Vector2.Zero,
+                        Vector2.Zero,
+                        Vector2.Zero,
+                        new Vector4(0.20f, 0.72f, 0.95f, 1.0f),
+                        pickingColor,
+                        vertices,
+                        pickingVertices);
+                }
+
+                var fallbackVertexCount = vertices.Count - fallbackSurfaceStart;
+                if (fallbackVertexCount > 0)
+                {
+                    renderedSurfaces++;
+                    materialBatches.Add(
+                        new NativeMaterialBatch(
+                            fallbackSurfaceStart,
+                            fallbackVertexCount,
+                            null,
+                            AlphaMode: 0,
+                            DoubleSided: true));
+                }
+            }
 
             foreach (
                 var surface in
