@@ -114,7 +114,7 @@ public sealed class NativeTransformEditValidatorTests
     public void SelectionInfo_RejectsUnknownPickingKind()
     {
         var values = new NativeSelectionInfo(
-            (PickingKind)int.MaxValue, 1, 0, 0, "tree.sco",
+            unchecked((PickingKind)int.MaxValue), 1, 0, 0, "tree.sco",
             0, 0, 0, 0,
             null, null, null, null, null, null);
 
