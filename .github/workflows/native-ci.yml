@@ -127,7 +127,7 @@ jobs:
             Sort-Object FullName |
             ForEach-Object {
               $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-              $relative = [System.IO.Path]::GetRelativePath($root.Path, $_.FullName).Replace("\\", "/")
+              $relative = [System.IO.Path]::GetRelativePath($root.Path, $_.FullName).Replace([string][char]92, "/")
               "$hash  $relative"
             }
           Set-Content -Path $manifest -Value $lines -Encoding utf8
