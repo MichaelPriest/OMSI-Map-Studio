@@ -12074,12 +12074,18 @@ public sealed class OmsiNativeSession
                     "tilePathInvalid");
             }
 
-            var document =
-                await OmsiConfigParser
-                    .ParseFileAsync(
-                        tilePath,
-                        cancellationToken)
+            // Read once and derive both the parsed document and concurrency
+            // token from the same bytes, so external edits are detected before
+            // the transaction replaces the original file.
+            var originalBytes =
+                await File.ReadAllBytesAsync(
+                    tilePath,
+                    cancellationToken)
                     .ConfigureAwait(false);
+
+            var document =
+                OmsiConfigParser.ParseBytes(
+                    originalBytes);
 
             var objectEdits =
                 group
@@ -12155,7 +12161,8 @@ public sealed class OmsiNativeSession
                 new PendingFileWrite(
                     tilePath,
                     backupPath,
-                    document.ToBytes()));
+                    document.ToBytes(),
+                    originalBytes));
 
             affectedPaths.Add(
                 group.Key);
