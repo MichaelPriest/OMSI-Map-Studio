@@ -55,11 +55,16 @@ public static class OmsiTileSplineEditor
             // edits from ever reaching the serializer.
             if (
                 edit.SplineId < 0 ||
-                string.IsNullOrWhiteSpace(edit.SplinePath) ||
-                !IsFinite(edit))
+                string.IsNullOrWhiteSpace(edit.SplinePath))
             {
                 throw new InvalidDataException(
                     "invalidSplineTransform");
+            }
+
+            if (!IsFinite(edit))
+            {
+                throw new InvalidDataException(
+                    "invalidSplineSection");
             }
 
             var section =
