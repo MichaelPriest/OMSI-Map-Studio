@@ -222,7 +222,7 @@ public sealed class MapStudioWorkspaceBootstrapper
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "invalidWorkspaceMapRequest");
+                "workspaceMapPathRejected");
         }
 
         if (
