@@ -50,8 +50,13 @@ public static class NativeSplinePlacementMath
                 NativeRoadElevationMode.Lower =>
                     (double)safeStart - Math.Abs(safeValue),
 
+                NativeRoadElevationMode.FollowTerrain =>
+                    (double)safeTerrain + safeValue,
+
+                // An unknown enum value must not silently behave like
+                // FollowTerrain; keep the endpoint at a safe terrain height.
                 _ =>
-                    (double)safeTerrain + safeValue
+                    safeTerrain
             };
 
         // Keep the placement API finite even for malformed input or
