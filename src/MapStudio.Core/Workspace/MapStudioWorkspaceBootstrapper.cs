@@ -224,92 +224,128 @@ public sealed class MapStudioWorkspaceBootstrapper
                 "workspaceMapAlreadyExists");
         }
 
-        CopyDirectory(
-            info.TemplatePath,
-            target,
-            overwrite:
-                false);
-
-        var globalPath =
+        var stagingDirectory =
             Path.Combine(
-                target,
-                "global.cfg");
+                info.MapsPath,
+                ".mapstudio-create-" +
+                Guid.NewGuid().ToString("N"));
 
-        var document =
-            await OmsiConfigParser
-                .ParseFileAsync(
+        try
+        {
+            CopyDirectory(
+                info.TemplatePath,
+                stagingDirectory,
+                overwrite:
+                    false);
+
+            var globalPath =
+                Path.Combine(
+                    stagingDirectory,
+                    "global.cfg");
+
+            var document =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        globalPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var lines =
+                document.Lines
+                    .ToList();
+
+            SetSimpleSectionValue(
+                lines,
+                "name",
+                displayName);
+
+            SetSimpleSectionValue(
+                lines,
+                "friendlyname",
+                displayName);
+
+            var patched =
+                new OmsiConfigDocument(
+                    lines,
+                    Array.Empty<
+                        OmsiConfigSection>(),
+                    document.NewLine,
+                    document
+                        .HasTrailingNewLine,
+                    document
+                        .TextEncoding,
+                    document
+                        .HasByteOrderMark);
+
+            await File.WriteAllBytesAsync(
                     globalPath,
+                    patched.ToBytes(),
                     cancellationToken)
                 .ConfigureAwait(false);
 
-        var lines =
-            document.Lines
-                .ToList();
-
-        SetSimpleSectionValue(
-            lines,
-            "name",
-            displayName);
-
-        SetSimpleSectionValue(
-            lines,
-            "friendlyname",
-            displayName);
-
-        var patched =
-            new OmsiConfigDocument(
-                lines,
-                Array.Empty<
-                    OmsiConfigSection>(),
-                document.NewLine,
-                document
-                    .HasTrailingNewLine,
-                document
-                    .TextEncoding,
-                document
-                    .HasByteOrderMark);
-
-        await File.WriteAllBytesAsync(
-                globalPath,
-                patched.ToBytes(),
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        var metadataDirectory =
-            Path.Combine(
-                target,
-                ".mapstudio");
-
-        Directory.CreateDirectory(
-            metadataDirectory);
-
-        var projectJson =
-            JsonSerializer.Serialize(
-                new
-                {
-                    version = 1,
-                    format =
-                        "mapstudio-omsi-compatible",
-                    displayName,
-                    createdAtUtc =
-                        DateTimeOffset.UtcNow
-                },
-                new JsonSerializerOptions
-                {
-                    WriteIndented =
-                        true
-                });
-
-        await File.WriteAllTextAsync(
+            var metadataDirectory =
                 Path.Combine(
-                    metadataDirectory,
-                    "project.json"),
-                projectJson,
-                Encoding.UTF8,
-                cancellationToken)
-            .ConfigureAwait(false);
+                    stagingDirectory,
+                    ".mapstudio");
 
-        return target;
+            Directory.CreateDirectory(
+                metadataDirectory);
+
+            var projectJson =
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        version = 1,
+                        format =
+                            "mapstudio-omsi-compatible",
+                        displayName,
+                        createdAtUtc =
+                            DateTimeOffset.UtcNow
+                    },
+                    new JsonSerializerOptions
+                    {
+                        WriteIndented =
+                            true
+                    });
+
+            await File.WriteAllTextAsync(
+                    Path.Combine(
+                        metadataDirectory,
+                        "project.json"),
+                    projectJson,
+                    Encoding.UTF8,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (
+                Directory.Exists(target) ||
+                File.Exists(target))
+            {
+                throw new IOException(
+                    "workspaceMapAlreadyExists");
+            }
+
+            Directory.Move(
+                stagingDirectory,
+                target);
+
+            return target;
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            TryDeleteDirectory(stagingDirectory);
+
+            throw new UnauthorizedAccessException(
+                $"Sem permissão para criar o mapa em '{info.MapsPath}'. Escolha uma pasta de trabalho em que sua conta possa gravar; evite criar mapas diretamente dentro de 'Program Files'.",
+                exception);
+        }
+        catch
+        {
+            TryDeleteDirectory(stagingDirectory);
+            throw;
+        }
     }
 
     public async Task<MapStudioWorkspaceMapImportResult>
@@ -789,6 +825,27 @@ public sealed class MapStudioWorkspaceBootstrapper
                     bytes,
                     cancellationToken)
                 .ConfigureAwait(false);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(
+                    path,
+                    recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+            // Preserve the original creation error; leftover staging data can be inspected manually.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Preserve the original creation error; leftover staging data can be inspected manually.
         }
     }
 
