@@ -177,21 +177,20 @@ public sealed class NativeAssetPreviewGeometryBuilder
         ArgumentNullException.ThrowIfNull(
             asset);
 
-        if (
-            !asset.Definition.Exists ||
-            asset.Definition
-                .Surfaces.Count == 0)
+        if (!asset.Definition.Exists)
         {
             return
                 NativeAssetPreviewGeometry
                     .Error(
                         asset.ErrorCode ??
-                        "previewNoSplineProfile");
+                        "previewSplineMissing");
         }
 
         previewLength =
             Math.Clamp(
-                previewLength,
+                float.IsFinite(previewLength)
+                    ? previewLength
+                    : 30.0f,
                 2.0f,
                 100.0f);
 
@@ -207,73 +206,99 @@ public sealed class NativeAssetPreviewGeometryBuilder
                 2,
                 64);
 
-        foreach (
-            var surface in
-                asset.Definition
-                    .Surfaces)
+        if (asset.Definition.Surfaces.Count == 0)
         {
-            for (
-                var segment = 0;
-                segment < segments;
-                segment++)
+            // A neutral preview helps the user select legacy/unsupported SLI
+            // files. It is not written to OMSI and does not replace the real
+            // profile when the file can be decoded.
+            const float halfWidth = 3.5f;
+            var fallbackColor = new Vector4(0.20f, 0.72f, 0.95f, 1.0f);
+
+            for (var segment = 0; segment < segments; segment++)
             {
-                var z0 =
-                    previewLength *
-                    segment /
-                    segments;
-
-                var z1 =
-                    previewLength *
-                    (segment + 1) /
-                    segments;
-
-                var a =
-                    new Vector3(
-                        (float)
-                            surface.From.X,
-                        (float)
-                            surface.From.Z,
-                        z0);
-
-                var b =
-                    new Vector3(
-                        (float)
-                            surface.From.X,
-                        (float)
-                            surface.From.Z,
-                        z1);
-
-                var c =
-                    new Vector3(
-                        (float)
-                            surface.To.X,
-                        (float)
-                            surface.To.Z,
-                        z1);
-
-                var d =
-                    new Vector3(
-                        (float)
-                            surface.To.X,
-                        (float)
-                            surface.To.Z,
-                        z0);
-
+                var z0 = previewLength * segment / segments;
+                var z1 = previewLength * (segment + 1) / segments;
                 AppendQuad(
-                    a,
-                    b,
-                    c,
-                    d,
-                    DefaultSplineColor,
+                    new Vector3(-halfWidth, 0.02f, z0),
+                    new Vector3(-halfWidth, 0.02f, z1),
+                    new Vector3(halfWidth, 0.02f, z1),
+                    new Vector3(halfWidth, 0.02f, z0),
+                    fallbackColor,
                     vertices);
+            }
+        }
+        else
+        {
+            foreach (
+                var surface in
+                    asset.Definition
+                        .Surfaces)
+            {
+                for (
+                    var segment = 0;
+                    segment < segments;
+                    segment++)
+                {
+                    var z0 =
+                        previewLength *
+                        segment /
+                        segments;
+
+                    var z1 =
+                        previewLength *
+                        (segment + 1) /
+                        segments;
+
+                    var a =
+                        new Vector3(
+                            (float)
+                                surface.From.X,
+                            (float)
+                                surface.From.Z,
+                            z0);
+
+                    var b =
+                        new Vector3(
+                            (float)
+                                surface.From.X,
+                            (float)
+                                surface.From.Z,
+                            z1);
+
+                    var c =
+                        new Vector3(
+                            (float)
+                                surface.To.X,
+                            (float)
+                                surface.To.Z,
+                            z1);
+
+                    var d =
+                        new Vector3(
+                            (float)
+                                surface.To.X,
+                            (float)
+                                surface.To.Z,
+                            z0);
+
+                    AppendQuad(
+                        a,
+                        b,
+                        c,
+                        d,
+                        DefaultSplineColor,
+                        vertices);
+                }
             }
         }
 
         return
             CreateResult(
                 vertices,
-                asset.Definition
-                    .Surfaces.Count,
+                Math.Max(
+                    1,
+                    asset.Definition
+                        .Surfaces.Count),
                 vertices.Count == 0
                     ? "previewNoSplineTriangles"
                     : null);
