@@ -1,4 +1,8 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using MapStudio.Core.IO;
+using Xunit;
 
 namespace MapStudio.Core.Tests.IO;
 
