@@ -233,4 +233,64 @@ public sealed class NativeSplineTriangleGeometryBuilderTests
                 0.05 +
                 0.001));
     }
+
+    [Fact]
+    public void BuildKeepsSplineVisibleAndPickableWhenProfileCannotBeDecoded()
+    {
+        var tile = new OmsiTileReference(0, 0, "tile_0_0.map");
+        var placedSpline = new OmsiPlacedSpline(
+            "spline",
+            @"Splines\\Legacy\\road.sli",
+            9,
+            -1,
+            -1,
+            10,
+            5,
+            20,
+            0,
+            12,
+            0,
+            0,
+            0,
+            false,
+            Array.Empty<string>());
+
+        var scene = new NativeSceneBuilder().Build(
+            [
+                new NativeSceneTile(
+                    tile,
+                    new OmsiTileContent(
+                        new OmsiTileSummary(true, 0, 1, 0),
+                        [],
+                        [placedSpline]))
+            ],
+            new PickingRegistry<object>());
+
+        var assets = new Dictionary<string, NativeSplineAsset>(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [placedSpline.SplinePath] = new(
+                placedSpline.SplinePath,
+                @"C:\\OMSI 2\\Splines\\Legacy\\road.sli",
+                new OmsiSplineDefinition(true, [], []),
+                Array.Empty<string?>(),
+                "noRenderableProfile")
+        };
+
+        var geometry = new NativeSplineTriangleGeometryBuilder().Build(scene, assets);
+
+        Assert.Equal(6, geometry.TriangleCount);
+        Assert.Equal(1, geometry.LoadedSplineCount);
+        Assert.Equal(1, geometry.RenderedSurfaceCount);
+        Assert.Contains(scene.Splines[0].PickingId, geometry.Ranges.Keys);
+        Assert.Null(Assert.Single(geometry.MaterialBatches).TexturePath);
+        Assert.All(
+            geometry.Vertices,
+            vertex =>
+            {
+                Assert.True(float.IsFinite(vertex.Position.X));
+                Assert.True(float.IsFinite(vertex.Position.Y));
+                Assert.True(float.IsFinite(vertex.Position.Z));
+            });
+    }
 }
