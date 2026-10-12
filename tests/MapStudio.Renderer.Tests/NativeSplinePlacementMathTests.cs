@@ -252,6 +252,36 @@ public sealed class
     }
 
     [Fact]
+    public void RoadElevationAlwaysReturnsFiniteHeightForMalformedInputs()
+    {
+        var invalidTerrain = NativeSplinePlacementMath.ResolveRoadEndpointHeight(
+            float.NaN,
+            12,
+            NativeRoadElevationMode.FollowTerrain,
+            5);
+        var invalidStart = NativeSplinePlacementMath.ResolveRoadEndpointHeight(
+            10,
+            float.PositiveInfinity,
+            NativeRoadElevationMode.Elevate,
+            5);
+        var overflow = NativeSplinePlacementMath.ResolveRoadEndpointHeight(
+            float.MaxValue,
+            float.MaxValue,
+            NativeRoadElevationMode.Elevate,
+            300);
+        var invalidOffset = NativeSplinePlacementMath.ResolveRoadEndpointHeight(
+            10,
+            12,
+            NativeRoadElevationMode.FollowTerrain,
+            double.NaN);
+
+        Assert.True(float.IsFinite(invalidTerrain));
+        Assert.True(float.IsFinite(invalidStart));
+        Assert.Equal(float.MaxValue, overflow);
+        Assert.Equal(10, invalidOffset);
+    }
+
+    [Fact]
     public void ArcShapeReachesRequestedEndpointInRendererMath()
     {
         var start =
