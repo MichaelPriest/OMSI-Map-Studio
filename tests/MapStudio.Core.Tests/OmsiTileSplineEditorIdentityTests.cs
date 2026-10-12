@@ -49,6 +49,21 @@ public sealed class OmsiTileSplineEditorIdentityTests
     }
 
     [Fact]
+    public void ApplyTransforms_UpdatesSplineAndPreservesUnknownSections()
+    {
+        var document = OmsiConfigParser.Parse(Source);
+
+        var result = OmsiTileSplineEditor.ApplyTransforms(
+            document,
+            [CreateEdit(x: 15)]);
+
+        Assert.Equal(1, result.AppliedCount);
+        var edited = OmsiConfigParser.ParseBytes(result.Bytes);
+        Assert.Contains("\\r\\n15\\r\\n30\\r\\n20\\r\\n", edited.ToText());
+        Assert.Contains("[future_section]\\r\\npreserve-this", edited.ToText());
+    }
+
+    [Fact]
     public void ApplyTransforms_StillRejectsNonFiniteValuesWithExistingError()
     {
         var document = OmsiConfigParser.Parse(Source);
