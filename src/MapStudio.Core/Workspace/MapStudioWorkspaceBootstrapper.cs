@@ -184,13 +184,24 @@ public sealed class MapStudioWorkspaceBootstrapper
                 "invalidWorkspaceMapRequest");
         }
 
-        var info =
-            await EnsureAsync(
-                    rootPath,
-                    seedStarterAssets:
-                        false,
-                    cancellationToken)
-                .ConfigureAwait(false);
+        MapStudioWorkspaceInfo info;
+
+        try
+        {
+            info =
+                await EnsureAsync(
+                        rootPath,
+                        seedStarterAssets:
+                            false,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new UnauthorizedAccessException(
+                $"Sem permissão para preparar a pasta de trabalho '{Path.GetFullPath(rootPath)}'. Selecione uma pasta gravável do seu usuário, como Documentos\\OMSI Map Studio\\Workspace, em vez da pasta protegida de instalação do OMSI.",
+                exception);
+        }
 
         var target =
             Path.GetFullPath(
