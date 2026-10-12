@@ -79,10 +79,10 @@ public static class NativeSceneryPlacementPatternBuilder
             index++)
         {
             var t =
-                segments <= 0
+                count <= 1
                     ? 0
                     : (double)index /
-                        segments;
+                        (count - 1);
 
             result.Add(
                 new NativeSceneryPatternPlacement(
