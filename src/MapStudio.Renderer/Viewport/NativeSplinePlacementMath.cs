@@ -117,6 +117,12 @@ public static class NativeSplinePlacementMath
                 gradient,
                 false);
 
+        if (!IsFiniteShape(shape))
+        {
+            shape = null;
+            return false;
+        }
+
         return true;
     }
 
@@ -325,6 +331,12 @@ public static class NativeSplinePlacementMath
                 gradient,
                 gradient,
                 true);
+
+        if (!IsFiniteShape(shape))
+        {
+            shape = null;
+            return false;
+        }
 
         return true;
     }
@@ -559,8 +571,25 @@ public static class NativeSplinePlacementMath
                 gradient,
                 true);
 
+        if (!IsFiniteShape(shape))
+        {
+            shape = null;
+            return false;
+        }
+
         return true;
     }
+
+    private static bool IsFiniteShape(
+        NativeSplinePlacementShape? shape) =>
+        shape is not null &&
+        IsFinite(shape.Start) &&
+        IsFinite(shape.End) &&
+        double.IsFinite(shape.Rotation) &&
+        double.IsFinite(shape.Length) &&
+        double.IsFinite(shape.Radius) &&
+        double.IsFinite(shape.GradientStart) &&
+        double.IsFinite(shape.GradientEnd);
 
     private static bool IsFinite(Vector3 value) =>
         float.IsFinite(value.X) &&
