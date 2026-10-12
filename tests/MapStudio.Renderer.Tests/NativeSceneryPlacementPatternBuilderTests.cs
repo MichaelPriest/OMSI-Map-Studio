@@ -35,6 +35,26 @@ public sealed class NativeSceneryPlacementPatternBuilderTests
             false);
 
     [Fact]
+    public void ExtremeFiniteParametersDoNotReturnNonFinitePlacements()
+    {
+        var center = Request(10, 20);
+
+        var area = NativeSceneryPlacementPatternBuilder.BuildArea(
+            center, double.MaxValue, 8, false);
+        var matrix = NativeSceneryPlacementPatternBuilder.BuildMatrix(
+            center, 4, 4, double.MaxValue, double.MaxValue, false);
+        var circle = NativeSceneryPlacementPatternBuilder.BuildCircle(
+            center, double.MaxValue, 8, true, false);
+        var lot = NativeSceneryPlacementPatternBuilder.BuildLot(
+            Request(0, 0), Request(20, 0), 1, double.MaxValue, false);
+
+        Assert.All(area, HasFiniteCoordinates);
+        Assert.All(matrix, HasFiniteCoordinates);
+        Assert.All(circle, HasFiniteCoordinates);
+        Assert.All(lot, HasFiniteCoordinates);
+    }
+
+    [Fact]
     public void NonFinitePatternParametersNeverProduceInvalidPlacements()
     {
         var center = Request(10, 20);
