@@ -21,6 +21,11 @@ public static class NativeSceneryPlacementPatternBuilder
             double spacing,
             bool randomRotation)
     {
+        if (!IsFiniteRequest(start) || !IsFiniteRequest(end))
+        {
+            return Array.Empty<NativeSceneryPatternPlacement>();
+        }
+
         var dx =
             end.WorldPoint.X -
             start.WorldPoint.X;
@@ -112,10 +117,15 @@ public static class NativeSceneryPlacementPatternBuilder
             int count,
             bool randomRotation)
     {
+        if (!IsFiniteRequest(center))
+        {
+            return Array.Empty<NativeSceneryPatternPlacement>();
+        }
+
         var safeRadius =
-            Math.Max(
-                1,
-                radius);
+            double.IsFinite(radius)
+                ? Math.Max(1, radius)
+                : 1;
 
         var safeCount =
             Math.Clamp(
@@ -190,6 +200,11 @@ public static class NativeSceneryPlacementPatternBuilder
             double spacingZ,
             bool randomRotation)
     {
+        if (!IsFiniteRequest(center))
+        {
+            return Array.Empty<NativeSceneryPatternPlacement>();
+        }
+
         var safeRows =
             Math.Clamp(
                 rows,
@@ -203,14 +218,14 @@ public static class NativeSceneryPlacementPatternBuilder
                 16);
 
         var sx =
-            Math.Max(
-                0.5,
-                spacingX);
+            double.IsFinite(spacingX)
+                ? Math.Max(0.5, spacingX)
+                : 0.5;
 
         var sz =
-            Math.Max(
-                0.5,
-                spacingZ);
+            double.IsFinite(spacingZ)
+                ? Math.Max(0.5, spacingZ)
+                : 0.5;
 
         var total =
             Math.Min(
@@ -287,10 +302,15 @@ public static class NativeSceneryPlacementPatternBuilder
             bool tangentRotation,
             bool randomRotation)
     {
+        if (!IsFiniteRequest(center))
+        {
+            return Array.Empty<NativeSceneryPatternPlacement>();
+        }
+
         var safeRadius =
-            Math.Max(
-                0.5,
-                radius);
+            double.IsFinite(radius)
+                ? Math.Max(0.5, radius)
+                : 0.5;
 
         var safeCount =
             Math.Clamp(
@@ -356,6 +376,11 @@ public static class NativeSceneryPlacementPatternBuilder
             double setback,
             bool randomRotation)
     {
+        if (!IsFiniteRequest(start) || !IsFiniteRequest(end))
+        {
+            return Array.Empty<NativeSceneryPatternPlacement>();
+        }
+
         var dx =
             end.WorldPoint.X -
             start.WorldPoint.X;
@@ -368,6 +393,11 @@ public static class NativeSceneryPlacementPatternBuilder
             Math.Sqrt(
                 dx * dx +
                 dz * dz);
+
+        if (!double.IsFinite(distance))
+        {
+            return Array.Empty<NativeSceneryPatternPlacement>();
+        }
 
         if (distance < 0.5)
         {
@@ -383,16 +413,23 @@ public static class NativeSceneryPlacementPatternBuilder
                 ];
         }
 
+        var safeSpacing =
+            double.IsFinite(spacing)
+                ? Math.Max(1, spacing)
+                : 1;
+
+        var requestedCount =
+            Math.Floor(distance / safeSpacing) + 1;
+
         var count =
-            Math.Clamp(
-                (int)Math.Floor(
-                    distance /
-                    Math.Max(
-                        1,
-                        spacing)) +
-                1,
-                1,
-                256);
+            requestedCount >= 256
+                ? 256
+                : Math.Clamp((int)requestedCount, 1, 256);
+
+        var safeSetback =
+            double.IsFinite(setback)
+                ? setback
+                : 0;
 
         var normalX =
             -dz /
@@ -433,11 +470,11 @@ public static class NativeSceneryPlacementPatternBuilder
                     start.WorldPoint.X +
                         dx * t +
                         normalX *
-                        setback,
+                        safeSetback,
                     start.WorldPoint.Z +
                         dz * t +
                         normalZ *
-                        setback,
+                        safeSetback,
                     start.Z,
                     randomRotation
                         ? NormalizeDegrees(
@@ -451,6 +488,19 @@ public static class NativeSceneryPlacementPatternBuilder
 
         return result;
     }
+
+    private static bool IsFiniteRequest(
+        NativeSceneryPlacementRequest? request) =>
+        request is not null &&
+        float.IsFinite(request.WorldPoint.X) &&
+        float.IsFinite(request.WorldPoint.Y) &&
+        float.IsFinite(request.WorldPoint.Z) &&
+        double.IsFinite(request.X) &&
+        double.IsFinite(request.Y) &&
+        double.IsFinite(request.Z) &&
+        double.IsFinite(request.Rotation) &&
+        double.IsFinite(request.Pitch) &&
+        double.IsFinite(request.Bank);
 
     private static double NormalizeDegrees(
         double value)
