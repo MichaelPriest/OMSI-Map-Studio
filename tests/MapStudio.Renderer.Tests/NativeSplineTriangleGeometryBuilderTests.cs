@@ -240,7 +240,7 @@ public sealed class NativeSplineTriangleGeometryBuilderTests
         var tile = new OmsiTileReference(0, 0, "tile_0_0.map");
         var placedSpline = new OmsiPlacedSpline(
             "spline",
-            @"Splines\\Legacy\\road.sli",
+            @"Splines\Legacy\road.sli",
             9,
             -1,
             -1,
@@ -271,7 +271,7 @@ public sealed class NativeSplineTriangleGeometryBuilderTests
         {
             [placedSpline.SplinePath] = new(
                 placedSpline.SplinePath,
-                @"C:\\OMSI 2\\Splines\\Legacy\\road.sli",
+                @"C:\OMSI 2\Splines\Legacy\road.sli",
                 new OmsiSplineDefinition(true, [], []),
                 Array.Empty<string?>(),
                 "noRenderableProfile")
