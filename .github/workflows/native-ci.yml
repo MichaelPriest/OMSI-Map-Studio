@@ -117,6 +117,21 @@ jobs:
       - name: Publish testable Windows x64 build
         run: dotnet publish src/MapStudio.Native/MapStudio.Native.csproj --configuration Release --runtime win-x64 --self-contained true -p:Platform=x64 -p:WindowsAppSDKSelfContained=true --output artifacts/OMSI-Map-Studio-test
 
+      - name: Generate SHA-256 manifest
+        shell: pwsh
+        run: |
+          $root = Resolve-Path artifacts/OMSI-Map-Studio-test
+          $manifest = Join-Path $root "SHA256SUMS.txt"
+          $lines = Get-ChildItem $root -File -Recurse |
+            Where-Object { $_.FullName -ne $manifest } |
+            Sort-Object FullName |
+            ForEach-Object {
+              $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              $relative = [System.IO.Path]::GetRelativePath($root.Path, $_.FullName).Replace("\\", "/")
+              "$hash  $relative"
+            }
+          Set-Content -Path $manifest -Value $lines -Encoding utf8
+
       - name: Upload Windows x64 test build
         uses: actions/upload-artifact@v4
         with:
