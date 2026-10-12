@@ -11,6 +11,60 @@ public sealed class
     NativeSplinePlacementMathTests
 {
     [Fact]
+    public void SplineFrameFallsBackSafelyForNonFiniteSplineData()
+    {
+        var spline = new OmsiPlacedSpline(
+            "0",
+            "road.sli",
+            1,
+            -1,
+            -1,
+            0,
+            0,
+            0,
+            double.NaN,
+            10,
+            5,
+            0,
+            0,
+            false,
+            []);
+        var entity = new NativeSplineEntity(
+            new PickingId(PickingKind.Spline, 1),
+            new OmsiTileReference(0, 0, "tile_0_0.map"),
+            spline,
+            12,
+            3,
+            24);
+
+        var frame = NativeSplinePathMath.GetFrame(entity, 5);
+
+        Assert.Equal(new Vector3(12, 3, 24), frame.Center);
+        Assert.Equal(Vector3.UnitX, frame.Lateral);
+        Assert.Equal(Vector3.UnitZ, frame.Forward);
+        Assert.True(float.IsFinite(frame.Center.X));
+        Assert.True(float.IsFinite(frame.Center.Y));
+        Assert.True(float.IsFinite(frame.Center.Z));
+    }
+
+    [Fact]
+    public void GradientRiseReturnsSafeZeroForNonFiniteInputsOrOverflow()
+    {
+        Assert.Equal(
+            0,
+            NativeSplinePathMath.GetGradientRise(
+                double.NaN, 10, 20, 5));
+        Assert.Equal(
+            0,
+            NativeSplinePathMath.GetGradientRise(
+                10, 20, double.PositiveInfinity, 5));
+        Assert.Equal(
+            0,
+            NativeSplinePathMath.GetGradientRise(
+                double.MaxValue, -double.MaxValue, 1, 1));
+    }
+
+    [Fact]
     public void StraightSplineRejectsNonFiniteCoordinates()
     {
         Assert.False(
