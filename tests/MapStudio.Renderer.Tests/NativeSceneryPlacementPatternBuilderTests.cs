@@ -89,6 +89,27 @@ public sealed class NativeSceneryPlacementPatternBuilderTests
     }
 
     [Fact]
+    public void NonFiniteSpacingFallsBackToSafeMinimum()
+    {
+        var result =
+            NativeSceneryPlacementPatternBuilder
+                .BuildLine(
+                    Request(0, 0),
+                    Request(0, 2),
+                    double.NaN,
+                    false);
+
+        Assert.Equal(
+            5,
+            result.Count);
+
+        Assert.Equal(
+            2,
+            result[^1].WorldZ,
+            6);
+    }
+
+    [Fact]
     public void MatrixIsCenteredAndCapped()
     {
         var result =
