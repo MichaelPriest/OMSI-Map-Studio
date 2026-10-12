@@ -20,6 +20,20 @@ public static class NativeSplinePathMath
         var spline =
             entity.Spline;
 
+        if (
+            !double.IsFinite(distance) ||
+            !double.IsFinite(entity.WorldX) ||
+            !double.IsFinite(entity.WorldY) ||
+            !double.IsFinite(entity.WorldZ) ||
+            !double.IsFinite(spline.Length) ||
+            !double.IsFinite(spline.Rotation) ||
+            !double.IsFinite(spline.Radius) ||
+            !double.IsFinite(spline.GradientStart) ||
+            !double.IsFinite(spline.GradientEnd))
+        {
+            return CreateSafeFallbackFrame(entity);
+        }
+
         var length =
             Math.Max(
                 0.0,
@@ -108,11 +122,21 @@ public static class NativeSplinePathMath
                 length,
                 clampedDistance);
 
+        var center = new Vector3(
+            (float)worldX,
+            (float)worldY,
+            (float)worldZ);
+
+        if (
+            !IsFinite(center) ||
+            !IsFinite(forward) ||
+            !IsFinite(lateral))
+        {
+            return CreateSafeFallbackFrame(entity);
+        }
+
         return new NativeSplineFrame(
-            new Vector3(
-                (float)worldX,
-                (float)worldY,
-                (float)worldZ),
+            center,
             lateral,
             forward);
     }
@@ -138,7 +162,12 @@ public static class NativeSplinePathMath
         double length,
         double distance)
     {
-        if (length <= 0)
+        if (
+            !double.IsFinite(gradientStart) ||
+            !double.IsFinite(gradientEnd) ||
+            !double.IsFinite(length) ||
+            !double.IsFinite(distance) ||
+            length <= 0)
         {
             return 0;
         }
@@ -160,7 +189,7 @@ public static class NativeSplinePathMath
             ) /
             100.0;
 
-        return
+        var rise =
             startSlope *
             clampedDistance +
             0.5 *
@@ -168,7 +197,30 @@ public static class NativeSplinePathMath
             clampedDistance *
             clampedDistance /
             length;
+
+        return double.IsFinite(rise)
+            ? rise
+            : 0;
     }
+
+    private static NativeSplineFrame CreateSafeFallbackFrame(
+        NativeSplineEntity entity)
+    {
+        var center = new Vector3(
+            float.IsFinite(entity.WorldX) ? entity.WorldX : 0,
+            float.IsFinite(entity.WorldY) ? entity.WorldY : 0,
+            float.IsFinite(entity.WorldZ) ? entity.WorldZ : 0);
+
+        return new NativeSplineFrame(
+            center,
+            Vector3.UnitX,
+            Vector3.UnitZ);
+    }
+
+    private static bool IsFinite(Vector3 value) =>
+        float.IsFinite(value.X) &&
+        float.IsFinite(value.Y) &&
+        float.IsFinite(value.Z);
 
     private static double DegreesToRadians(
         double value) =>
