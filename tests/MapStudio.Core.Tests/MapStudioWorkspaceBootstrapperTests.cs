@@ -210,7 +210,9 @@ public sealed class MapStudioWorkspaceBootstrapperTests
                         vegetationRoot,
                         "Starter_Tree",
                         treeMetadata.Tree!
-                            .TextureName)));
+                            .TextureName
+                            .Replace('\\', Path.DirectorySeparatorChar)
+                            .Replace('/', Path.DirectorySeparatorChar))));
 
             Assert.True(
                 File.Exists(
@@ -218,7 +220,9 @@ public sealed class MapStudioWorkspaceBootstrapperTests
                         vegetationRoot,
                         "Starter_Shrub",
                         shrubMetadata.Tree!
-                            .TextureName)));
+                            .TextureName
+                            .Replace('\\', Path.DirectorySeparatorChar)
+                            .Replace('/', Path.DirectorySeparatorChar))));
 
             var templateTile =
                 await File.ReadAllTextAsync(
