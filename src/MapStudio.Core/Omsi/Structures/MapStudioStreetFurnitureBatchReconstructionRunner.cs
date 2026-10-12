@@ -225,6 +225,8 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
             string.IsNullOrWhiteSpace(
                 relativePath) ||
             Path.IsPathRooted(
+                relativePath) ||
+            LooksLikeWindowsRootedPath(
                 relativePath))
         {
             throw new InvalidDataException(
@@ -265,6 +267,21 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
 
         return fullPath;
     }
+
+    private static bool LooksLikeWindowsRootedPath(
+        string path) =>
+        path.StartsWith(
+            "\\\\",
+            StringComparison.Ordinal) ||
+        path.StartsWith(
+            "//",
+            StringComparison.Ordinal) ||
+        (
+            path.Length >= 3 &&
+            char.IsAsciiLetter(path[0]) &&
+            path[1] == ':' &&
+            (path[2] == '\\\\' || path[2] == '/')
+        );
 
     private static double ResolvePlacementRotation(
         MapStudioGeoStreetFurniturePoint point)
