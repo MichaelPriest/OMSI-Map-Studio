@@ -138,10 +138,20 @@ public static class SafeFileTransaction
             {
                 try
                 {
-                    File.Copy(
-                        write.BackupPath,
-                        write.TargetPath,
-                        overwrite: true);
+                    // Roll back only while the target still contains the
+                    // bytes written by this transaction. If another program
+                    // has changed it since replacement, preserve that change
+                    // and leave the backup available for manual recovery.
+                    if (File.Exists(write.TargetPath) &&
+                        File.ReadAllBytes(write.TargetPath)
+                            .AsSpan()
+                            .SequenceEqual(write.Bytes))
+                    {
+                        File.Copy(
+                            write.BackupPath,
+                            write.TargetPath,
+                            overwrite: true);
+                    }
                 }
                 catch
                 {
