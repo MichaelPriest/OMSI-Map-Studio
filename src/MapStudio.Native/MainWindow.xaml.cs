@@ -23436,6 +23436,39 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var directoryName =
+            directoryBox.Text.Trim();
+
+        var displayName =
+            displayNameBox.Text.Trim();
+
+        if (
+            string.IsNullOrWhiteSpace(directoryName) ||
+            string.IsNullOrWhiteSpace(displayName))
+        {
+            StatusText.Text =
+                "Informe a pasta do projeto e o nome do mapa antes de continuar.";
+
+            return;
+        }
+
+        if (
+            directoryName.Length > 80 ||
+            displayName.Length > 120 ||
+            directoryName is "." or ".." ||
+            !string.Equals(
+                Path.GetFileName(directoryName),
+                directoryName,
+                StringComparison.Ordinal) ||
+            directoryName.IndexOfAny(
+                Path.GetInvalidFileNameChars()) >= 0)
+        {
+            StatusText.Text =
+                "Nome de pasta inválido. Use apenas um nome de pasta (até 80 caracteres), sem barras nem caracteres reservados do Windows.";
+
+            return;
+        }
+
         try
         {
             StatusText.Text =
@@ -23451,8 +23484,8 @@ public sealed partial class MainWindow : Window
             var snapshot =
                 await _session
                     .CreateStandaloneMapAsync(
-                        directoryBox.Text,
-                        displayNameBox.Text);
+                        directoryName,
+                        displayName);
 
             _fullMapMode =
                 true;
@@ -23472,8 +23505,21 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            var message =
+                exception.Message switch
+                {
+                    "invalidWorkspaceMapRequest" =>
+                        "Nome ou dados do mapa inválidos. Confira o nome da pasta e o nome de exibição.",
+                    "workspaceMapPathRejected" =>
+                        "O caminho calculado para o mapa saiu da pasta Workspace. Nenhum mapa foi criado.",
+                    "workspaceMapAlreadyExists" =>
+                        "Já existe um mapa com essa pasta no Workspace. Escolha outro nome.",
+                    _ =>
+                        exception.Message
+                };
+
             StatusText.Text =
-                $"Falha ao criar mapa: {exception.Message}";
+                $"Falha ao criar mapa: {message}";
         }
     }
 
