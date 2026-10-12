@@ -43,8 +43,12 @@ public static class OmsiTileObjectEditor
                     "invalidObjectSection");
             }
 
-            // Never persist NaN or infinities into an OMSI map file.
-            if (!IsFinite(edit))
+            // Reject invalid identity fields at the persistence boundary too;
+            // a blank path or negative ID must never match a malformed source record.
+            if (
+                edit.ObjectId < 0 ||
+                string.IsNullOrWhiteSpace(edit.SceneryObjectPath) ||
+                !IsFinite(edit))
             {
                 throw new InvalidDataException(
                     "invalidObjectTransform");
