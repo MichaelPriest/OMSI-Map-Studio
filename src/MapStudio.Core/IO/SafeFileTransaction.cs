@@ -19,12 +19,20 @@ public static class SafeFileTransaction
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
 
+        var normalizedBackups =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
         var originalBytesByTarget =
             new Dictionary<string, byte[]>(
                 StringComparer.OrdinalIgnoreCase);
 
+        // Validate the complete target/backup topology before touching the
+        // filesystem. A backup must never alias a target in the same batch.
         foreach (var write in writes)
         {
+            ArgumentNullException.ThrowIfNull(write);
+
             ArgumentException.ThrowIfNullOrWhiteSpace(
                 write.TargetPath);
 
@@ -35,13 +43,43 @@ public static class SafeFileTransaction
                 Path.GetFullPath(
                     write.TargetPath);
 
-            if (
-                !normalizedTargets.Add(
-                    target))
+            var backup =
+                Path.GetFullPath(
+                    write.BackupPath);
+
+            if (!normalizedTargets.Add(target))
             {
                 throw new InvalidOperationException(
                     "duplicateTarget");
             }
+
+            if (!normalizedBackups.Add(backup))
+            {
+                throw new InvalidOperationException(
+                    "duplicateBackup");
+            }
+
+            if (string.Equals(
+                    target,
+                    backup,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "backupAliasesTarget");
+            }
+        }
+
+        if (normalizedTargets.Overlaps(normalizedBackups))
+        {
+            throw new InvalidOperationException(
+                "backupAliasesTarget");
+        }
+
+        foreach (var write in writes)
+        {
+            var target =
+                Path.GetFullPath(
+                    write.TargetPath);
 
             if (!File.Exists(target))
             {
