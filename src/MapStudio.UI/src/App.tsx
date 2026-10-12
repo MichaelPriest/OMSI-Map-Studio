@@ -14765,6 +14765,48 @@ export function App() {
     loadMapCatalog();
   };
 
+  const handlePreviewNewMapSatellite = useCallback(() => {
+    const latitude = Number(newMapLatitude.replace(",", "."));
+    const longitude = Number(newMapLongitude.replace(",", "."));
+
+    if (
+      !bridgeAvailable ||
+      !googleApiKey.trim() ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      setError("Informe uma chave válida da API do Google e latitude/longitude válidas para visualizar a imagem de satélite.");
+      return;
+    }
+
+    setGoogleLatitude(String(latitude));
+    setGoogleLongitude(String(longitude));
+    setGoogleMapType("satellite");
+    setLoadingGoogleReference(true);
+    setGoogleReference(undefined);
+    setError(undefined);
+    setSaveNotice(undefined);
+
+    loadGoogleMapReference(googleApiKey.trim(), {
+      latitude,
+      longitude,
+      zoom: googleZoom,
+      mapType: "satellite",
+      width: 640,
+      height: 640
+    });
+  }, [
+    bridgeAvailable,
+    googleApiKey,
+    googleZoom,
+    newMapLatitude,
+    newMapLongitude
+  ]);
+
   const handleCreateCoordinateMap = () => {
     if (
       !rootPath ||
@@ -15615,6 +15657,46 @@ export function App() {
                   />
                 </label>
               </div>
+
+              <label>
+                <span>Chave da API do Google Maps (necessária para imagens de satélite)</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={googleApiKey}
+                  placeholder="Cole sua chave da API"
+                  onChange={(event) => setGoogleApiKey(event.target.value)}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="secondary-action"
+                disabled={loadingGoogleReference}
+                onClick={handlePreviewNewMapSatellite}
+              >
+                {loadingGoogleReference ? "Carregando satélite..." : "Visualizar área por satélite"}
+              </button>
+
+              {googleReference && (
+                <div className="coordinate-satellite-preview">
+                  <img
+                    src={`data:${googleReference.mimeType};base64,${googleReference.base64Data}`}
+                    alt="Imagem de satélite da região escolhida para o novo mapa"
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      maxHeight: 360,
+                      objectFit: "contain",
+                      borderRadius: 8,
+                      background: "#101820"
+                    }}
+                  />
+                  <small>
+                    Imagem de satélite · zoom {googleReference.zoom}. {googleReference.attribution}
+                  </small>
+                </div>
+              )}
 
               <button
                 type="button"
