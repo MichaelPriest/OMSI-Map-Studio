@@ -35,6 +35,55 @@ public sealed class NativeSceneryPlacementPatternBuilderTests
             false);
 
     [Fact]
+    public void NonFinitePatternParametersNeverProduceInvalidPlacements()
+    {
+        var center = Request(10, 20);
+
+        var area = NativeSceneryPlacementPatternBuilder.BuildArea(
+            center, double.NaN, 8, false);
+        var matrix = NativeSceneryPlacementPatternBuilder.BuildMatrix(
+            center, 2, 3, double.PositiveInfinity, double.NaN, false);
+        var circle = NativeSceneryPlacementPatternBuilder.BuildCircle(
+            center, double.NegativeInfinity, 8, true, false);
+        var lot = NativeSceneryPlacementPatternBuilder.BuildLot(
+            Request(0, 0), Request(20, 0), double.PositiveInfinity,
+            double.NaN, false);
+
+        Assert.All(area, HasFiniteCoordinates);
+        Assert.All(matrix, HasFiniteCoordinates);
+        Assert.All(circle, HasFiniteCoordinates);
+        Assert.All(lot, HasFiniteCoordinates);
+    }
+
+    [Fact]
+    public void NonFiniteWorldPointIsRejected()
+    {
+        var invalid = Request(0, 0) with
+        {
+            WorldPoint = new Vector3(float.NaN, 0, 0)
+        };
+
+        Assert.Empty(
+            NativeSceneryPlacementPatternBuilder.BuildArea(
+                invalid, 10, 5, false));
+
+        Assert.Empty(
+            NativeSceneryPlacementPatternBuilder.BuildLine(
+                invalid, Request(10, 0), 2, false));
+    }
+
+    private static void HasFiniteCoordinates(
+        NativeSceneryPatternPlacement placement)
+    {
+        Assert.True(double.IsFinite(placement.WorldX));
+        Assert.True(double.IsFinite(placement.WorldZ));
+        Assert.True(double.IsFinite(placement.Z));
+        Assert.True(double.IsFinite(placement.Rotation));
+        Assert.True(double.IsFinite(placement.Pitch));
+        Assert.True(double.IsFinite(placement.Bank));
+    }
+
+    [Fact]
     public void LineUsesSpacingAndAlignsRotation()
     {
         var result =
