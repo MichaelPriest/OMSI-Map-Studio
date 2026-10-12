@@ -113,3 +113,14 @@ jobs:
 
       - name: Build native WinUI host
         run: dotnet build src/MapStudio.Native/MapStudio.Native.csproj --configuration Release -p:Platform=x64
+
+      - name: Publish testable Windows x64 build
+        run: dotnet publish src/MapStudio.Native/MapStudio.Native.csproj --configuration Release --runtime win-x64 --self-contained true -p:Platform=x64 -p:WindowsAppSDKSelfContained=true --output artifacts/OMSI-Map-Studio-test
+
+      - name: Upload Windows x64 test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-Windows-x64-test
+          path: artifacts/OMSI-Map-Studio-test/
+          if-no-files-found: error
+          retention-days: 14
