@@ -64,6 +64,28 @@ public sealed class OmsiTileSplineEditorIdentityTests
     }
 
     [Fact]
+    public void ApplyTransforms_RejectsChangedSourceIdentityWithoutMutatingDocument()
+    {
+        var document = OmsiConfigParser.Parse(Source);
+        var invalidEdits = new[]
+        {
+            CreateEdit() with { SplineId = 2 },
+            CreateEdit() with { SplinePath = "Splines\\\\Pack\\\\other.sli" },
+            CreateEdit() with { PreviousSplineId = 7 }
+        };
+
+        foreach (var edit in invalidEdits)
+        {
+            var error = Assert.Throws<InvalidDataException>(
+                () => OmsiTileSplineEditor.ApplyTransforms(document, [edit]));
+            Assert.Equal("splineSourceChanged", error.Message);
+        }
+
+        Assert.Contains("\\r\\n10\\r\\n30\\r\\n20\\r\\n", document.ToText());
+        Assert.Contains("preserve-this", document.ToText());
+    }
+
+    [Fact]
     public void ApplyTransforms_StillRejectsNonFiniteValuesWithExistingError()
     {
         var document = OmsiConfigParser.Parse(Source);
