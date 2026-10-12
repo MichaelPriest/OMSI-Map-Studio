@@ -70,7 +70,7 @@ public sealed class OmsiTileSplineEditorIdentityTests
         var invalidEdits = new[]
         {
             CreateEdit() with { SplineId = 2 },
-            CreateEdit() with { SplinePath = "Splines\\\\Pack\\\\other.sli" },
+            CreateEdit() with { SplinePath = "Splines\\Pack\\other.sli" },
             CreateEdit() with { PreviousSplineId = 7 }
         };
 
@@ -81,7 +81,7 @@ public sealed class OmsiTileSplineEditorIdentityTests
             Assert.Equal("splineSourceChanged", error.Message);
         }
 
-        Assert.Contains("\\r\\n10\\r\\n30\\r\\n20\\r\\n", document.ToText());
+        Assert.Contains("\r\n10\r\n30\r\n20\r\n", document.ToText());
         Assert.Contains("preserve-this", document.ToText());
     }
 
