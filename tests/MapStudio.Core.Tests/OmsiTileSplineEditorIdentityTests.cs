@@ -57,7 +57,7 @@ public sealed class OmsiTileSplineEditorIdentityTests
             document,
             [CreateEdit(x: 15)]);
 
-        Assert.Equal(1, result.AppliedCount);
+        Assert.Equal(1, result.AppliedEdits);
         var edited = OmsiConfigParser.ParseBytes(result.Bytes);
         Assert.Contains("\r\n15\r\n30\r\n20\r\n", edited.ToText());
         Assert.Contains("[future_section]\r\npreserve-this", edited.ToText());
