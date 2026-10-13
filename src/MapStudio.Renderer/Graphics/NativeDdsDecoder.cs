@@ -93,6 +93,7 @@ internal static class NativeDdsDecoder
         var blocksX = (width + 3) / 4;
         var blocksY = (height + 3) / 4;
         var block = new byte[blockBytes];
+        Span<byte> colors = stackalloc byte[16];
         for (var by = 0; by < blocksY; by++)
         for (var bx = 0; bx < blocksX; bx++)
         {
@@ -100,7 +101,6 @@ internal static class NativeDdsDecoder
             var colorOffset = format == 0x31545844 ? 0 : 8;
             var c0 = BinaryPrimitives.ReadUInt16LittleEndian(block.AsSpan(colorOffset, 2));
             var c1 = BinaryPrimitives.ReadUInt16LittleEndian(block.AsSpan(colorOffset + 2, 2));
-            Span<byte> colors = stackalloc byte[16];
             BuildColors(c0, c1, colors, format == 0x31545844);
 
             var colorBits = BinaryPrimitives.ReadUInt32LittleEndian(block.AsSpan(colorOffset + 4, 4));
