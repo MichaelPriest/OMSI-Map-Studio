@@ -13,6 +13,15 @@ public sealed partial class MainWindow
     private const string KeepOriginalTextureLabel =
         "— Manter textura original —";
 
+    private void OnVisualVariantPanelLoaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        VisualVariantTextureComboBox.ItemsSource =
+            new[] { KeepOriginalTextureLabel };
+        VisualVariantTextureComboBox.SelectedIndex = 0;
+    }
+
     private void OnRefreshVisualTexturesClick(
         object sender,
         RoutedEventArgs e)
