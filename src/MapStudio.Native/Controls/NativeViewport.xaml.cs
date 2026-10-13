@@ -182,6 +182,13 @@ public sealed partial class NativeViewport : UserControl
         _runtime?.GetAvailableTexturePaths(searchText, limit) ??
         Array.Empty<string>();
 
+    public IReadOnlyList<string> GetVisualTexturePathsForSelection(
+        NativeSelectionInfo selection,
+        string? searchText = null,
+        int limit = 2000) =>
+        _runtime?.GetTexturePathsForObject(selection, searchText, limit) ??
+        Array.Empty<string>();
+
     public bool ApplyVisualVariantToSelection(
         NativeSelectionInfo selection,
         string variantName,
