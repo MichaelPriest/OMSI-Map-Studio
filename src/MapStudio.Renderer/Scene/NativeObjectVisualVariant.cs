@@ -9,8 +9,7 @@ namespace MapStudio.Renderer.Scene;
 public readonly record struct NativeObjectVisualVariantKey(
     int TileX,
     int TileY,
-    int ObjectId,
-    int SourceSectionOrdinal)
+    int ObjectId)
 {
     public static NativeObjectVisualVariantKey From(
         NativeObjectEntity entity)
@@ -20,8 +19,7 @@ public readonly record struct NativeObjectVisualVariantKey(
         return new NativeObjectVisualVariantKey(
             entity.Tile.X,
             entity.Tile.Y,
-            entity.Object.ObjectId,
-            entity.Object.SourceSectionOrdinal);
+            entity.Object.ObjectId);
     }
 }
 
