@@ -533,7 +533,7 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             resolvedAssetPath = Path.Combine(
                 _omsiRoot,
-                resolvedAssetPath.Replace('\\\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
+                resolvedAssetPath.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
         }
 
         if (!File.Exists(resolvedAssetPath))
