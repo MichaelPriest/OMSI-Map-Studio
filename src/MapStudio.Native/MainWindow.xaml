@@ -1259,7 +1259,8 @@
 
                                         <Expander x:Name="VisualVariantExpander"
                                                   Header="🎨 Variantes visuais do objeto"
-                                                  IsExpanded="False">
+                                                  IsExpanded="False"
+                                                  Loaded="OnVisualVariantPanelLoaded">
                                             <StackPanel Spacing="6">
                                                 <TextBlock Text="Personalize somente a instância selecionada. Os arquivos originais do OMSI 2 não serão alterados."
                                                            TextWrapping="Wrap"
