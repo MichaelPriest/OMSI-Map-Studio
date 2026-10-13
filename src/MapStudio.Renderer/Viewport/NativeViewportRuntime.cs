@@ -70,6 +70,12 @@ public sealed class NativeViewportRuntime : IDisposable
         _selectedPickingIds =
             new();
 
+    private readonly Dictionary<
+        NativeObjectVisualVariantKey,
+        NativeObjectVisualVariant>
+        _objectVisualVariants =
+            new();
+
     private NativeGizmoHandle _activeGizmoHandle =
         NativeGizmoHandle.None;
 
@@ -219,6 +225,117 @@ public sealed class NativeViewportRuntime : IDisposable
     }
 
     public NativeSceneSnapshot? Scene { get; private set; }
+
+    /// <summary>
+    /// Applies a non-destructive appearance override to one placed object.
+    /// The override is runtime state and never writes into OMSI package files.
+    /// </summary>
+    public void SetObjectVisualVariant(
+        NativeObjectVisualVariantKey key,
+        NativeObjectVisualVariant variant)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(variant);
+
+        foreach (var pair in variant.MaterialTextureOverrides)
+        {
+            if (
+                pair.Key < 0 ||
+                string.IsNullOrWhiteSpace(pair.Value) ||
+                !File.Exists(pair.Value))
+            {
+                throw new ArgumentException(
+                    "Cada substituição deve apontar para uma textura existente e um índice de material válido.",
+                    nameof(variant));
+            }
+        }
+
+        _objectVisualVariants[key] = variant;
+
+        if (Scene is not null && !_assetPreviewActive)
+        {
+            UploadSceneGeometry();
+            RenderInitialFrame();
+        }
+    }
+
+    public bool TryGetObjectVisualVariant(
+        NativeObjectVisualVariantKey key,
+        out NativeObjectVisualVariant variant) =>
+        _objectVisualVariants.TryGetValue(key, out variant!);
+
+    public void ResetObjectVisualVariant(
+        NativeObjectVisualVariantKey key)
+    {
+        ThrowIfDisposed();
+
+        if (!_objectVisualVariants.Remove(key))
+        {
+            return;
+        }
+
+        if (Scene is not null && !_assetPreviewActive)
+        {
+            UploadSceneGeometry();
+            RenderInitialFrame();
+        }
+    }
+
+    public IReadOnlyList<string> GetAvailableTexturePaths(
+        string? searchText = null,
+        int limit = 2000)
+    {
+        if (string.IsNullOrWhiteSpace(_omsiRoot) || !Directory.Exists(_omsiRoot))
+        {
+            return Array.Empty<string>();
+        }
+
+        var allowedExtensions = new HashSet<string>(
+            new[] { ".bmp", ".dds", ".png", ".jpg", ".jpeg", ".tga" },
+            StringComparer.OrdinalIgnoreCase);
+
+        var results = new List<string>();
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(
+                _omsiRoot,
+                "*",
+                SearchOption.AllDirectories))
+            {
+                if (!allowedExtensions.Contains(Path.GetExtension(path)))
+                {
+                    continue;
+                }
+
+                if (
+                    !string.IsNullOrWhiteSpace(searchText) &&
+                    !Path.GetFileName(path).Contains(
+                        searchText,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                results.Add(path);
+                if (results.Count >= Math.Clamp(limit, 1, 10_000))
+                {
+                    break;
+                }
+            }
+        }
+        catch (IOException)
+        {
+            // A partially unreadable package tree must not crash the editor.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Skip inaccessible folders; no files are modified.
+        }
+
+        return results
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 
     private void WriteDiagnostic(
         string message)
@@ -8016,7 +8133,8 @@ public sealed class NativeViewportRuntime : IDisposable
             new NativeObjectTriangleGeometryBuilder()
                 .Build(
                     Scene,
-                    _sceneryAssets);
+                    _sceneryAssets,
+                    _objectVisualVariants);
 
         WriteDiagnostic(
             $"ViewportRuntime geometry-rebuild objects id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds} vertices={objectGeometry.Vertices.Length}");
