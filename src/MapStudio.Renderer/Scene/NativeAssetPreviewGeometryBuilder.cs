@@ -32,8 +32,7 @@ public sealed class NativeAssetPreviewGeometryBuilder
         if (
             string.Equals(asset.ErrorCode, "scoPathInvalid", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(asset.ErrorCode, "scoMissing", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(asset.FullPath) ||
-            !File.Exists(asset.FullPath))
+            string.IsNullOrWhiteSpace(asset.FullPath))
         {
             return NativeAssetPreviewGeometry.Error(
                 asset.ErrorCode ?? "previewScenerySourceMissing");
