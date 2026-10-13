@@ -26,7 +26,21 @@ public sealed partial class MainWindow
         object sender,
         RoutedEventArgs e)
     {
-        var textures = Viewport.GetAvailableVisualTexturePaths(
+        var selected = Viewport.GetSelectedSelectionInfos()
+            .FirstOrDefault(info => info.Kind == PickingKind.Object);
+
+        if (selected is null)
+        {
+            VisualVariantTextureComboBox.ItemsSource =
+                new[] { KeepOriginalTextureLabel };
+            VisualVariantTextureComboBox.SelectedIndex = 0;
+            VisualVariantStatusTextBlock.Text =
+                "Selecione primeiro o objeto no mapa e atualize a lista para carregar as texturas da pasta dele.";
+            return;
+        }
+
+        var textures = Viewport.GetVisualTexturePathsForSelection(
+            selected,
             limit: 2000);
 
         VisualVariantTextureComboBox.ItemsSource =
@@ -35,10 +49,11 @@ public sealed partial class MainWindow
                 .ToArray();
 
         VisualVariantTextureComboBox.SelectedIndex = 0;
+        var sourceFolder = Path.GetDirectoryName(selected.AssetPath);
         VisualVariantStatusTextBlock.Text =
             textures.Count == 0
-                ? "Nenhuma textura encontrada. Confirme se a pasta do OMSI 2 está carregada."
-                : $"{textures.Count} texturas encontradas. Selecione uma para substituir o material escolhido.";
+                ? $"Nenhuma textura encontrada na pasta do objeto selecionado ({sourceFolder ?? selected.AssetPath}). Verifique se o arquivo .sco está acessível e se as imagens estão nessa mesma pasta."
+                : $"{textures.Count} texturas encontradas na pasta do objeto: {sourceFolder ?? selected.AssetPath}. Selecione uma e informe o índice do material.";
     }
 
     private void OnApplyVisualVariantClick(
