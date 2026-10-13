@@ -1257,6 +1257,42 @@
                                                 HorizontalAlignment="Stretch"
                                                 Click="OnPlaceAssetClick" />
 
+                                        <Expander x:Name="VisualVariantExpander"
+                                                  Header="🎨 Variantes visuais do objeto"
+                                                  IsExpanded="False"
+                                                  Loaded="OnVisualVariantPanelLoaded">
+                                            <StackPanel Spacing="6">
+                                                <TextBlock Text="Personalize somente a instância selecionada. Os arquivos originais do OMSI 2 não serão alterados."
+                                                           TextWrapping="Wrap"
+                                                           Opacity="0.78" />
+                                                <TextBox x:Name="VisualVariantNameTextBox"
+                                                         Header="Nome do tema"
+                                                         Text="Original"
+                                                         PlaceholderText="Ex.: Azul municipal" />
+                                                <Button Content="Atualizar lista de texturas do OMSI"
+                                                        Click="OnRefreshVisualTexturesClick" />
+                                                <ComboBox x:Name="VisualVariantTextureComboBox"
+                                                          Header="Textura de substituição"
+                                                          HorizontalAlignment="Stretch" />
+                                                <TextBox x:Name="VisualVariantMaterialIndexTextBox"
+                                                         Header="Índice do material (para trocar textura)"
+                                                         PlaceholderText="Ex.: 0" />
+                                                <TextBox x:Name="VisualVariantTintTextBox"
+                                                         Header="Cor/tint opcional (hexadecimal)"
+                                                         PlaceholderText="#2468a2" />
+                                                <Button Content="Aplicar variante ao objeto selecionado"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="OnApplyVisualVariantClick" />
+                                                <Button Content="Restaurar aparência original"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="OnResetVisualVariantClick" />
+                                                <TextBlock x:Name="VisualVariantStatusTextBlock"
+                                                           Text="Selecione um objeto no mapa para personalizá-lo."
+                                                           TextWrapping="Wrap"
+                                                           Opacity="0.78" />
+                                            </StackPanel>
+                                        </Expander>
+
                                         <Grid ColumnSpacing="6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />

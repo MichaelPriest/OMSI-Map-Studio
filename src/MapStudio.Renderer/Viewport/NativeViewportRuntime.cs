@@ -1,4 +1,7 @@
 using System.Numerics;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Vegetation;
@@ -69,6 +72,23 @@ public sealed class NativeViewportRuntime : IDisposable
     private readonly HashSet<PickingId>
         _selectedPickingIds =
             new();
+
+    private readonly Dictionary<
+        NativeObjectVisualVariantKey,
+        NativeObjectVisualVariant>
+        _objectVisualVariants =
+            new();
+
+    private sealed record PersistedVisualVariant(
+        int TileX,
+        int TileY,
+        int ObjectId,
+        string Name,
+        Dictionary<int, string> MaterialTextureOverrides,
+        float? TintR,
+        float? TintG,
+        float? TintB,
+        float? TintA);
 
     private NativeGizmoHandle _activeGizmoHandle =
         NativeGizmoHandle.None;
@@ -200,6 +220,143 @@ public sealed class NativeViewportRuntime : IDisposable
                 Device);
     }
 
+    private static string? GetVisualVariantStorePath(
+        string? mapDirectoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(mapDirectoryPath))
+        {
+            return null;
+        }
+
+        var canonicalPath = Path.GetFullPath(mapDirectoryPath)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var hash = Convert.ToHexString(
+            SHA256.HashData(
+                Encoding.UTF8.GetBytes(canonicalPath.ToUpperInvariant())));
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OMSI Map Studio",
+            "VisualVariants",
+            hash + ".json");
+    }
+
+    private void LoadObjectVisualVariants(string mapDirectoryPath)
+    {
+        _objectVisualVariants.Clear();
+        var path = GetVisualVariantStorePath(mapDirectoryPath);
+        if (path is null || !File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            var persisted = JsonSerializer.Deserialize<
+                List<PersistedVisualVariant>>(File.ReadAllText(path));
+            if (persisted is null)
+            {
+                return;
+            }
+
+            foreach (var entry in persisted)
+            {
+                var overrides = entry.MaterialTextureOverrides
+                    .Where(pair =>
+                        pair.Key >= 0 &&
+                        !string.IsNullOrWhiteSpace(pair.Value) &&
+                        File.Exists(pair.Value))
+                    .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+                Vector4? tint = null;
+                if (
+                    entry.TintR is float r &&
+                    entry.TintG is float g &&
+                    entry.TintB is float b &&
+                    entry.TintA is float a)
+                {
+                    tint = new Vector4(r, g, b, a);
+                }
+
+                var key = new NativeObjectVisualVariantKey(
+                    entry.TileX,
+                    entry.TileY,
+                    entry.ObjectId);
+
+                _objectVisualVariants[key] =
+                    new NativeObjectVisualVariant(
+                        entry.Name,
+                        overrides,
+                        tint);
+            }
+        }
+        catch (Exception exception) when (
+            exception is IOException or
+            UnauthorizedAccessException or
+            JsonException or
+            ArgumentException)
+        {
+            WriteDiagnostic(
+                $"Visual variant sidecar could not be loaded: {exception.Message}");
+            _objectVisualVariants.Clear();
+        }
+    }
+
+    private void SaveObjectVisualVariants()
+    {
+        var path = GetVisualVariantStorePath(
+            _mapDescriptor?.DirectoryPath);
+        if (path is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(directory);
+            var entries = _objectVisualVariants
+                .Select(pair =>
+                {
+                    var tint = pair.Value.ColorTint;
+                    return new PersistedVisualVariant(
+                        pair.Key.TileX,
+                        pair.Key.TileY,
+                        pair.Key.ObjectId,
+                        pair.Value.Name,
+                        pair.Value.MaterialTextureOverrides
+                            .ToDictionary(item => item.Key, item => item.Value),
+                        tint?.X,
+                        tint?.Y,
+                        tint?.Z,
+                        tint?.W);
+                })
+                .ToArray();
+
+            var temporaryPath = path + ".tmp";
+            File.WriteAllText(
+                temporaryPath,
+                JsonSerializer.Serialize(
+                    entries,
+                    new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        catch (Exception exception) when (
+            exception is IOException or
+            UnauthorizedAccessException or
+            ArgumentException or
+            NotSupportedException)
+        {
+            WriteDiagnostic(
+                $"Visual variant sidecar could not be saved: {exception.Message}");
+        }
+    }
+
     public D3D11DeviceHost Device { get; }
 
     public D3D11SwapChainSurface? Surface { get; private set; }
@@ -219,6 +376,228 @@ public sealed class NativeViewportRuntime : IDisposable
     }
 
     public NativeSceneSnapshot? Scene { get; private set; }
+
+    /// <summary>
+    /// Applies a non-destructive appearance override to one placed object.
+    /// The override is runtime state and never writes into OMSI package files.
+    /// </summary>
+    public void SetObjectVisualVariant(
+        NativeObjectVisualVariantKey key,
+        NativeObjectVisualVariant variant)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(variant);
+
+        foreach (var pair in variant.MaterialTextureOverrides)
+        {
+            if (
+                pair.Key < 0 ||
+                string.IsNullOrWhiteSpace(pair.Value) ||
+                !File.Exists(pair.Value))
+            {
+                throw new ArgumentException(
+                    "Cada substituição deve apontar para uma textura existente e um índice de material válido.",
+                    nameof(variant));
+            }
+        }
+
+        _objectVisualVariants[key] = variant;
+        SaveObjectVisualVariants();
+
+        if (Scene is not null && !_assetPreviewActive)
+        {
+            UploadSceneGeometry();
+            RenderInitialFrame();
+        }
+    }
+
+    public bool TryGetObjectVisualVariant(
+        NativeObjectVisualVariantKey key,
+        out NativeObjectVisualVariant variant) =>
+        _objectVisualVariants.TryGetValue(key, out variant!);
+
+    public void ResetObjectVisualVariant(
+        NativeObjectVisualVariantKey key)
+    {
+        ThrowIfDisposed();
+
+        if (!_objectVisualVariants.Remove(key))
+        {
+            return;
+        }
+
+        SaveObjectVisualVariants();
+
+        if (Scene is not null && !_assetPreviewActive)
+        {
+            UploadSceneGeometry();
+            RenderInitialFrame();
+        }
+    }
+
+    public IReadOnlyList<string> GetAvailableTexturePaths(
+        string? searchText = null,
+        int limit = 2000)
+    {
+        if (string.IsNullOrWhiteSpace(_omsiRoot) || !Directory.Exists(_omsiRoot))
+        {
+            return Array.Empty<string>();
+        }
+
+        var allowedExtensions = new HashSet<string>(
+            new[] { ".bmp", ".dds", ".png", ".jpg", ".jpeg", ".tga" },
+            StringComparer.OrdinalIgnoreCase);
+
+        var results = new List<string>();
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(
+                _omsiRoot,
+                "*",
+                SearchOption.AllDirectories))
+            {
+                if (!allowedExtensions.Contains(Path.GetExtension(path)))
+                {
+                    continue;
+                }
+
+                if (
+                    !string.IsNullOrWhiteSpace(searchText) &&
+                    !Path.GetFileName(path).Contains(
+                        searchText,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                results.Add(path);
+                if (results.Count >= Math.Clamp(limit, 1, 10_000))
+                {
+                    break;
+                }
+            }
+        }
+        catch (IOException)
+        {
+            // A partially unreadable package tree must not crash the editor.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Skip inaccessible folders; no files are modified.
+        }
+
+        return results
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Lists texture files beside the selected object's source .sco file.
+    /// This keeps the picker scoped to the chosen asset instead of showing an
+    /// unrelated alphabetical slice of the entire OMSI installation.
+    /// </summary>
+    public IReadOnlyList<string> GetTexturePathsForObject(
+        NativeSelectionInfo selection,
+        string? searchText = null,
+        int limit = 2000)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+
+        if (selection.Kind != MapStudio.Renderer.Picking.PickingKind.Object)
+        {
+            return Array.Empty<string>();
+        }
+
+        string? sourceAssetPath = null;
+        var entity = Scene?.Objects.FirstOrDefault(item =>
+            item.Object.ObjectId == selection.EntityId &&
+            item.Tile.X == selection.TileX &&
+            item.Tile.Y == selection.TileY);
+
+        if (entity is not null &&
+            _sceneryAssets.TryGetValue(entity.Object.SceneryObjectPath, out var sceneryAsset) &&
+            !string.IsNullOrWhiteSpace(sceneryAsset.FullPath))
+        {
+            sourceAssetPath = sceneryAsset.FullPath;
+        }
+
+        sourceAssetPath ??= selection.AssetPath;
+        if (string.IsNullOrWhiteSpace(sourceAssetPath))
+        {
+            return Array.Empty<string>();
+        }
+
+        var resolvedAssetPath = sourceAssetPath;
+        if (!Path.IsPathRooted(resolvedAssetPath) &&
+            !string.IsNullOrWhiteSpace(_omsiRoot))
+        {
+            resolvedAssetPath = Path.Combine(
+                _omsiRoot,
+                resolvedAssetPath.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        if (!File.Exists(resolvedAssetPath))
+        {
+            // Some selection records contain the relative OMSI asset path while
+            // the loader's canonical path is available in its indexed asset map.
+            var matchingAsset = _sceneryAssets.Values.FirstOrDefault(asset =>
+                string.Equals(asset.SceneryObjectPath, selection.AssetPath, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(asset.FullPath) &&
+                File.Exists(asset.FullPath));
+            if (matchingAsset?.FullPath is string loadedPath)
+            {
+                resolvedAssetPath = loadedPath;
+            }
+        }
+
+        if (!File.Exists(resolvedAssetPath))
+        {
+            return Array.Empty<string>();
+        }
+
+        var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(resolvedAssetPath));
+        if (string.IsNullOrWhiteSpace(sourceDirectory) || !Directory.Exists(sourceDirectory))
+        {
+            return Array.Empty<string>();
+        }
+
+        var allowedExtensions = new HashSet<string>(
+            new[] { ".bmp", ".dds", ".png", ".jpg", ".jpeg", ".tga" },
+            StringComparer.OrdinalIgnoreCase);
+        var results = new List<string>();
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (!allowedExtensions.Contains(Path.GetExtension(path)))
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(searchText) &&
+                    !Path.GetFileName(path).Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                results.Add(Path.GetFullPath(path));
+                if (results.Count >= Math.Clamp(limit, 1, 10_000))
+                {
+                    break;
+                }
+            }
+        }
+        catch (IOException)
+        {
+            // Skip unreadable files without interrupting the editor.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Skip folders the current user cannot read.
+        }
+
+        return results.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
 
     private void WriteDiagnostic(
         string message)
@@ -5707,6 +6086,8 @@ public sealed class NativeViewportRuntime : IDisposable
             _mapDescriptor =
                 map;
 
+            LoadObjectVisualVariants(map.DirectoryPath);
+
             _omsiRoot =
                 omsiRoot;
 
@@ -8016,7 +8397,8 @@ public sealed class NativeViewportRuntime : IDisposable
             new NativeObjectTriangleGeometryBuilder()
                 .Build(
                     Scene,
-                    _sceneryAssets);
+                    _sceneryAssets,
+                    _objectVisualVariants);
 
         WriteDiagnostic(
             $"ViewportRuntime geometry-rebuild objects id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds} vertices={objectGeometry.Vertices.Length}");

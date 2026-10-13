@@ -176,6 +176,64 @@ public sealed partial class NativeViewport : UserControl
             ?.GetSelectedSelectionInfos() ??
         Array.Empty<NativeSelectionInfo>();
 
+    public IReadOnlyList<string> GetAvailableVisualTexturePaths(
+        string? searchText = null,
+        int limit = 2000) =>
+        _runtime?.GetAvailableTexturePaths(searchText, limit) ??
+        Array.Empty<string>();
+
+    public IReadOnlyList<string> GetVisualTexturePathsForSelection(
+        NativeSelectionInfo selection,
+        string? searchText = null,
+        int limit = 2000) =>
+        _runtime?.GetTexturePathsForObject(selection, searchText, limit) ??
+        Array.Empty<string>();
+
+    public bool ApplyVisualVariantToSelection(
+        NativeSelectionInfo selection,
+        string variantName,
+        IReadOnlyDictionary<int, string> materialTextureOverrides,
+        Vector4? colorTint)
+    {
+        if (
+            _runtime is null ||
+            selection.Kind != PickingKind.Object)
+        {
+            return false;
+        }
+
+        var key = new NativeObjectVisualVariantKey(
+            selection.TileX,
+            selection.TileY,
+            selection.EntityId);
+
+        _runtime.SetObjectVisualVariant(
+            key,
+            new NativeObjectVisualVariant(
+                variantName,
+                materialTextureOverrides,
+                colorTint));
+
+        return true;
+    }
+
+    public void ResetVisualVariantForSelection(
+        NativeSelectionInfo selection)
+    {
+        if (
+            _runtime is null ||
+            selection.Kind != PickingKind.Object)
+        {
+            return;
+        }
+
+        _runtime.ResetObjectVisualVariant(
+            new NativeObjectVisualVariantKey(
+                selection.TileX,
+                selection.TileY,
+                selection.EntityId));
+    }
+
     public bool TryBuildSelectedGroupDuplicateRequests(
         Vector3 worldOffset,
         out IReadOnlyList<NativeSceneryPlacementRequest>

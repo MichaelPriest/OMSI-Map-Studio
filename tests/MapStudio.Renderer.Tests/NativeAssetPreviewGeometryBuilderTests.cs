@@ -225,4 +225,42 @@ public sealed class
         Assert.InRange(preview.Maximum.X, 3.499f, 3.501f);
         Assert.InRange(preview.Maximum.Z, 29.999f, 30.001f);
     }
+
+    [Fact]
+    public void ValidSceneryObjectWithoutDecodedMeshesGetsPlacementMarker()
+    {
+        var asset = new NativeSceneryAsset(
+            @"Sceneryobjects\\Legacy\\light_only.sco",
+            @"C:\\OMSI\\Sceneryobjects\\Legacy\\light_only.sco",
+            [],
+            null,
+            false,
+            "noRenderableMeshes");
+
+        var preview = new NativeAssetPreviewGeometryBuilder()
+            .BuildScenery(asset);
+
+        Assert.True(preview.IsRenderable);
+        Assert.Equal(12, preview.TriangleCount);
+        Assert.Equal(0, preview.SourceMeshCount);
+        Assert.Equal(1.0f, preview.Maximum.Y);
+    }
+
+    [Fact]
+    public void MissingSceneryObjectDoesNotGetPlacementMarker()
+    {
+        var asset = new NativeSceneryAsset(
+            @"Sceneryobjects\\Missing\\missing.sco",
+            @"C:\\OMSI\\Sceneryobjects\\Missing\\missing.sco",
+            [],
+            null,
+            false,
+            "scoMissing");
+
+        var preview = new NativeAssetPreviewGeometryBuilder()
+            .BuildScenery(asset);
+
+        Assert.False(preview.IsRenderable);
+        Assert.Equal("scoMissing", preview.ErrorCode);
+    }
 }
