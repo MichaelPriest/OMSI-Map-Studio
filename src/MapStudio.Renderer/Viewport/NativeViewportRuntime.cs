@@ -1,4 +1,7 @@
 using System.Numerics;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Vegetation;
@@ -75,6 +78,17 @@ public sealed class NativeViewportRuntime : IDisposable
         NativeObjectVisualVariant>
         _objectVisualVariants =
             new();
+
+    private sealed record PersistedVisualVariant(
+        int TileX,
+        int TileY,
+        int ObjectId,
+        string Name,
+        Dictionary<int, string> MaterialTextureOverrides,
+        float? TintR,
+        float? TintG,
+        float? TintB,
+        float? TintA);
 
     private NativeGizmoHandle _activeGizmoHandle =
         NativeGizmoHandle.None;
@@ -206,6 +220,143 @@ public sealed class NativeViewportRuntime : IDisposable
                 Device);
     }
 
+    private static string? GetVisualVariantStorePath(
+        string? mapDirectoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(mapDirectoryPath))
+        {
+            return null;
+        }
+
+        var canonicalPath = Path.GetFullPath(mapDirectoryPath)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var hash = Convert.ToHexString(
+            SHA256.HashData(
+                Encoding.UTF8.GetBytes(canonicalPath.ToUpperInvariant())));
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OMSI Map Studio",
+            "VisualVariants",
+            hash + ".json");
+    }
+
+    private void LoadObjectVisualVariants(string mapDirectoryPath)
+    {
+        _objectVisualVariants.Clear();
+        var path = GetVisualVariantStorePath(mapDirectoryPath);
+        if (path is null || !File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            var persisted = JsonSerializer.Deserialize<
+                List<PersistedVisualVariant>>(File.ReadAllText(path));
+            if (persisted is null)
+            {
+                return;
+            }
+
+            foreach (var entry in persisted)
+            {
+                var overrides = entry.MaterialTextureOverrides
+                    .Where(pair =>
+                        pair.Key >= 0 &&
+                        !string.IsNullOrWhiteSpace(pair.Value) &&
+                        File.Exists(pair.Value))
+                    .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+                Vector4? tint = null;
+                if (
+                    entry.TintR is float r &&
+                    entry.TintG is float g &&
+                    entry.TintB is float b &&
+                    entry.TintA is float a)
+                {
+                    tint = new Vector4(r, g, b, a);
+                }
+
+                var key = new NativeObjectVisualVariantKey(
+                    entry.TileX,
+                    entry.TileY,
+                    entry.ObjectId);
+
+                _objectVisualVariants[key] =
+                    new NativeObjectVisualVariant(
+                        entry.Name,
+                        overrides,
+                        tint);
+            }
+        }
+        catch (Exception exception) when (
+            exception is IOException or
+            UnauthorizedAccessException or
+            JsonException or
+            ArgumentException)
+        {
+            WriteDiagnostic(
+                $"Visual variant sidecar could not be loaded: {exception.Message}");
+            _objectVisualVariants.Clear();
+        }
+    }
+
+    private void SaveObjectVisualVariants()
+    {
+        var path = GetVisualVariantStorePath(
+            _mapDescriptor?.DirectoryPath);
+        if (path is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(directory);
+            var entries = _objectVisualVariants
+                .Select(pair =>
+                {
+                    var tint = pair.Value.ColorTint;
+                    return new PersistedVisualVariant(
+                        pair.Key.TileX,
+                        pair.Key.TileY,
+                        pair.Key.ObjectId,
+                        pair.Value.Name,
+                        pair.Value.MaterialTextureOverrides
+                            .ToDictionary(item => item.Key, item => item.Value),
+                        tint?.X,
+                        tint?.Y,
+                        tint?.Z,
+                        tint?.W);
+                })
+                .ToArray();
+
+            var temporaryPath = path + ".tmp";
+            File.WriteAllText(
+                temporaryPath,
+                JsonSerializer.Serialize(
+                    entries,
+                    new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        catch (Exception exception) when (
+            exception is IOException or
+            UnauthorizedAccessException or
+            ArgumentException or
+            NotSupportedException)
+        {
+            WriteDiagnostic(
+                $"Visual variant sidecar could not be saved: {exception.Message}");
+        }
+    }
+
     public D3D11DeviceHost Device { get; }
 
     public D3D11SwapChainSurface? Surface { get; private set; }
@@ -251,6 +402,7 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         _objectVisualVariants[key] = variant;
+        SaveObjectVisualVariants();
 
         if (Scene is not null && !_assetPreviewActive)
         {
@@ -273,6 +425,8 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             return;
         }
+
+        SaveObjectVisualVariants();
 
         if (Scene is not null && !_assetPreviewActive)
         {
@@ -5823,6 +5977,8 @@ public sealed class NativeViewportRuntime : IDisposable
 
             _mapDescriptor =
                 map;
+
+            LoadObjectVisualVariants(map.DirectoryPath);
 
             _omsiRoot =
                 omsiRoot;
