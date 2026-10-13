@@ -491,6 +491,114 @@ public sealed class NativeViewportRuntime : IDisposable
             .ToArray();
     }
 
+    /// <summary>
+    /// Lists texture files beside the selected object's source .sco file.
+    /// This keeps the picker scoped to the chosen asset instead of showing an
+    /// unrelated alphabetical slice of the entire OMSI installation.
+    /// </summary>
+    public IReadOnlyList<string> GetTexturePathsForObject(
+        NativeSelectionInfo selection,
+        string? searchText = null,
+        int limit = 2000)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+
+        if (selection.Kind != MapStudio.Renderer.Picking.PickingKind.Object)
+        {
+            return Array.Empty<string>();
+        }
+
+        string? sourceAssetPath = null;
+        var entity = Scene?.Objects.FirstOrDefault(item =>
+            item.Object.ObjectId == selection.EntityId &&
+            item.Tile.X == selection.TileX &&
+            item.Tile.Y == selection.TileY);
+
+        if (entity is not null &&
+            _sceneryAssets.TryGetValue(entity.Object.SceneryObjectPath, out var sceneryAsset) &&
+            !string.IsNullOrWhiteSpace(sceneryAsset.FullPath))
+        {
+            sourceAssetPath = sceneryAsset.FullPath;
+        }
+
+        sourceAssetPath ??= selection.AssetPath;
+        if (string.IsNullOrWhiteSpace(sourceAssetPath))
+        {
+            return Array.Empty<string>();
+        }
+
+        var resolvedAssetPath = sourceAssetPath;
+        if (!Path.IsPathRooted(resolvedAssetPath) &&
+            !string.IsNullOrWhiteSpace(_omsiRoot))
+        {
+            resolvedAssetPath = Path.Combine(
+                _omsiRoot,
+                resolvedAssetPath.Replace('\\\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        if (!File.Exists(resolvedAssetPath))
+        {
+            // Some selection records contain the relative OMSI asset path while
+            // the loader's canonical path is available in its indexed asset map.
+            var matchingAsset = _sceneryAssets.Values.FirstOrDefault(asset =>
+                string.Equals(asset.SceneryObjectPath, selection.AssetPath, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(asset.FullPath) &&
+                File.Exists(asset.FullPath));
+            if (matchingAsset?.FullPath is string loadedPath)
+            {
+                resolvedAssetPath = loadedPath;
+            }
+        }
+
+        if (!File.Exists(resolvedAssetPath))
+        {
+            return Array.Empty<string>();
+        }
+
+        var sourceDirectory = Path.GetDirectoryName(Path.GetFullPath(resolvedAssetPath));
+        if (string.IsNullOrWhiteSpace(sourceDirectory) || !Directory.Exists(sourceDirectory))
+        {
+            return Array.Empty<string>();
+        }
+
+        var allowedExtensions = new HashSet<string>(
+            new[] { ".bmp", ".dds", ".png", ".jpg", ".jpeg", ".tga" },
+            StringComparer.OrdinalIgnoreCase);
+        var results = new List<string>();
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (!allowedExtensions.Contains(Path.GetExtension(path)))
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(searchText) &&
+                    !Path.GetFileName(path).Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                results.Add(Path.GetFullPath(path));
+                if (results.Count >= Math.Clamp(limit, 1, 10_000))
+                {
+                    break;
+                }
+            }
+        }
+        catch (IOException)
+        {
+            // Skip unreadable files without interrupting the editor.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Skip folders the current user cannot read.
+        }
+
+        return results.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
     private void WriteDiagnostic(
         string message)
     {
