@@ -89,4 +89,39 @@ public sealed class NativeHighlightGeometryBuilderTests
         Assert.Empty(
             result);
     }
+
+    [Theory]
+    [InlineData(-1, 1)]
+    [InlineData(0, -1)]
+    [InlineData(0, 1)]
+    [InlineData(1, 2147483647)]
+    public void BuildRejectsInvalidOrOverflowingRanges(
+        int startVertex,
+        int vertexCount)
+    {
+        var source =
+            new[]
+            {
+                new NativeMapVertex(
+                    Vector3.Zero,
+                    Vector4.One),
+                new NativeMapVertex(
+                    Vector3.One,
+                    Vector4.One)
+            };
+
+        var result =
+            NativeHighlightGeometryBuilder
+                .Build(
+                    source,
+                    new NativeTriangleRange(
+                        startVertex,
+                        vertexCount),
+                    Vector3.One,
+                    Vector4.One,
+                    0.05f);
+
+        Assert.Empty(
+            result);
+    }
 }
