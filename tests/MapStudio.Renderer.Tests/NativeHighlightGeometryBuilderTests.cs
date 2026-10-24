@@ -93,7 +93,7 @@ public sealed class NativeHighlightGeometryBuilderTests
     [Theory]
     [InlineData(-1, 1)]
     [InlineData(0, -1)]
-    [InlineData(0, 1)]
+    [InlineData(2, 1)]
     [InlineData(1, 2147483647)]
     public void BuildRejectsInvalidOrOverflowingRanges(
         int startVertex,
