@@ -98,3 +98,20 @@ A comparação não termina em estradas e viewport. O openMapper deve servir com
 ### Regra para declarar paridade
 
 Cada recurso será marcado internamente como **equivalente**, **parcial**, **ausente** ou **não aplicável**, com evidência de código e teste. "Equivalente" exige que a ação funcione em mapa real e que os dados sobrevivam a salvar, fechar e reabrir. Recursos do openMapper que ainda não existem no Native serão tratados como trabalho de implementação, não como suporte presumido. A prioridade será: fluxo de edição básico e viewport, estradas/junções, objetos e terreno, depois lógica/importação e ferramentas de qualidade.
+
+## Auditoria inicial do renderer (revisão de código, não teste visual)
+
+A leitura inicial do renderer Native e do shader de malha do openMapper identificou estas diferenças e cuidados. Os itens abaixo são hipóteses de trabalho para confirmar com assets reais; não são declarações de defeito confirmado.
+
+| Tema | Evidência no código atual | Próxima verificação |
+| --- | --- | --- |
+| Materiais OMSI | O Native já transporta alpha mode, no-Z-write/no-Z-check, double-sided, transmap, bump, environment, night/light maps e detail texture nos lotes de material | Montar casos de regressão com objetos reais que usem cada combinação; conferir transparência e ordenação com profundidade |
+| Iluminação de objetos | O shader Native aplica iluminação adicional quando há bump map e reflexo quando há environment map; o openMapper tem um caminho de iluminação geral com normais frente/verso, fog e tonemapping | Comparar objetos sem bump/environment: garantir leitura visual adequada sem alterar a aparência dos materiais OMSI |
+| Normais e faces duplas | O openMapper inverte a normal para faces traseiras no shader; Native já marca lotes double-sided, mas é necessário confirmar a combinação entre rasterizer, winding e normal usada na iluminação | Usar malhas reais de folhas, cercas e superfícies finas, incluindo objetos com faces invertidas |
+| Transparência e transmap | Native possui shaders separados para alpha cutout/blend e transmap | Validar folhas, grades, vidros e materiais noturnos contra o jogo; não trocar o limiar de alpha sem evidência |
+| LOD de objetos | O construtor de geometria Native seleciona atualmente o maior limiar de LOD encontrado no asset durante a montagem da geometria | Verificar como o snapshot e a câmera atualizam a cena; medir custo em mapas grandes antes de alterar estratégia de LOD |
+| Seleção | O shader openMapper oferece contorno/rim para seleção; o Native usa caminhos de renderização e picking próprios | Inspecionar o passe de seleção do Native e preservar cor/textura da malha selecionada, com handles legíveis em escala de tela |
+
+### Critério antes de mexer no shader
+
+Nenhuma alteração visual será considerada correta apenas por compilar. A validação precisa incluir malhas e texturas reais do OMSI, seleção, faces duplas, materiais opacos e transparentes, dia/noite quando suportado, além de captura antes/depois. Se não houver asset de teste legítimo para uma característica, ela fica pendente em vez de ser declarada validada.
