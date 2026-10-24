@@ -359,6 +359,8 @@ public sealed class MapStudioWorkspaceBootstrapperTests
     [Theory]
     [InlineData("", "Cidade")]
     [InlineData("../fora", "Cidade")]
+    [InlineData("Cidade:Teste", "Cidade")]
+    [InlineData("Cidade\\Teste", "Cidade")]
     [InlineData("Cidade", "")]
     public async Task CreateBlankMapRejectsInvalidRequests(
         string directoryName,
@@ -378,6 +380,42 @@ public sealed class MapStudioWorkspaceBootstrapperTests
                         root,
                         directoryName,
                         displayName));
+
+            Assert.False(Directory.Exists(root));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task CreateBlankMapRejectsOverlongNames()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-LongName-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var bootstrapper = new MapStudioWorkspaceBootstrapper();
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => bootstrapper.CreateBlankMapAsync(
+                    root,
+                    new string('M', 81),
+                    "Cidade"));
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => bootstrapper.CreateBlankMapAsync(
+                    root,
+                    "Cidade",
+                    new string('N', 121)));
 
             Assert.False(Directory.Exists(root));
         }
