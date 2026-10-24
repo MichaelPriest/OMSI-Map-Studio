@@ -178,6 +178,20 @@ public sealed class MapStudioWorkspaceBootstrapper
                 StringComparison.Ordinal) ||
             directoryName.IndexOfAny(
                 Path.GetInvalidFileNameChars()) >=
+                0 ||
+            directoryName.IndexOfAny(
+                new[]
+                {
+                    '\\',
+                    '/',
+                    ':',
+                    '*',
+                    '?',
+                    '"',
+                    '<',
+                    '>',
+                    '|'
+                }) >=
                 0)
         {
             throw new InvalidDataException(
