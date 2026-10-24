@@ -1382,4 +1382,97 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
             link.NextRequestIndex);
     }
 
+
+    [Fact]
+    public void BuilderDoesNotLinkSequentialSplinesAcrossGradeLevels()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "part-a",
+                            [
+                                new(20, 30),
+                                new(80, 30)
+                            ],
+                            "road.sli"),
+                        new MapStudioRoadTrace(
+                            "part-b",
+                            [
+                                new(80, 30),
+                                new(120, 30)
+                            ],
+                            "road.sli")
+                    ]);
+
+        graph =
+            graph with
+            {
+                Segments =
+                    graph.Segments
+                        .Select(
+                            (segment, index) =>
+                                index == 1
+                                    ? segment with
+                                    {
+                                        Layer = 1
+                                    }
+                                    : segment)
+                        .ToArray()
+            };
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            2,
+            result.Requests.Count);
+
+        Assert.Empty(
+            result.Links);
+    }
+
 }
