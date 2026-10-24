@@ -1425,6 +1425,18 @@ public sealed class NativeProceduralRoadPlacementBuilder
                     continue;
                 }
 
+                var candidate =
+                    bindings[
+                        candidateIndex];
+
+                if (
+                    !HasCompatibleGradeSeparation(
+                        current.Request,
+                        candidate.Request))
+                {
+                    continue;
+                }
+
                 nextIndex =
                     candidateIndex;
 
