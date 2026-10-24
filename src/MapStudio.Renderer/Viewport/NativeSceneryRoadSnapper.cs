@@ -24,6 +24,8 @@ public static class NativeSceneryRoadSnapper
             !float.IsFinite(
                 worldPoint.X) ||
             !float.IsFinite(
+                worldPoint.Y) ||
+            !float.IsFinite(
                 worldPoint.Z) ||
             !double.IsFinite(
                 maximumDistance) ||
@@ -95,7 +97,7 @@ public static class NativeSceneryRoadSnapper
                         frame.Center);
 
                 if (
-                    squared <
+                    squared < 
                     bestSquared)
                 {
                     bestSquared =
@@ -191,6 +193,8 @@ public static class NativeSceneryRoadSnapper
                             .Center));
 
             if (
+                !double.IsFinite(
+                    distance) ||
                 distance >
                     maximumDistance ||
                 (
@@ -211,6 +215,11 @@ public static class NativeSceneryRoadSnapper
                             .Forward.Z) *
                     180.0 /
                     Math.PI);
+
+            if (!double.IsFinite(rotation))
+            {
+                continue;
+            }
 
             best =
                 new NativeSceneryRoadSnap(
@@ -242,7 +251,7 @@ public static class NativeSceneryRoadSnapper
             b.Z;
 
         return
-            dx * dx +
+            dx * dx + 
             dz * dz;
     }
 
