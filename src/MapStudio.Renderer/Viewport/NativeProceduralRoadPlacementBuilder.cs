@@ -260,6 +260,16 @@ public sealed class NativeProceduralRoadPlacementBuilder
         (first.Layer ?? 0) ==
             (second.Layer ?? 0);
 
+    private static bool HasCompatibleGradeSeparation(
+        NativeSplinePlacementRequest first,
+        NativeSplinePlacementRequest second) =>
+        first.SourceBridge ==
+            second.SourceBridge &&
+        first.SourceTunnel ==
+            second.SourceTunnel &&
+        (first.SourceLayer ?? 0) ==
+            (second.SourceLayer ?? 0);
+
     private static bool TryBuildCurveRequest(
         NativeSceneSnapshot scene,
         MapStudioRoadGraphSegment first,
