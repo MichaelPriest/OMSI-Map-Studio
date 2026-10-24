@@ -356,6 +356,78 @@ public sealed class MapStudioWorkspaceBootstrapperTests
         }
     }
 
+    [Theory]
+    [InlineData("", "Cidade")]
+    [InlineData("../fora", "Cidade")]
+    [InlineData("Cidade", "")]
+    public async Task CreateBlankMapRejectsInvalidRequests(
+        string directoryName,
+        string displayName)
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-Invalid-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => new MapStudioWorkspaceBootstrapper()
+                    .CreateBlankMapAsync(
+                        root,
+                        directoryName,
+                        displayName));
+
+            Assert.False(Directory.Exists(root));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task CreateBlankMapDoesNotOverwriteExistingMap()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-NoOverwrite-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var bootstrapper = new MapStudioWorkspaceBootstrapper();
+            var mapPath = await bootstrapper.CreateBlankMapAsync(
+                root,
+                "Cidade_Protegida",
+                "Cidade Protegida");
+            var globalPath = Path.Combine(mapPath, "global.cfg");
+            var originalBytes = await File.ReadAllBytesAsync(globalPath);
+
+            await Assert.ThrowsAsync<IOException>(
+                () => bootstrapper.CreateBlankMapAsync(
+                    root,
+                    "Cidade_Protegida",
+                    "Nome Diferente"));
+
+            Assert.Equal(
+                originalBytes,
+                await File.ReadAllBytesAsync(globalPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     [Fact]
     public async Task ImportMapFolderCopiesAndValidatesExternalMap()
     {
