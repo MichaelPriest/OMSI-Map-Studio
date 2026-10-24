@@ -189,6 +189,65 @@ public sealed class NativeSceneryRoadSnapperTests
                     8));
     }
 
+    [Fact]
+    public void RejectsNonFiniteWorldCoordinatesAndDistance()
+    {
+        var road =
+            CreateSpline(
+                id: 14,
+                length: 100,
+                radius: 0,
+                rotation: 0,
+                heightSpline: false);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [],
+                [],
+                [road],
+                []);
+
+        Assert.Null(
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    scene,
+                    new Vector3(
+                        1,
+                        float.NaN,
+                        10),
+                    8));
+
+        Assert.Null(
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    scene,
+                    new Vector3(
+                        1,
+                        float.PositiveInfinity,
+                        10),
+                    8));
+
+        Assert.Null(
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    scene,
+                    new Vector3(
+                        float.NaN,
+                        0,
+                        10),
+                    8));
+
+        Assert.Null(
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    scene,
+                    new Vector3(
+                        1,
+                        0,
+                        10),
+                    double.NaN));
+    }
+
     private static NativeSplineEntity
         CreateSpline(
             int id,
