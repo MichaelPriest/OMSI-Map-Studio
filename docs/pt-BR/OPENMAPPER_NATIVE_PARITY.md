@@ -72,3 +72,29 @@ A licença atual do openMapper é AGPL-3.0-only. Portanto, este plano não copia
 - Notas de release e detalhes de UX: https://github.com/openOMSI-org/openMapper/releases
 - Arquitetura atual do Map Studio Native: docs/pt-BR/NATIVE_MIGRATION.md
 - Contratos e ferramentas de OMSI: src/MapStudio.Core
+
+## Inventário ampliado de paridade funcional
+
+A comparação não termina em estradas e viewport. O openMapper deve servir como referência de experiência e cobertura para todo o fluxo de autoria de mapas OMSI. Cada linha precisa ser auditada contra implementação real no Native; a existência de uma classe ou botão, isoladamente, não conta como recurso concluído.
+
+| Área funcional | Comportamento de referência a comparar | Verificação no Native |
+| --- | --- | --- |
+| Criar, abrir e trocar mapas | Fluxo curto, mapas recentes e mensagens claras | Criar/abrir/salvar/reabrir um mapa sem sobrescrever outro nem perder alterações |
+| Navegação e câmera | Orbit, pan, zoom, fly e visão geral | Atalhos consistentes, foco correto do viewport e navegação em mapas grandes |
+| Seleção e edição | Seleção única/múltipla, caixa de seleção, mover, duplicar, copiar/colar e propriedades numéricas | Hit-test previsível, transformações persistidas e undo/redo coerente |
+| Ruas e tipos de estrada | Desenho rápido por pontos, edição posterior, larguras/faixas/calçadas/texturas e perfis reais | Gerar e editar arquivos .sli válidos, com caminhos/faixas, altura e textura corretos |
+| Junções e continuidade | Junções automáticas, curvas conectadas, pontas e cruzamentos | Testar geometrias e vínculos reais; nenhuma conexão pode ser apenas visual |
+| Trilhos e splines especiais | Tipos de spline além de ruas, quando suportados pelo formato | Seleção do tipo correto, orientação e round-trip dos dados |
+| Objetos e vegetação | Catálogo pesquisável, favoritos/recentes, preview fiel, posicionamento e áreas/pincel quando aplicável | Texturas, transparência, escala, rotação, origem e tile corretos; sem substituir assets reais por cubos fictícios |
+| Terreno | Escultura, nivelamento, rampas, elevação importada, pintura por pincel/regra/estrada e bordas entre tiles | Preservar alturas, máscaras e texturas depois de salvar e reabrir |
+| Água, luzes e cruzamentos | Criação e edição dos elementos de cena suportados pelo mapa | Persistência nos formatos OMSI corretos e representação visual identificável |
+| Lógica de tráfego | Paradas, pontos iniciais, estacionamentos, caminhos AI, linhas/viagens/rotas e sinais, conforme formatos existentes | Vínculos válidos e verificáveis; não marcar como suportado sem reader/writer e teste |
+| Importação e referência geográfica | OpenStreetMap, imagens aéreas, alturas, trilhas GPS e tiles de outros mapas | Importação reproduzível, projeção/escala conferidas e gravação apenas no destino escolhido |
+| Verificação do mapa | Encontrar arquivos ausentes, splines desconectadas, paradas fora de caminhos e IDs conflitantes | Relatório acionável e não destrutivo; nenhuma correção silenciosa |
+| Salvamento, recuperação e compartilhamento | Autosave, recuperação após falha, versões anteriores, cópia/exportação | Gravação segura, backup recuperável e teste de interrupção/round-trip |
+| Desempenho e diagnóstico | Cenas grandes, medição de renderização e erros visíveis | Testes de mapas pequenos e grandes, logs úteis e ausência de travamentos silenciosos |
+| Interface e acessibilidade de uso | Busca de comandos, atalhos consistentes, painéis claros e escala de interface | Ações principais fáceis de encontrar, sem depender de sequência obscura de cliques |
+
+### Regra para declarar paridade
+
+Cada recurso será marcado internamente como **equivalente**, **parcial**, **ausente** ou **não aplicável**, com evidência de código e teste. "Equivalente" exige que a ação funcione em mapa real e que os dados sobrevivam a salvar, fechar e reabrir. Recursos do openMapper que ainda não existem no Native serão tratados como trabalho de implementação, não como suporte presumido. A prioridade será: fluxo de edição básico e viewport, estradas/junções, objetos e terreno, depois lógica/importação e ferramentas de qualidade.
