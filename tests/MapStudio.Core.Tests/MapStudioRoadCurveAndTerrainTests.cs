@@ -241,6 +241,87 @@ public sealed class MapStudioRoadCurveAndTerrainTests
     }
 
     [Fact]
+    public async Task RoadTerrainConformFollowsAscendingAndDescendingRoadProfiles()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-slope-terrain-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root,
+                    includeTerrain: true,
+                    terrainHeight: 25);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            var ascending =
+                new MapStudioRoadBatchPlacement(
+                    1,
+                    "ascending-road",
+                    1,
+                    tilePath,
+                    0,
+                    0,
+                    150,
+                    50,
+                    0,
+                    100,
+                    MapStudioStandardRoadCatalog.RoadTwoLane.RelativePath,
+                    false,
+                    false)
+                {
+                    RadiusMeters = 0,
+                    StartHeightMeters = 5,
+                    GradientStartPercent = 10,
+                    GradientEndPercent = 10,
+                    PhysicalWidthMeters = 7
+                };
+
+            var result =
+                await new MapStudioRoadTerrainConformBatchApplier()
+                    .ApplyAsync(
+                        root,
+                        mapDirectory,
+                        [ascending]);
+
+            Assert.True(result.ChangedSamples > 0);
+
+            var terrain =
+                await new OmsiTerrainReader()
+                    .ReadAsync(tilePath + ".terrain");
+
+            var sampleCount = terrain.CellCount + 1;
+            var halfwayAlongRoadIndex = 20 * sampleCount + 30;
+
+            // 10% grade over 50 m raises the road from 5 m to 10 m.
+            // Terrain is kept 12 cm below the road surface to avoid covering it.
+            Assert.InRange(
+                terrain.Heights[halfwayAlongRoadIndex],
+                9.879f,
+                9.881f);
+
+            Assert.True(
+                File.Exists(
+                    Assert.Single(result.Tiles).BackupPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void RoadArcGeometryRoundTripsCurvedEndpoint()
     {
         var start =
