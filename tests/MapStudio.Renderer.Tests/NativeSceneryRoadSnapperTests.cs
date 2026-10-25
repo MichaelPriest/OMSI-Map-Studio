@@ -219,6 +219,69 @@ public sealed class NativeSceneryRoadSnapperTests
     }
 
 
+    [Theory]
+    [InlineData(float.NaN, 0f, 10f)]
+    [InlineData(20f, float.PositiveInfinity, 10f)]
+    [InlineData(20f, 0f, float.NegativeInfinity)]
+    public void FindNearestRejectsNonFiniteWorldCoordinates(
+        float x,
+        float y,
+        float z)
+    {
+        var road =
+            CreateSpline(
+                id: 14,
+                length: 100,
+                radius: 0,
+                rotation: 0,
+                heightSpline: false);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [],
+                [],
+                [road],
+                []);
+
+        Assert.Null(
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    scene,
+                    new Vector3(x, y, z),
+                    8));
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(0.0)]
+    [InlineData(-1.0)]
+    public void FindNearestRejectsInvalidMaximumDistance(
+        double maximumDistance)
+    {
+        var road =
+            CreateSpline(
+                id: 15,
+                length: 100,
+                radius: 0,
+                rotation: 0,
+                heightSpline: false);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [],
+                [],
+                [road],
+                []);
+
+        Assert.Null(
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    scene,
+                    new Vector3(2, 0, 10),
+                    maximumDistance));
+    }
+
     private static NativeSplineEntity
         CreateSpline(
             int id,
