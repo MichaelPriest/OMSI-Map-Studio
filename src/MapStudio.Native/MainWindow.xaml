@@ -3984,8 +3984,8 @@
                                         ToolTipService.ToolTip="Aumentar a cota final pelo passo selecionado; permite rampas, pontes e viadutos"
                                         Click="OnRoadElevationUpClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Terreno ↕ via"
-                                        ToolTipService.ToolTip="Fazer o terreno acompanhar a spline selecionada usando largura e transição configuradas no Inspector"
+                                        Content="Corrigir terreno ↕ via"
+                                        ToolTipService.ToolTip="Ajusta o terreno à spline selecionada usando largura, transição e folga abaixo da pista configuradas no Inspector"
                                         Click="OnConformTerrainToSelectedSplineClick" />
                                 <ComboBox x:Name="RoadElevationStepBox"
                                           Width="72"
@@ -5021,8 +5021,8 @@
                                                ValueChanged="OnTerrainSplinePreviewValueChanged" />
                                 </Grid>
                                 <NumberBox x:Name="TerrainSplineVerticalOffsetBox"
-                                           Header="Offset vertical do terreno (m)"
-                                           Value="0"
+                                           Header="Folga abaixo da via (m)"
+                                           Value="-0.12"
                                            Minimum="-20"
                                            Maximum="20"
                                            SmallChange="0.05"
