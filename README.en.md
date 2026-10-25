@@ -84,3 +84,9 @@ The official technical and functional direction is documented in:
 - [Roadmap técnico e funcional — Português](docs/pt-BR/ROADMAP.md)
 
 The roadmap defines the retained stack, Asset Index/cache, tile streaming, original-editor parity, Traffic Rules, paths, tracks/trips, timetables, signals, rail, geodata, and the criteria for considering Map Studio a functional replacement for the original editor.
+
+
+## Repository folder organization
+
+- [Repository structure and organization rules](docs/en/REPOSITORY_STRUCTURE.md)
+- [Estrutura do repositório — Português](docs/pt-BR/REPOSITORY_STRUCTURE.md)
