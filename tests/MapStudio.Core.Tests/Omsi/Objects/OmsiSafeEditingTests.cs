@@ -4,7 +4,7 @@ using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Maps;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi.Objects;
 
 public sealed class OmsiSafeEditingTests
 {
