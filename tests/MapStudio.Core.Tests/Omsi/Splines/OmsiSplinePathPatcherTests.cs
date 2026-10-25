@@ -3,7 +3,7 @@ using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Splines;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi.Splines;
 
 public sealed class OmsiSplinePathPatcherTests
 {
