@@ -3,7 +3,7 @@ using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Scenery;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi.Scenery;
 
 public sealed class OmsiSceneryTrafficLightPatcherTests
 {
