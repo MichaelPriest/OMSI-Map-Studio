@@ -2,7 +2,7 @@ using System.Text;
 using MapStudio.Core.Omsi.Splines;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi.Splines;
 
 public sealed class OmsiSplineDefinitionTests
 {
