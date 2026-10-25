@@ -285,12 +285,35 @@ public sealed class MapStudioRoadCurveAndTerrainTests
                     PhysicalWidthMeters = 7
                 };
 
+            var descending =
+                new MapStudioRoadBatchPlacement(
+                    2,
+                    "descending-road",
+                    2,
+                    tilePath,
+                    0,
+                    0,
+                    180,
+                    50,
+                    0,
+                    100,
+                    MapStudioStandardRoadCatalog.RoadTwoLane.RelativePath,
+                    false,
+                    false)
+                {
+                    RadiusMeters = 0,
+                    StartHeightMeters = 15,
+                    GradientStartPercent = -10,
+                    GradientEndPercent = -10,
+                    PhysicalWidthMeters = 7
+                };
+
             var result =
                 await new MapStudioRoadTerrainConformBatchApplier()
                     .ApplyAsync(
                         root,
                         mapDirectory,
-                        [ascending]);
+                        [ascending, descending]);
 
             Assert.True(result.ChangedSamples > 0);
 
@@ -301,8 +324,19 @@ public sealed class MapStudioRoadCurveAndTerrainTests
             var sampleCount = terrain.CellCount + 1;
             var halfwayAlongRoadIndex = 20 * sampleCount + 30;
 
-            // 10% grade over 50 m raises the road from 5 m to 10 m.
-            // Terrain is kept 12 cm below the road surface to avoid covering it.
+            // At 75 m along the ascending road, the 10% grade reaches 7.5 m.
+            // The descending road starts at 15 m and reaches 12.5 m at the same station.
+            // Terrain is kept 12 cm below each road surface to avoid covering it.
+            Assert.InRange(
+                terrain.Heights[15 * sampleCount + 30],
+                7.379f,
+                7.381f);
+
+            Assert.InRange(
+                terrain.Heights[15 * sampleCount + 36],
+                12.379f,
+                12.381f);
+
             Assert.InRange(
                 terrain.Heights[halfwayAlongRoadIndex],
                 9.879f,
