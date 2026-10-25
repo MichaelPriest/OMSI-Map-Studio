@@ -86,10 +86,10 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceSmootherTests.cs"
       - "tests/MapStudio.Core.Tests/Omsi/Splines/OmsiSplineTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTileContentCacheTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileGridTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileContentCacheTests.cs"
       - "tests/MapStudio.Core.Tests/Omsi/OmsiTerrainBorderStitcherTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileCreationRoundTripTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeTileAdjacencyTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointSnapFinderTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs"
@@ -627,7 +627,7 @@ jobs:
           $stitcher = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
-          $roundTrip = Get-Content tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs -Raw
+          $roundTrip = Get-Content tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileCreationRoundTripTests.cs -Raw
 
           foreach ($required in @(
             'TileSize = 300.0',
