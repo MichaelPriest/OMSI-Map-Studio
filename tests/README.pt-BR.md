@@ -17,6 +17,6 @@
 
 ## Próxima reorganização
 
-A migração incremental agora organiza nove arquivos em `MapStudio.Core.Tests/Omsi/`. Além dos seis arquivos já migrados, `OmsiTerrainBorderStitcherTests.cs`, `OmsiTerrainEditingTests.cs` e `OmsiTerrainTextureMaskTests.cs` foram movidos para a pasta OMSI e tiveram seus namespaces atualizados; os testes existentes foram preservados. Os workflows `ci.yml`, `native-ci.yml` e `core-editing-tests.yml` filtram `tests/**` ou `tests/MapStudio.Core.Tests/**`, portanto as novas localizações permanecem cobertas por esses gatilhos. A validação da nova movimentação depende da conclusão do CI.
+A migração incremental organiza nove testes de terreno/leitura em `MapStudio.Core.Tests/Omsi/` e dez testes de horários/viagens em `MapStudio.Core.Tests/Omsi/Timetables/`. Os arquivos de horários foram movidos sem alterar os casos de teste e seus namespaces passaram a `MapStudio.Core.Tests.Omsi.Timetables`. Os workflows `ci.yml`, `native-ci.yml` e `core-editing-tests.yml` filtram `tests/**` ou `tests/MapStudio.Core.Tests/**`; o projeto usa inclusão automática de arquivos C#, sem lista manual no `.csproj`. A execução dos workflows do novo commit ainda precisa confirmar a validação.
 
 O projeto Core.Tests ainda tem muitos arquivos diretamente na raiz. Continue por domínio, conferindo todos os caminhos explícitos em workflows, scripts e documentação; não mova todo o conjunto de uma vez.
