@@ -17,4 +17,6 @@
 
 ## Next reorganization
 
-The Core.Tests project has many files directly in its root. Migration should be incremental and domain-based, starting with one coherent group and checking all explicit paths in `native-preview-release.yml`. The existing `IO/` folder is an example of grouping; do not move the entire suite at once.
+The first migration moved `OmsiWaterReaderWriterTests.cs` into `MapStudio.Core.Tests/Omsi/` and updated its namespace while preserving all five existing tests. The `ci.yml`, `native-ci.yml`, and `core-editing-tests.yml` workflows filter `tests/**` or `tests/MapStudio.Core.Tests/**`, so the new location remains covered by those triggers. Compilation still needs confirmation in Windows CI.
+
+Core.Tests still has many files directly in its root. Continue incrementally by domain, checking explicit paths in workflows, scripts, and documentation; do not move the entire suite at once.
