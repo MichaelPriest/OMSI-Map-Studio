@@ -1,7 +1,7 @@
 using MapStudio.Core.Omsi.Timetables;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi.Timetables;
 
 public sealed class OmsiTimetableProfileEditorTests
 {
