@@ -19,4 +19,4 @@
 
 The incremental migration organizes nine terrain/reader tests in `MapStudio.Core.Tests/Omsi/` and ten timetable/trip tests in `MapStudio.Core.Tests/Omsi/Timetables/`. The timetable files were moved without changing test cases, and their namespaces now use `MapStudio.Core.Tests.Omsi.Timetables`. The `ci.yml`, `native-ci.yml`, and `core-editing-tests.yml` workflows filter `tests/**` or `tests/MapStudio.Core.Tests/**`; the project uses automatic C# file inclusion rather than a manual `.csproj` list. Workflow runs for the new commit still need to confirm validation.
 
-Core.Tests still has many files directly in its root. Continue incrementally by domain, checking explicit paths in workflows, scripts, and documentation; do not move the entire suite at once.
+Seven spline and spline-path tests now live in `MapStudio.Core.Tests/Omsi/Splines/`, using the `MapStudio.Core.Tests.Omsi.Splines` namespace. The explicit `OmsiSplineTests.cs` path in `native-preview-release.yml` was updated. Core.Tests still has many files directly in its root; continue incrementally by domain and verify references before each move.
