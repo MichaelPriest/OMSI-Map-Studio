@@ -2,7 +2,7 @@ using System.Numerics;
 using MapStudio.Core.Omsi.Maps;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi;
 
 public sealed class OmsiTerrainEditingTests
 {

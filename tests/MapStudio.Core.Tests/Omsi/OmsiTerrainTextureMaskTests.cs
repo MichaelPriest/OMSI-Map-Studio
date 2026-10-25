@@ -3,7 +3,7 @@ using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Textures;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi;
 
 public sealed class OmsiTerrainTextureMaskTests
 {
