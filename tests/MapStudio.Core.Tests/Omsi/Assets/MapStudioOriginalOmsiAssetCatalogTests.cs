@@ -1,7 +1,7 @@
 using MapStudio.Core.Omsi.Indexing;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi.Assets;
 
 public sealed class MapStudioOriginalOmsiAssetCatalogTests
 {
