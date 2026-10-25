@@ -85,7 +85,7 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioRoadGraphBuilderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceSmootherTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Splines/OmsiSplineTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileContentCacheTests.cs"
       - "tests/MapStudio.Core.Tests/Omsi/OmsiTerrainBorderStitcherTests.cs"
