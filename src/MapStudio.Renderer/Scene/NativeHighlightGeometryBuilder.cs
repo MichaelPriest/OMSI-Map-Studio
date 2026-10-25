@@ -17,9 +17,11 @@ public static class NativeHighlightGeometryBuilder
         if (
             range.VertexCount <= 0 ||
             range.StartVertex < 0 ||
-            range.StartVertex +
-                range.VertexCount >
-            sourceVertices.Length)
+            range.StartVertex >
+                sourceVertices.Length ||
+            range.VertexCount >
+                sourceVertices.Length -
+                range.StartVertex)
         {
             return Array.Empty<
                 NativeMapVertex>();

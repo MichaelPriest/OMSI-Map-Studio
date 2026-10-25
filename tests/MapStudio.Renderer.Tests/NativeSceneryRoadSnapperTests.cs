@@ -189,6 +189,36 @@ public sealed class NativeSceneryRoadSnapperTests
                     8));
     }
 
+    [Fact]
+    public void FindNearestRejectsNonFiniteWorldHeight()
+    {
+        var road =
+            CreateSpline(
+                id: 13,
+                length: 100,
+                radius: 0,
+                rotation: 0,
+                heightSpline: false);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [],
+                [],
+                [road],
+                []);
+
+        Assert.Null(
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    scene,
+                    new Vector3(
+                        20,
+                        float.NaN,
+                        10),
+                    8));
+    }
+
+
     private static NativeSplineEntity
         CreateSpline(
             int id,

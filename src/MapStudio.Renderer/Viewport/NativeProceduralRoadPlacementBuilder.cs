@@ -251,6 +251,13 @@ public sealed class NativeProceduralRoadPlacementBuilder
 
 
     private static bool HasCompatibleGradeSeparation(
+        NativeSplinePlacementRequest first,
+        NativeSplinePlacementRequest second) =>
+        first.SourceBridge == second.SourceBridge &&
+        first.SourceTunnel == second.SourceTunnel &&
+        (first.SourceLayer ?? 0) == (second.SourceLayer ?? 0);
+
+    private static bool HasCompatibleGradeSeparation(
         MapStudioRoadGraphSegment first,
         MapStudioRoadGraphSegment second) =>
         first.Bridge ==
@@ -1420,7 +1427,12 @@ public sealed class NativeProceduralRoadPlacementBuilder
                     bindings[
                         candidateIndex]
                         .StartNodeId !=
-                    current.EndNodeId)
+                    current.EndNodeId ||
+                    !HasCompatibleGradeSeparation(
+                        current.Request,
+                        bindings[
+                            candidateIndex]
+                            .Request))
                 {
                     continue;
                 }

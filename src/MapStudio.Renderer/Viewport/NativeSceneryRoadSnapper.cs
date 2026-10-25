@@ -24,6 +24,8 @@ public static class NativeSceneryRoadSnapper
             !float.IsFinite(
                 worldPoint.X) ||
             !float.IsFinite(
+                worldPoint.Y) ||
+            !float.IsFinite(
                 worldPoint.Z) ||
             !double.IsFinite(
                 maximumDistance) ||
@@ -93,6 +95,11 @@ public static class NativeSceneryRoadSnapper
                     DistanceSquaredXZ(
                         worldPoint,
                         frame.Center);
+
+                if (!double.IsFinite(squared))
+                {
+                    continue;
+                }
 
                 if (
                     squared <

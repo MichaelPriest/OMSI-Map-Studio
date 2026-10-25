@@ -72,6 +72,31 @@ public sealed class NativeHighlightGeometryBuilderTests
     }
 
     [Fact]
+    public void BuildRejectsRangeThatWouldOverflowWhenAdded()
+    {
+        var source =
+            new[]
+            {
+                new NativeMapVertex(
+                    Vector3.Zero,
+                    Vector4.One)
+            };
+
+        var result =
+            NativeHighlightGeometryBuilder
+                .Build(
+                    source,
+                    new NativeTriangleRange(
+                        1,
+                        int.MaxValue),
+                    Vector3.One,
+                    Vector4.One,
+                    0.05f);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public void BuildRejectsRangeOutsideSource()
     {
         var result =
