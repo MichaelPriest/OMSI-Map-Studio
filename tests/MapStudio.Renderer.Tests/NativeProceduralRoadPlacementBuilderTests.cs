@@ -1295,6 +1295,106 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
             result.SkippedSegments);
     }
     [Fact]
+    public void BuilderDoesNotLinkRoadsAcrossGradeSeparation()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var profile =
+            MapStudioStandardRoadCatalog
+                .RoadTwoLane;
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "ground-road",
+                            [
+                                new(20, 30),
+                                new(80, 30)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters,
+                            Layer: 0,
+                            SourceTopologyAuthoritative: true),
+                        new MapStudioRoadTrace(
+                            "bridge-road",
+                            [
+                                new(80, 30),
+                                new(120, 30)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters,
+                            Layer: 1,
+                            Bridge: true,
+                            SourceTopologyAuthoritative: true)
+                    ]);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            2,
+            result.Requests.Count);
+
+        Assert.DoesNotContain(
+            result.Links,
+            link =>
+                (
+                    link.PreviousRequestIndex == 0 &&
+                    link.NextRequestIndex == 1
+                ) ||
+                (
+                    link.PreviousRequestIndex == 1 &&
+                    link.NextRequestIndex == 0
+                ));
+    }
+
+    [Fact]
     public void BuilderLinksSequentialDegreeTwoTraces()
     {
         var reference =
