@@ -17,6 +17,6 @@
 
 ## Próxima reorganização
 
-A migração inicial moveu `OmsiWaterReaderWriterTests.cs`, `OmsiTerrainReaderTests.cs` e `OmsiTerrainRenderDataReaderTests.cs` para `MapStudio.Core.Tests/Omsi/`, atualizando os namespaces e preservando os 13 testes existentes. Os workflows `ci.yml`, `native-ci.yml` e `core-editing-tests.yml` filtram `tests/**` ou `tests/MapStudio.Core.Tests/**`, portanto as novas localizações permanecem cobertas por esses gatilhos. A compilação ainda precisa ser confirmada no CI Windows.
+A migração incremental moveu cinco arquivos para `MapStudio.Core.Tests/Omsi/`: `OmsiWaterReaderWriterTests.cs`, `OmsiTerrainReaderTests.cs`, `OmsiTerrainRenderDataReaderTests.cs`, `OmsiGroundTextureTests.cs` e `OmsiTerrainDiagnosticsTests.cs`. Os namespaces foram atualizados e os 21 casos existentes (`Fact`/`Theory`) foram preservados. Os workflows `ci.yml`, `native-ci.yml` e `core-editing-tests.yml` filtram `tests/**` ou `tests/MapStudio.Core.Tests/**`, portanto as novas localizações permanecem cobertas por esses gatilhos. A compilação ainda precisa ser confirmada no CI Windows.
 
 O projeto Core.Tests ainda tem muitos arquivos diretamente na raiz. Continue por domínio, conferindo todos os caminhos explícitos em workflows, scripts e documentação; não mova todo o conjunto de uma vez.
