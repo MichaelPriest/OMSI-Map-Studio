@@ -84,3 +84,9 @@ A direção técnica e funcional oficial está documentada em:
 - [Technical and functional roadmap — English](docs/en/ROADMAP.md)
 
 O roadmap define a stack mantida, Asset Index/cache, streaming por tiles, paridade com o editor OMSI, Traffic Rules, paths, tracks/trips, timetables, sinais, ferrovia, geodados e critérios para considerar o Map Studio um substituto funcional do editor original.
+
+
+## Organização do repositório
+
+- [Estrutura de pastas e regras de organização](docs/pt-BR/REPOSITORY_STRUCTURE.md)
+- [Repository structure — English](docs/en/REPOSITORY_STRUCTURE.md)
