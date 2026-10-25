@@ -9,6 +9,6 @@ This directory contains the English release notes for OMSI Map Studio.
 
 ## Test-build notes
 
-Files named `v0.2.0-alpha.5-test.*-native.md` are sequential validation snapshots, not separate stable releases. The `test.10.N` family records iterative builds from the native preview workflow. Keep these notes for traceability, but use the latest validated build and the GitHub Actions run as the source of truth for whether a build passed.
+The [latest numbered Test 10 note currently present in this branch](./v0.2.0-alpha.5-test.10.143-native.md) is a documentation pointer, **not proof that its build passed**. Check the [Native Preview Release workflow](../../../.github/workflows/native-preview-release.yml) and its specific GitHub Actions run for actual validation status.
 
-When adding new notes, prefer one summary per milestone and link detailed CI logs from the release/workflow page instead of creating a new permanent document for every internal test iteration.
+Files named `v0.2.0-alpha.5-test.*-native.md` are sequential validation snapshots, not separate stable releases. Preserve them for traceability, but avoid creating a permanent document for every internal iteration. Prefer one summary per milestone with links to the relevant CI logs.
