@@ -39,9 +39,9 @@ on:
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileContentCache.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/OmsiTerrainEditingTests.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainTextureMaskPainter.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTerrainTextureMaskTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/OmsiTerrainTextureMaskTests.cs"
       - "src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs"
       - "src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs"
@@ -85,11 +85,11 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioRoadGraphBuilderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceSmootherTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTileContentCacheTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTerrainBorderStitcherTests.cs"
-      - "tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Splines/OmsiSplineTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileGridTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileContentCacheTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/OmsiTerrainBorderStitcherTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileCreationRoundTripTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeTileAdjacencyTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointSnapFinderTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs"
@@ -112,150 +112,7 @@ on:
       - "tests/MapStudio.Renderer.Tests/NativeReferenceOverlayGeometryBuilderTests.cs"
       - "src/MapStudio.Renderer/Scene/NativePickingProxyGeometryBuilder.cs"
       - "tools/build_user_manual_pdf.py"
-      - "docs/pt-BR/USER_MANUAL.md"
-      - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.69-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.69-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.70-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.70-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.71-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.72-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.72-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.73-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.73-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.74-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.74-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.75-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.75-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.76-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.76-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.77-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.77-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.78-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.78-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.79-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.79-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.80-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.80-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.81-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.81-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.82-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.82-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.83-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.83-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.84-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.84-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.85-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.85-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.86-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.86-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.87-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.87-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.88-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.88-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.89-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.89-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.90-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.90-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.91-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.91-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.92-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.92-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.93-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.93-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.94-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.94-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.95-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.95-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.96-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.96-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.97-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.97-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.98-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.98-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.99-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.99-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.100-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.100-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.101-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.101-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.102-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.102-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.103-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.103-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.104-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.104-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.105-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.105-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.109-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.109-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.110-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.110-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.111-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.111-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.112-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.112-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.113-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.113-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.114-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.114-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.115-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.115-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.116-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.116-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.117-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.117-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.118-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.118-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.119-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.119-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.120-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.120-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.121-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.121-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.122-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.122-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.123-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.123-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.124-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.124-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.125-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.125-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.126-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.126-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.127-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.127-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.128-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.128-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.129-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.129-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.131-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.131-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.132-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.132-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.133-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.133-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.134-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.134-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.135-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.135-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.136-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.136-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.137-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.137-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.138-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.138-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.139-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.139-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.140-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.140-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.141-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.141-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.142-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.142-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.143-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.143-native.md"
+      - "docs/**"
       - "src/MapStudio.Core/Generation/Roads/MapStudioRoadArcGeometry.cs"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioRoadTerrainConformBatchApplier.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadCurveAndTerrainTests.cs"
@@ -266,8 +123,8 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioOmsiJunctionResolverTests.cs"
       - "src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs"
       - "src/MapStudio.Core/Omsi/Indexing/MapStudioOriginalOmsiAssetCatalog.cs"
-      - "tests/MapStudio.Core.Tests/OmsiAssetLibraryClassifierTests.cs"
-      - "tests/MapStudio.Core.Tests/MapStudioOriginalOmsiAssetCatalogTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Assets/OmsiAssetLibraryClassifierTests.cs"
+      - "tests/MapStudio.Core.Tests/Omsi/Assets/MapStudioOriginalOmsiAssetCatalogTests.cs"
       - "src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs"
       - "src/MapStudio.Core/Settings/MapStudioUserSettingsStore.cs"
@@ -770,7 +627,7 @@ jobs:
           $stitcher = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
-          $roundTrip = Get-Content tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs -Raw
+          $roundTrip = Get-Content tests/MapStudio.Core.Tests/Omsi/Tiles/OmsiTileCreationRoundTripTests.cs -Raw
 
           foreach ($required in @(
             'TileSize = 300.0',
@@ -2224,7 +2081,7 @@ jobs:
           $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $painter = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainTextureMaskPainter.cs -Raw
-          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainTextureMaskTests.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/Omsi/OmsiTerrainTextureMaskTests.cs -Raw
 
           foreach ($required in @(
             'TerrainShapeStartButton',
@@ -2268,7 +2125,7 @@ jobs:
           $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
-          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/Omsi/OmsiTerrainEditingTests.cs -Raw
 
           foreach ($required in @(
             'TerrainSplineHalfWidthBox',
@@ -2374,7 +2231,7 @@ jobs:
           $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
-          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/Omsi/OmsiTerrainEditingTests.cs -Raw
 
           foreach ($required in @(
             'TerrainShapeLevelButton',
@@ -2491,7 +2348,7 @@ jobs:
           $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
           $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
           $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
-          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/Omsi/OmsiTerrainEditingTests.cs -Raw
 
           foreach ($required in @(
             'TerrainSplinePreviewLayer',
@@ -5325,10 +5182,10 @@ jobs:
           $window = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $classifier = Get-Content src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs -Raw
-          $classifierTests = Get-Content tests/MapStudio.Core.Tests/OmsiAssetLibraryClassifierTests.cs -Raw
+          $classifierTests = Get-Content tests/MapStudio.Core.Tests/Omsi/Assets/OmsiAssetLibraryClassifierTests.cs -Raw
           $tunnelTests = Get-Content tests/MapStudio.Core.Tests/MapStudioTunnelSplineGeneratorTests.cs -Raw
-          $trackTests = Get-Content tests/MapStudio.Core.Tests/OmsiTimetableTrackWriterTests.cs -Raw
-          $trafficTests = Get-Content tests/MapStudio.Core.Tests/OmsiSceneryTrafficLightPatcherTests.cs -Raw
+          $trackTests = Get-Content tests/MapStudio.Core.Tests/Omsi/Timetables/OmsiTimetableTrackWriterTests.cs -Raw
+          $trafficTests = Get-Content tests/MapStudio.Core.Tests/Omsi/Scenery/OmsiSceneryTrafficLightPatcherTests.cs -Raw
 
           $visibleRoutes = @(
             @{ Pattern = '<Button[\s\S]*?Content="Validar mapa"[\s\S]*?Click="OnToolValidationClick"\s*/>'; Name = 'Selection -> Validate' },
@@ -5439,7 +5296,7 @@ jobs:
           $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs -Raw
           $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
           $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
-          $classifierTests = Get-Content tests/MapStudio.Core.Tests/OmsiAssetLibraryClassifierTests.cs -Raw
+          $classifierTests = Get-Content tests/MapStudio.Core.Tests/Omsi/Assets/OmsiAssetLibraryClassifierTests.cs -Raw
           $resolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs -Raw
           $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
 
@@ -5518,7 +5375,7 @@ jobs:
           $classifier = Get-Content src/MapStudio.Core/Omsi/Indexing/OmsiAssetLibraryClassifier.cs -Raw
           $resolver = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioOmsiConstructionAssetResolver.cs -Raw
           $furniture = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioStreetFurnitureAssetSuggester.cs -Raw
-          $catalogTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOriginalOmsiAssetCatalogTests.cs -Raw
+          $catalogTests = Get-Content tests/MapStudio.Core.Tests/Omsi/Assets/MapStudioOriginalOmsiAssetCatalogTests.cs -Raw
           $resolverTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOmsiConstructionAssetResolverTests.cs -Raw
           $furnitureTests = Get-Content tests/MapStudio.Core.Tests/MapStudioExtendedStreetFurnitureTests.cs -Raw
 
