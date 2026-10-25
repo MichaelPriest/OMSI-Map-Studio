@@ -241,6 +241,121 @@ public sealed class MapStudioRoadCurveAndTerrainTests
     }
 
     [Fact]
+    public async Task RoadTerrainConformFollowsAscendingAndDescendingRoadProfiles()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-slope-terrain-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root,
+                    includeTerrain: true,
+                    terrainHeight: 25);
+
+            var tilePath =
+                Path.Combine(
+                    mapDirectory,
+                    "tile_0_0.map");
+
+            var ascending =
+                new MapStudioRoadBatchPlacement(
+                    1,
+                    "ascending-road",
+                    1,
+                    tilePath,
+                    0,
+                    0,
+                    150,
+                    50,
+                    0,
+                    100,
+                    MapStudioStandardRoadCatalog.RoadTwoLane.RelativePath,
+                    false,
+                    false)
+                {
+                    RadiusMeters = 0,
+                    StartHeightMeters = 5,
+                    GradientStartPercent = 10,
+                    GradientEndPercent = 10,
+                    PhysicalWidthMeters = 7
+                };
+
+            var descending =
+                new MapStudioRoadBatchPlacement(
+                    2,
+                    "descending-road",
+                    2,
+                    tilePath,
+                    0,
+                    0,
+                    180,
+                    50,
+                    0,
+                    100,
+                    MapStudioStandardRoadCatalog.RoadTwoLane.RelativePath,
+                    false,
+                    false)
+                {
+                    RadiusMeters = 0,
+                    StartHeightMeters = 15,
+                    GradientStartPercent = -10,
+                    GradientEndPercent = -10,
+                    PhysicalWidthMeters = 7
+                };
+
+            var result =
+                await new MapStudioRoadTerrainConformBatchApplier()
+                    .ApplyAsync(
+                        root,
+                        mapDirectory,
+                        [ascending, descending]);
+
+            Assert.True(result.ChangedSamples > 0);
+
+            var terrain =
+                await new OmsiTerrainReader()
+                    .ReadAsync(tilePath + ".terrain");
+
+            var sampleCount = terrain.CellCount + 1;
+            var halfwayAlongRoadIndex = 20 * sampleCount + 30;
+
+            // At 75 m along the ascending road, the 10% grade reaches 7.5 m.
+            // The descending road starts at 15 m and reaches 12.5 m at the same station.
+            // Terrain is kept 12 cm below each road surface to avoid covering it.
+            Assert.InRange(
+                terrain.Heights[15 * sampleCount + 30],
+                7.379f,
+                7.381f);
+
+            Assert.InRange(
+                terrain.Heights[15 * sampleCount + 36],
+                12.379f,
+                12.381f);
+
+            Assert.InRange(
+                terrain.Heights[halfwayAlongRoadIndex],
+                9.879f,
+                9.881f);
+
+            Assert.True(
+                File.Exists(
+                    Assert.Single(result.Tiles).BackupPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void RoadArcGeometryRoundTripsCurvedEndpoint()
     {
         var start =
