@@ -9,6 +9,6 @@ Este diretório reúne as notas de versão em português do OMSI Map Studio.
 
 ## Notas de builds de teste
 
-Os arquivos `v0.2.0-alpha.5-test.*-native.md` são registros sequenciais de validação, não versões estáveis independentes. A família `test.10.N` documenta builds iterativas do workflow de prévia nativa. Preserve essas notas para rastreabilidade, mas use a build validada mais recente e a execução do GitHub Actions como fonte oficial do resultado dos testes.
+A [nota numerada mais recente da Test 10 presente neste branch](./v0.2.0-alpha.5-test.10.143-native.md) é apenas um link para documentação, **não comprova que a build passou**. Confira o [workflow Native Preview Release](../../../.github/workflows/native-preview-release.yml) e a execução específica no GitHub Actions para verificar o resultado real da validação.
 
-Ao adicionar notas novas, prefira um resumo por marco e links para os logs detalhados do CI na página da release/workflow, em vez de criar um documento permanente para cada iteração interna de teste.
+Os arquivos `v0.2.0-alpha.5-test.*-native.md` são registros sequenciais de validação, não versões estáveis independentes. Preserve-os para rastreabilidade, mas evite criar um documento permanente para cada iteração interna. Prefira um resumo por marco com links para os logs relevantes do CI.
