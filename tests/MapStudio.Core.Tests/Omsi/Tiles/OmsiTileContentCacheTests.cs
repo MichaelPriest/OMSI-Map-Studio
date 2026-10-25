@@ -1,7 +1,7 @@
 using MapStudio.Core.Omsi.Maps;
 using Xunit;
 
-namespace MapStudio.Core.Tests;
+namespace MapStudio.Core.Tests.Omsi.Tiles;
 
 public sealed class OmsiTileContentCacheTests
 {
