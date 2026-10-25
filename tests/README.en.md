@@ -17,6 +17,6 @@
 
 ## Next reorganization
 
-The incremental migration moved five files into `MapStudio.Core.Tests/Omsi/`: `OmsiWaterReaderWriterTests.cs`, `OmsiTerrainReaderTests.cs`, `OmsiTerrainRenderDataReaderTests.cs`, `OmsiGroundTextureTests.cs`, and `OmsiTerrainDiagnosticsTests.cs`. Namespaces were updated and all 21 existing `Fact`/`Theory` cases were preserved. The `ci.yml`, `native-ci.yml`, and `core-editing-tests.yml` workflows filter `tests/**` or `tests/MapStudio.Core.Tests/**`, so the new locations remain covered by those triggers. Compilation still needs confirmation in Windows CI.
+The incremental migration moved six files into `MapStudio.Core.Tests/Omsi/`: `OmsiWaterReaderWriterTests.cs`, `OmsiTerrainReaderTests.cs`, `OmsiTerrainRenderDataReaderTests.cs`, `OmsiGroundTextureTests.cs`, and `OmsiTerrainDiagnosticsTests.cs`, and `OmsiAttachmentReaderTests.cs`. Namespaces were updated and all 23 existing `Fact`/`Theory` cases were preserved. The `ci.yml`, `native-ci.yml`, and `core-editing-tests.yml` workflows filter `tests/**` or `tests/MapStudio.Core.Tests/**`, so the new locations remain covered by those triggers. Compilation still needs confirmation in Windows CI.
 
 Core.Tests still has many files directly in its root. Continue incrementally by domain, checking explicit paths in workflows, scripts, and documentation; do not move the entire suite at once.
