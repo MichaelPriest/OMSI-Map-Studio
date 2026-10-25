@@ -362,7 +362,117 @@ public sealed class MapStudioWorkspaceBootstrapperTests
         }
     }
 
-[Fact]
+    [Theory]
+    [InlineData("", "Cidade")]
+    [InlineData("Cidade:Teste", "Cidade")]
+    [InlineData("Cidade/Teste", "Cidade")]
+    [InlineData(@"Cidade\Teste", "Cidade")]
+    [InlineData("Cidade", "")]
+    public async Task CreateBlankMapRejectsInvalidNames(
+        string directoryName,
+        string displayName)
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-InvalidNames-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => new MapStudioWorkspaceBootstrapper()
+                    .CreateBlankMapAsync(
+                        root,
+                        directoryName,
+                        displayName));
+
+            Assert.False(Directory.Exists(root));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task CreateBlankMapRejectsOverlongNames()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-LongNames-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var bootstrapper = new MapStudioWorkspaceBootstrapper();
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => bootstrapper.CreateBlankMapAsync(
+                    root,
+                    new string('M', 81),
+                    "Cidade"));
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => bootstrapper.CreateBlankMapAsync(
+                    root,
+                    "Cidade",
+                    new string('N', 121)));
+
+            Assert.False(Directory.Exists(root));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task CreateBlankMapDoesNotOverwriteExistingMap()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-NoOverwrite-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var bootstrapper = new MapStudioWorkspaceBootstrapper();
+            var mapPath = await bootstrapper.CreateBlankMapAsync(
+                root,
+                "Cidade_Protegida",
+                "Cidade Protegida");
+            var globalPath = Path.Combine(mapPath, "global.cfg");
+            var originalBytes = await File.ReadAllBytesAsync(globalPath);
+
+            await Assert.ThrowsAsync<IOException>(
+                () => bootstrapper.CreateBlankMapAsync(
+                    root,
+                    "Cidade_Protegida",
+                    "Nome Diferente"));
+
+            Assert.Equal(
+                originalBytes,
+                await File.ReadAllBytesAsync(globalPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task CreateBlankMapProducesMapReadableByCore()
     {
         var root =
