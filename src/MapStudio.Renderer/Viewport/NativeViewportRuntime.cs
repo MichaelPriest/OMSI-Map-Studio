@@ -104,7 +104,8 @@ public sealed class NativeViewportRuntime : IDisposable
     private bool _splinePlacementActive;
     private bool _splinePlacementCurved;
     private bool _splinePlacementIsHeight;
-    private bool _splineEasyRoadEnabled;
+    // Start road creation in the two-click workflow; height splines opt out explicitly.
+    private bool _splineEasyRoadEnabled = true;
     private double _splineEasyRoadCurveOffset;
     private string? _placementSplinePath;
     private NativeSplineAsset? _placementSplineAsset;
