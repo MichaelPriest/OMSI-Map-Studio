@@ -30,14 +30,12 @@ public sealed class NativeAssetPreviewGeometryBuilder
             asset);
 
         if (
-            asset.Meshes.Count == 0 &&
-            asset.Tree is null)
+            string.Equals(asset.ErrorCode, "scoPathInvalid", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(asset.ErrorCode, "scoMissing", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(asset.FullPath))
         {
-            return
-                NativeAssetPreviewGeometry
-                    .Error(
-                        asset.ErrorCode ??
-                        "previewNoRenderableMeshes");
+            return NativeAssetPreviewGeometry.Error(
+                asset.ErrorCode ?? "previewScenerySourceMissing");
         }
 
         var vertices =
@@ -115,13 +113,43 @@ public sealed class NativeAssetPreviewGeometryBuilder
             }
         }
 
-        return
-            CreateResult(
-                vertices,
-                meshCount,
-                vertices.Count == 0
-                    ? "previewNoTriangles"
-                    : null);
+        if (vertices.Count == 0)
+        {
+            // A valid .sco can contain legacy/unsupported mesh formats or
+            // light-only definitions. Keep placement available with a clear
+            // 3D marker rather than silently refusing to add the object.
+            return BuildSceneryPlacementFallback();
+        }
+
+        return CreateResult(
+            vertices,
+            meshCount,
+            errorCode: null);
+    }
+
+    private static NativeAssetPreviewGeometry BuildSceneryPlacementFallback()
+    {
+        var vertices = new List<NativeMapVertex>(36);
+        const float halfWidth = 0.35f;
+        const float height = 1.0f;
+        var left = new Vector3(-halfWidth, 0, -halfWidth);
+        var right = new Vector3(halfWidth, 0, -halfWidth);
+        var backRight = new Vector3(halfWidth, 0, halfWidth);
+        var backLeft = new Vector3(-halfWidth, 0, halfWidth);
+        var topLeft = new Vector3(-halfWidth, height, -halfWidth);
+        var topRight = new Vector3(halfWidth, height, -halfWidth);
+        var topBackRight = new Vector3(halfWidth, height, halfWidth);
+        var topBackLeft = new Vector3(-halfWidth, height, halfWidth);
+        var markerColor = new Vector4(1.0f, 0.55f, 0.12f, 1.0f);
+
+        AppendQuad(left, topLeft, topRight, right, markerColor, vertices);
+        AppendQuad(right, topRight, topBackRight, backRight, markerColor, vertices);
+        AppendQuad(backRight, topBackRight, topBackLeft, backLeft, markerColor, vertices);
+        AppendQuad(backLeft, topBackLeft, topLeft, left, markerColor, vertices);
+        AppendQuad(topLeft, topBackLeft, topBackRight, topRight, markerColor, vertices);
+        AppendQuad(left, backLeft, backRight, right, markerColor, vertices);
+
+        return CreateResult(vertices, sourceMeshCount: 0, errorCode: null);
     }
 
     public NativeAssetPreviewGeometry

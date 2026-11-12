@@ -248,6 +248,19 @@ internal sealed class NativeGpuTextureLoader
         if (
             string.Equals(
                 Path.GetExtension(path),
+                ".dds",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var dds = NativeDdsDecoder.TryDecodeFile(path);
+            if (dds is not null)
+            {
+                return CreateRgbaTexture(dds.Rgba, dds.Width, dds.Height);
+            }
+        }
+
+        if (
+            string.Equals(
+                Path.GetExtension(path),
                 ".tga",
                 StringComparison.OrdinalIgnoreCase))
         {

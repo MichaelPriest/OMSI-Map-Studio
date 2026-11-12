@@ -66,7 +66,10 @@ public sealed class NativeObjectTriangleGeometryBuilder
             IReadOnlyDictionary<
                 string,
                 NativeSceneryAsset>
-                assets)
+                assets,
+            IReadOnlyDictionary<
+                NativeObjectVisualVariantKey,
+                NativeObjectVisualVariant>? visualVariants = null)
     {
         ArgumentNullException.ThrowIfNull(
             scene);
@@ -121,6 +124,17 @@ public sealed class NativeObjectTriangleGeometryBuilder
                             scene,
                             entity);
 
+            NativeObjectVisualVariant? visualVariant = null;
+            if (visualVariants is not null)
+            {
+                visualVariants.TryGetValue(
+                    NativeObjectVisualVariantKey.From(entity),
+                    out visualVariant);
+            }
+
+            visualVariant ??=
+                NativeObjectVisualVariant.Original;
+
             var lodThresholds =
                 asset.Meshes
                     .Where(
@@ -164,6 +178,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     mesh,
                     asset.RenderType,
                     terrainOffset,
+                    visualVariant,
                     vertices,
                     pickingVertices,
                     materialBatches);
@@ -230,6 +245,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
         NativeSceneryMeshAsset mesh,
         string? renderType,
         double terrainOffset,
+        NativeObjectVisualVariant visualVariant,
         List<NativeMapVertex> output,
         List<NativeMapVertex>
             pickingOutput,
@@ -360,22 +376,31 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 continue;
             }
 
-            var color =
-                GetTriangleColor(
-                    geometry,
-                    triangle);
-
             var materialIndex =
                 GetTriangleMaterialIndex(
                     geometry,
                     triangle);
 
-            var texturePath =
+            var color =
+                NativeObjectVisualVariant.ApplyTint(
+                    GetTriangleColor(
+                        geometry,
+                        triangle),
+                    visualVariant.ColorTint);
+
+            var originalTexturePath =
                 hasUvs
                     ? GetMaterialTexturePath(
                         mesh,
                         materialIndex)
                     : null;
+
+            var texturePath =
+                visualVariant.TryGetTextureOverride(
+                    materialIndex,
+                    out var replacementTexturePath)
+                    ? replacementTexturePath
+                    : originalTexturePath;
 
             var nightTexturePath =
                 hasUvs

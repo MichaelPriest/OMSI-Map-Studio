@@ -213,7 +213,7 @@ public sealed class MapStudioWorkspaceBootstrapper
         catch (UnauthorizedAccessException exception)
         {
             throw new UnauthorizedAccessException(
-                $"Sem permissão para preparar a pasta de trabalho '{Path.GetFullPath(rootPath)}'. Selecione uma pasta gravável do seu usuário, como Documentos\\OMSI Map Studio\\Workspace, em vez da pasta protegida de instalação do OMSI.",
+                $"Sem permissão para preparar a pasta de trabalho '{Path.GetFullPath(rootPath)}'. Escolha uma pasta gravável fora de diretórios sincronizados pelo OneDrive e fora de 'Program Files'; o padrão recomendado fica em LocalAppData\\OMSI Map Studio\\Workspace.",
                 exception);
         }
 

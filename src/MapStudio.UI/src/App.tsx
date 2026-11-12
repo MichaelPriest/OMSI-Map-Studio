@@ -6691,7 +6691,11 @@ export function App() {
   ]);
 
   useEffect(() => {
+    // The library preview needs the profile itself before its textures can
+    // be discovered. Prioritize the item being previewed over map selection.
     const splinePath =
+      splineLibraryPreviewAsset?.splinePath ??
+      splinePlacementTemplate?.splinePath ??
       selectedSpline?.splinePath;
 
     if (
@@ -6728,6 +6732,8 @@ export function App() {
     loadingSplineFor,
     preloadingSplineProfileFor,
     selectedSpline,
+    splineLibraryPreviewAsset,
+    splinePlacementTemplate,
     splineProfilesByPath
   ]);
 
@@ -6811,12 +6817,15 @@ export function App() {
       return;
     }
 
+    // Asset-library previews must load their own materials even when
+    // another object remains selected in the map. Otherwise the preview
+    // geometry is rendered before its textures are ever requested.
     const sceneryObjectPath =
-      selectedObject
+      sceneryLibraryPreviewAsset
         ?.sceneryObjectPath ??
       placementAsset
         ?.sceneryObjectPath ??
-      sceneryLibraryPreviewAsset
+      selectedObject
         ?.sceneryObjectPath;
 
     if (!sceneryObjectPath) {
@@ -6982,12 +6991,14 @@ export function App() {
       return;
     }
 
+    // Prioritize the library preview's profile so its own textures are
+    // requested while the user browses, regardless of map selection.
     const splinePath =
-      selectedSpline
+      splineLibraryPreviewAsset
         ?.splinePath ??
       splinePlacementTemplate
         ?.splinePath ??
-      splineLibraryPreviewAsset
+      selectedSpline
         ?.splinePath;
 
     if (!splinePath) {
@@ -14754,6 +14765,48 @@ export function App() {
     loadMapCatalog();
   };
 
+  const handlePreviewNewMapSatellite = useCallback(() => {
+    const latitude = Number(newMapLatitude.replace(",", "."));
+    const longitude = Number(newMapLongitude.replace(",", "."));
+
+    if (
+      !bridgeAvailable ||
+      !googleApiKey.trim() ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      setError("Informe uma chave válida da API do Google e latitude/longitude válidas para visualizar a imagem de satélite.");
+      return;
+    }
+
+    setGoogleLatitude(String(latitude));
+    setGoogleLongitude(String(longitude));
+    setGoogleMapType("satellite");
+    setLoadingGoogleReference(true);
+    setGoogleReference(undefined);
+    setError(undefined);
+    setSaveNotice(undefined);
+
+    loadGoogleMapReference(googleApiKey.trim(), {
+      latitude,
+      longitude,
+      zoom: googleZoom,
+      mapType: "satellite",
+      width: 640,
+      height: 640
+    });
+  }, [
+    bridgeAvailable,
+    googleApiKey,
+    googleZoom,
+    newMapLatitude,
+    newMapLongitude
+  ]);
+
   const handleCreateCoordinateMap = () => {
     if (
       !rootPath ||
@@ -15604,6 +15657,46 @@ export function App() {
                   />
                 </label>
               </div>
+
+              <label>
+                <span>Chave da API do Google Maps (necessária para imagens de satélite)</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={googleApiKey}
+                  placeholder="Cole sua chave da API"
+                  onChange={(event) => setGoogleApiKey(event.target.value)}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="secondary-action"
+                disabled={loadingGoogleReference}
+                onClick={handlePreviewNewMapSatellite}
+              >
+                {loadingGoogleReference ? "Carregando satélite..." : "Visualizar área por satélite"}
+              </button>
+
+              {googleReference && (
+                <div className="coordinate-satellite-preview">
+                  <img
+                    src={`data:${googleReference.mimeType};base64,${googleReference.base64Data}`}
+                    alt="Imagem de satélite da região escolhida para o novo mapa"
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      maxHeight: 360,
+                      objectFit: "contain",
+                      borderRadius: 8,
+                      background: "#101820"
+                    }}
+                  />
+                  <small>
+                    Imagem de satélite · zoom {googleReference.zoom}. {googleReference.attribution}
+                  </small>
+                </div>
+              )}
 
               <button
                 type="button"
