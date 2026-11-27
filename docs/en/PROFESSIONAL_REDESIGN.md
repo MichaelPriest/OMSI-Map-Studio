@@ -13,3 +13,7 @@ Two desktop navigation rows, frequent actions near the menu, secondary actions g
 ## Stage 7 — grouped Road Studio
 
 Drawing, straight, curve, snap and continuous modes come first; curve/endpoints editing, connections/parallel roads and elevation use expandable groups. Precision, roundabout, review, profile and advanced tools remain accessible. Compact asset thumbnails and actions; proportional tray cap only when docked. Existing controls and handlers preserved. Visual and editing acceptance pending.
+
+## Stage 8 — focused Inspector
+
+Fixed header and selection, independently scrollable properties, Apply/Duplicate/Delete at the bottom when available. Core geometry remains accessible; terrain matching and links are collapsible. Terrain tools separate brush, textures and polygons. Lighter borders and status ellipsis. Existing control names and handlers preserved. Validate selection, editing and persistence on Windows, including compact heights.

@@ -5021,10 +5021,14 @@
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="FullscreenInspectorTranslate" />
                 </Border.RenderTransform>
-                <ScrollViewer
-                    VerticalScrollBarVisibility="Auto">
-                    <StackPanel Padding="12" Spacing="9">
-                        <Grid ColumnSpacing="5" RowSpacing="4"
+                <Grid Padding="7" RowSpacing="5">
+    <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <StackPanel Spacing="5">
+        <Grid ColumnSpacing="5" RowSpacing="4"
                               Background="Transparent">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -5036,15 +5040,15 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <StackPanel Spacing="1">
-                                <TextBlock Text="PROPRIEDADES"
+                                <TextBlock Text="Inspector"
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap"
                                            CharacterSpacing="15" />
                                 <TextBlock x:Name="InspectorContextSubtitleText"
-                                           Text="Selecione um item ou escolha uma ferramenta"
+                                           Text="Selecione um item"
                                            FontSize="11"
-                                           TextWrapping="Wrap"
+                                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
                             <Border Grid.Row="1" Grid.ColumnSpan="3"
@@ -5084,16 +5088,16 @@
                                            Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             </Border>
                         </Grid>
-
-                        <Border Background="{ThemeResource MapStudioSurfaceBrush}"
+        <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
                                 BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="10">
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="0"
+                                Padding="4,6">
                             <StackPanel Spacing="4">
                                 <TextBlock x:Name="SelectionText"
                                            Text="Sem seleção"
-                                           FontSize="14"
+                                           FontSize="13"
+                                           TextWrapping="Wrap"
                                            FontWeight="SemiBold"
                                            Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                 <TextBlock x:Name="InspectorTypeText"
@@ -5111,21 +5115,23 @@
                                            Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                             </StackPanel>
                         </Border>
-
-                        <Border x:Name="InspectorTransformCard"
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="6">
+            <Border x:Name="InspectorTransformCard"
                                 Visibility="Collapsed"
-                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                Background="Transparent"
                                 BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="10">
-                            <StackPanel Spacing="8">
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="0"
+                                Padding="4,6">
+                            <StackPanel Spacing="6">
                                 <TextBlock Text="Transformação"
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
 
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -5154,9 +5160,9 @@
                                            SmallChange="5" />
 
                                 <StackPanel x:Name="InspectorObjectFields"
-                                            Spacing="8"
+                                            Spacing="6"
                                             Visibility="Collapsed">
-                                    <Grid ColumnSpacing="8">
+                                    <Grid ColumnSpacing="6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
@@ -5178,24 +5184,24 @@
 
                         <Border x:Name="InspectorSplineFields"
                                 Visibility="Collapsed"
-                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                Background="Transparent"
                                 BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="10">
-                            <StackPanel Spacing="8">
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="0"
+                                Padding="4,6">
+                            <StackPanel Spacing="6">
                                 <TextBlock Text="Geometria da spline"
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <NumberBox x:Name="InspectorLengthBox"
                                                Grid.Column="0"
-                                               Header="Comprimento (m)"
+                                               Header="Extensão (m)"
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="0.25"
                                                Minimum="0" />
@@ -5205,37 +5211,21 @@
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="0.25" />
                                 </Grid>
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <NumberBox x:Name="InspectorGradientStartBox"
                                                Grid.Column="0"
-                                               Header="Inclinação inicial (%)"
+                                               Header="Início (%)"
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="0.1" />
                                     <NumberBox x:Name="InspectorGradientEndBox"
                                                Grid.Column="1"
-                                               Header="Inclinação final (%)"
+                                               Header="Fim (%)"
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="0.1" />
-                                </Grid>
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <NumberBox x:Name="InspectorPreviousSplineIdBox"
-                                               Grid.Column="0"
-                                               Header="Anterior ID"
-                                               SpinButtonPlacementMode="Compact"
-                                               SmallChange="1" />
-                                    <NumberBox x:Name="InspectorNextSplineIdBox"
-                                               Grid.Column="1"
-                                               Header="Próxima ID"
-                                               SpinButtonPlacementMode="Compact"
-                                               SmallChange="1" />
                                 </Grid>
                                 <Button Content="Ver perfil longitudinal" HorizontalAlignment="Stretch" Click="OnRoadProfileClick" />
                                 <Button x:Name="LevelSplineToTerrainButton"
@@ -5244,19 +5234,15 @@
                                         IsEnabled="False"
                                         ToolTipService.ToolTip="Move a spline para acompanhar o terreno existente"
                                         Click="OnLevelSelectedSplineToTerrainClick" />
-                                <TextBlock Text="Terreno acompanha a via"
-                                           Margin="0,4,0,0"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                                <Grid ColumnSpacing="8">
+                                <Expander Header="Terreno e via" IsExpanded="False" HorizontalAlignment="Stretch">
+<StackPanel Spacing="6"><Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <NumberBox x:Name="TerrainSplineHalfWidthBox"
                                                Grid.Column="0"
-                                               Header="Meia largura (m)"
+                                               Header="Meia via (m)"
                                                Value="6"
                                                Minimum="0.5"
                                                Maximum="100"
@@ -5290,12 +5276,30 @@
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
                                         ToolTipService.ToolTip="Remodela os .terrain reais nos tiles atravessados pela spline; cria backup antes de gravar"
-                                        Click="OnConformTerrainToSelectedSplineClick" />
-                                <Button x:Name="SaveSplineLinksButton"
+                                        Click="OnConformTerrainToSelectedSplineClick" /></StackPanel></Expander>
+<Expander Header="Vínculos da spline" IsExpanded="False" HorizontalAlignment="Stretch">
+<StackPanel Spacing="6"><Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="InspectorPreviousSplineIdBox"
+                                               Grid.Column="0"
+                                               Header="Anterior ID"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="1" />
+                                    <NumberBox x:Name="InspectorNextSplineIdBox"
+                                               Grid.Column="1"
+                                               Header="Próxima ID"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="1" />
+                                </Grid>
+<Button x:Name="SaveSplineLinksButton"
                                         Content="Salvar vínculos"
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
-                                        Click="OnSaveSplineLinksClick" />
+                                        Click="OnSaveSplineLinksClick" /></StackPanel></Expander>
+                                
                                 <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -5303,71 +5307,32 @@
                                     </Grid.ColumnDefinitions>
                                     <Button x:Name="EditSplineAdvancedButton"
                                             Grid.Column="0"
-                                            Content="Cant / Mirror..."
+                                            Content="Cant / Mirror"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
                                             Click="OnEditSplineAdvancedClick" />
                                     <Button x:Name="CompleteToSplineButton"
                                             Grid.Column="1"
-                                            Content="Complete to..."
+                                            Content="Conectar…"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
                                             Click="OnCompleteToSplineClick" />
                                 </Grid>
                                 <Button x:Name="ExportSplineXButton"
-                                        Content="Spline Export (.x)..."
+                                        Content="Exportar spline (.x)"
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
                                         Click="OnExportSplineXClick" />
                             </StackPanel>
                         </Border>
-
-                        <Border x:Name="InspectorSelectionActionsCard"
+            <Border x:Name="InspectorTerrainFields"
                                 Visibility="Collapsed"
-                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                Background="Transparent"
                                 BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="10">
-                            <StackPanel Spacing="7">
-                                <TextBlock Text="Ações"
-                                           FontSize="13"
-                                           FontWeight="SemiBold"
-                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                                <Button x:Name="ApplyInspectorButton"
-                                        Content="Aplicar valores"
-                                        HorizontalAlignment="Stretch"
-                                        IsEnabled="False"
-                                        Click="OnApplyInspectorClick" />
-                                <Grid ColumnSpacing="6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Button x:Name="DuplicateSelectionButton"
-                                            Grid.Column="0"
-                                            Content="Colocar cópia"
-                                            HorizontalAlignment="Stretch"
-                                            IsEnabled="False"
-                                            Click="OnDuplicateSelectionClick" />
-                                    <Button x:Name="DeleteSelectionButton"
-                                            Grid.Column="1"
-                                            Content="Excluir"
-                                            HorizontalAlignment="Stretch"
-                                            IsEnabled="False"
-                                            Click="OnDeleteSelectionClick" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border x:Name="InspectorTerrainFields"
-                                Visibility="Collapsed"
-                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
-                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="10">
-                            <StackPanel Spacing="8">
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="0"
+                                Padding="4,6">
+                            <StackPanel Spacing="6">
                                 <TextBlock Text="Terreno"
                                            FontSize="13"
                                            FontWeight="SemiBold"
@@ -5386,7 +5351,7 @@
                                            SpinButtonPlacementMode="Compact"
                                            SmallChange="0.25"
                                            ValueChanged="OnTerrainShapePreviewValueChanged" />
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -5409,7 +5374,7 @@
                                                SmallChange="0.05"
                                                ValueChanged="OnTerrainBrushPreviewValueChanged" />
                                 </Grid>
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -5460,7 +5425,7 @@
                                             StepFrequency="0.05"
                                             Value="{Binding Value, ElementName=TerrainBrushDeltaBox, Mode=TwoWay}" />
                                 </StackPanel>
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -5478,10 +5443,7 @@
                                             IsEnabled="False"
                                             Click="OnLowerTerrainClick" />
                                 </Grid>
-                                <TextBlock Text="Textura / material"
-                                           Margin="0,5,0,0"
-                                           FontWeight="SemiBold" />
-                                <Grid ColumnSpacing="8">
+                                <Expander Header="Texturas e pintura" IsExpanded="False" HorizontalAlignment="Stretch"><StackPanel Spacing="6"><Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -5518,27 +5480,24 @@
                                         Content="Pintar textura no ponto"
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
-                                        Click="OnApplyTerrainPaintClick" />
-                                <TextBlock Text="Custom Shape"
-                                           Margin="0,5,0,0"
-                                           FontWeight="SemiBold" />
-                                <TextBlock Text="Capture um polígono no viewport para nivelar, elevar, abaixar ou pintar o terreno. Formas côncavas e múltiplos tiles são suportados."
+                                        Click="OnApplyTerrainPaintClick" /></StackPanel></Expander>
+<Expander Header="Formas e polígonos" IsExpanded="False" HorizontalAlignment="Stretch"><StackPanel Spacing="6"><TextBlock Text="Capture um polígono no viewport para nivelar, elevar, abaixar ou pintar o terreno. Formas côncavas e múltiplos tiles são suportados."
                                            TextWrapping="Wrap"
                                            FontSize="10"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Button x:Name="TerrainShapeStartButton"
                                             Grid.Column="0"
-                                            Content="Desenhar forma"
+                                            Content="Desenhar"
                                             HorizontalAlignment="Stretch"
                                             Click="OnTerrainShapeStartClick" />
                                     <Button x:Name="TerrainShapeClearButton"
                                             Grid.Column="1"
-                                            Content="Limpar forma"
+                                            Content="Limpar"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
                                             Click="OnTerrainShapeClearClick" />
@@ -5551,21 +5510,21 @@
                                     </Grid.ColumnDefinitions>
                                     <Button x:Name="TerrainShapeLevelButton"
                                             Grid.Column="0"
-                                            Content="Nivelar forma"
+                                            Content="Nivelar"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
                                             PointerEntered="OnTerrainShapeLevelPreviewEntered"
                                             Click="OnTerrainShapeLevelClick" />
                                     <Button x:Name="TerrainShapeRaiseButton"
                                             Grid.Column="1"
-                                            Content="Elevar forma"
+                                            Content="Elevar"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
                                             PointerEntered="OnTerrainShapeRaisePreviewEntered"
                                             Click="OnTerrainShapeRaiseClick" />
                                     <Button x:Name="TerrainShapeLowerButton"
                                             Grid.Column="2"
-                                            Content="Abaixar forma"
+                                            Content="Abaixar"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
                                             PointerEntered="OnTerrainShapeLowerPreviewEntered"
@@ -5580,16 +5539,48 @@
                                 <TextBlock Text="Suavização da borda da forma = raio do pincel × suavização."
                                            TextWrapping="Wrap"
                                            FontSize="10"
-                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" /></StackPanel></Expander></StackPanel>
+                        </Border>
+        </StackPanel>
+    </ScrollViewer>
+    <Border Grid.Row="2" x:Name="InspectorSelectionActionsCard"
+                                Visibility="Collapsed"
+                                Background="Transparent"
+                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="0"
+                                Padding="4,6">
+                            <StackPanel Spacing="7">
+                                <TextBlock Text="Ações"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                                <Button x:Name="ApplyInspectorButton"
+                                        Content="Aplicar valores"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnApplyInspectorClick" />
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="DuplicateSelectionButton"
+                                            Grid.Column="0"
+                                            Content="Duplicar"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnDuplicateSelectionClick" />
+                                    <Button x:Name="DeleteSelectionButton"
+                                            Grid.Column="1"
+                                            Content="Excluir"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnDeleteSelectionClick" />
+                                </Grid>
                             </StackPanel>
                         </Border>
-
-                        <TextBlock Text="Seleção e edição compartilham o estado nativo do viewport e do ID Buffer."
-                                   TextWrapping="Wrap"
-                                   FontSize="10"
-                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
-                    </StackPanel>
-                </ScrollViewer>
+</Grid>
             </Border>
         </Grid>
 
@@ -5603,6 +5594,8 @@
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="StatusText"
+                       TextTrimming="CharacterEllipsis"
+                       ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                        VerticalAlignment="Center"
                        Text="Runtime nativo pronto para inicialização"
                        FontSize="11"
@@ -5612,6 +5605,7 @@
                        Grid.Column="1"
                        VerticalAlignment="Center"
                        Text="v— · WinUI 3 · Direct3D 11 · .NET 10"
+                       FontSize="10" Margin="10,0,0,0"
                        Foreground="{ThemeResource MapStudioTextMutedBrush}" />
         </Grid>
     </Grid>

@@ -40,3 +40,7 @@ Duas faixas de navegação no desktop, ações frequentes junto ao menu e açõe
 ## Etapa 7 — Road Studio por grupos
 
 Desenho, reta, curva, snap e continuidade ficam no início; edição de curva/endpoints, conexões/paralelas e elevação passam para grupos expansíveis. Precisão, rotatória, revisão, perfil e ferramentas avançadas permanecem acessíveis. Biblioteca com miniaturas e comandos compactos; limite proporcional somente no modo acoplado. Todos os controles e eventos foram preservados. Homologação visual e de edição pendente.
+
+## Etapa 8 — Inspector funcional
+
+Cabeçalho e seleção fixos, propriedades com rolagem independente, ações Aplicar/Duplicar/Excluir no rodapé quando disponíveis. Geometria principal sempre acessível; ajustes terreno/via e vínculos em seções recolhíveis. Ferramentas de terreno separam pincel, texturas e polígonos. Bordas mais discretas e status com reticências. Preservados nomes e eventos dos controles. Validar seleção, edição e gravação no Windows, inclusive altura compacta.
