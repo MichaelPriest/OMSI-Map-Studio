@@ -18,6 +18,14 @@ public sealed partial class MainWindow
                 (_, _) => SyncProfessionalLayers());
         }
         SyncProfessionalLayers();
+        WorkspaceGrid.SizeChanged += OnProfessionalWorkspaceSizeChanged;
+    }
+
+    private void OnProfessionalWorkspaceSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var compact = e.NewSize.Width > 0 && e.NewSize.Width < 1200;
+        ExplorerColumn.MaxWidth = compact ? 250 : double.PositiveInfinity;
+        InspectorColumn.MaxWidth = compact ? 255 : double.PositiveInfinity;
     }
 
     private void SyncProfessionalLayers()
@@ -103,8 +111,14 @@ public sealed partial class MainWindow
     private void ApplyGeoWorkspaceLayout()
     {
         var docked = _geoWorkspaceDocked;
-        RealMapAreaWindow.Width = docked ? double.NaN : Math.Min(960, Math.Max(360, WorkspaceGrid.ActualWidth - 32));
-        RealMapAreaWindow.Height = _realMapAreaWindowMinimized ? 70 : docked ? double.NaN : Math.Min(660, Math.Max(320, WorkspaceGrid.ActualHeight - 32));
+        if (docked && !_realMapAreaWindowMinimized &&
+            RealMapAreaWindow.Visibility == Visibility.Visible &&
+            AssetLibraryToolWindow.Visibility == Visibility.Visible)
+        {
+            CloseAssetLibraryToolWindow();
+        }
+        RealMapAreaWindow.Width = docked ? double.NaN : Math.Min(960, Math.Max(280, WorkspaceGrid.ActualWidth - 32));
+        RealMapAreaWindow.Height = _realMapAreaWindowMinimized ? 70 : docked ? double.NaN : Math.Min(660, Math.Max(200, WorkspaceGrid.ActualHeight - 32));
         RealMapAreaWindow.Margin = docked ? new Thickness(6) : new Thickness(16, 16, 0, 0);
         RealMapAreaWindow.HorizontalAlignment = docked ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
         RealMapAreaWindow.VerticalAlignment = docked && !_realMapAreaWindowMinimized ? VerticalAlignment.Stretch : VerticalAlignment.Top;

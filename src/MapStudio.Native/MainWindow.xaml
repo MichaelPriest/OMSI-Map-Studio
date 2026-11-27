@@ -541,91 +541,91 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="0" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                             BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                             AutomationProperties.Name="Projeto" Click="OnOpenWorkspaceClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE8B7;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Projeto" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE8B7;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Projeto" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="1" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="1" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleTerrainButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTerrainButton, Mode=OneWay}"
                             AutomationProperties.Name="Terreno" Click="OnToolTerrainClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE909;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Terreno" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE909;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Terreno" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="2" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="2" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleRoadsButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleRoadsButton, Mode=OneWay}"
                             AutomationProperties.Name="Road Studio" Click="OnToolSplinesClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE804;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Road Studio" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE804;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Road Studio" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="3" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="3" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleObjectsButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleObjectsButton, Mode=OneWay}"
                             AutomationProperties.Name="Cenários" Click="OnToolObjectsClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE8B9;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Cenários" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE8B9;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Cenários" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="4" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="4" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleTrafficButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTrafficButton, Mode=OneWay}"
                             AutomationProperties.Name="Tráfego" Click="OnToolTrafficClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE7C0;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Tráfego" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE7C0;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Tráfego" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="5" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="5" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                             BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                             AutomationProperties.Name="Geo Studio" Click="OnCreateCoordinateMapClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE909;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Geo Studio" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE909;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Geo Studio" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="6" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="6" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleTransportButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTransportButton, Mode=OneWay}"
                             AutomationProperties.Name="Transporte" Click="OnToolTransportClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE806;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Transporte" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE806;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Transporte" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="7" HorizontalAlignment="Stretch" MinHeight="42" Padding="10,7"
+                    <Button Grid.Column="7" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
                             HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
                             Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                             BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                             AutomationProperties.Name="Testes" Click="OnToolValidationClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE73E;" FontSize="17" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Testes" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon Glyph="&#xE73E;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <TextBlock Text="Testes" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
@@ -892,11 +892,13 @@
                         <StackPanel Spacing="1">
                             <TextBlock x:Name="ExplorerPanelTitleText"
                                        Text="EXPLORADOR DO MAPA"
-                                       FontSize="14"
+                                       FontSize="13"
                                        FontWeight="SemiBold"
-                                       CharacterSpacing="55" />
+                                       TextWrapping="Wrap"
+                                       CharacterSpacing="15" />
                             <TextBlock x:Name="ExplorerModeSubtitleText"
                                        Text="Cena e conteúdo do mapa"
+                                       TextWrapping="Wrap"
                                        FontSize="11"
                                        Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                         </StackPanel>
@@ -3043,10 +3045,10 @@
                           PointerMoved="OnAssetLibraryToolWindowDragMoved"
                           PointerReleased="OnAssetLibraryToolWindowDragReleased"
                           PointerCanceled="OnAssetLibraryToolWindowDragReleased">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
                         <StackPanel Orientation="Horizontal"
                                     Spacing="7">
@@ -3057,20 +3059,22 @@
                                 <TextBlock Text="BIBLIOTECA DE ASSETS"
                                            FontSize="13"
                                            FontWeight="SemiBold" />
-                                <TextBlock Text="Assets · favoritos · coleções · classificação IA"
+                                <TextBlock Text="Favoritos · coleções · IA"
                                            FontSize="10"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1"
-                                    Orientation="Horizontal"
+                        <ScrollViewer Grid.Row="1" HorizontalScrollMode="Auto"
+                                      HorizontalScrollBarVisibility="Auto" VerticalScrollMode="Disabled"
+                                      VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Horizontal"
                                     Spacing="4">
                             <Button Content="Prévia 3D" Style="{StaticResource EditorToolbarButtonStyle}"
                                     ToolTipService.ToolTip="Inspecionar o asset selecionado no viewport"
                                     Click="OnPreviewSelectedAssetClick" />
                             <Button x:Name="AssetLibraryDockToggleButton"
-                                    Content="Desacoplar"
+                                    Content="Desacoplar" Style="{StaticResource EditorToolbarButtonStyle}"
                                     ToolTipService.ToolTip="Alternar entre biblioteca inferior e janela flutuante"
                                     Click="OnToggleAssetLibraryDockClick" />
                             <Button x:Name="AssetLibraryToolMinimizeButton"
@@ -3087,6 +3091,7 @@
                                     ToolTipService.ToolTip="Fechar e devolver Biblioteca ao painel Projeto"
                                     Click="OnCloseAssetLibraryToolWindowClick" />
                         </StackPanel>
+                        </ScrollViewer>
                     </Grid>
 
                     <ScrollViewer x:Name="AssetQuickBar" Grid.Row="1" HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
@@ -3252,7 +3257,7 @@
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Visibility="Collapsed"
-                    Canvas.ZIndex="108"
+                    Canvas.ZIndex="115"
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
@@ -3288,7 +3293,7 @@
                                 <TextBlock Text="GEO STUDIO · MAPAS REAIS"
                                            FontSize="13"
                                            FontWeight="SemiBold" />
-                                <TextBlock Text="OpenStreetMap · seleção da região · fontes · reconstrução"
+                                <TextBlock Text="Seleção da região · fontes · reconstrução"
                                            FontSize="10"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
@@ -3326,7 +3331,7 @@
                             <Grid Margin="4,8,4,4"
                                   RowSpacing="8">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="280" />
+                                    <ColumnDefinition Width="300" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
@@ -3335,20 +3340,14 @@
                                 <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                                 <StackPanel Spacing="10" Margin="0,0,10,0">
 
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="6">
                                     <TextBox x:Name="RealMapDirectoryBox"
-                                             Grid.Column="0"
-                                             Header="Pasta"
+                                             Header="Pasta do mapa"
                                              PlaceholderText="MeuMapaReal" />
                                     <TextBox x:Name="RealMapDisplayNameBox"
-                                             Grid.Column="1"
-                                             Header="Nome"
+                                             Header="Nome de exibição"
                                              PlaceholderText="Meu mapa real" />
-                                </Grid>
+                                </StackPanel>
 
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
@@ -3356,7 +3355,7 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:Name="RealMapSearchBox"
-                                             Header="Buscar cidade, endereço ou local"
+                                             Header="Cidade ou endereço"
                                              PlaceholderText="Ex.: Av. Paulista, São Paulo" />
                                     <Button x:Name="RealMapSearchButton"
                                             Grid.Column="1"
@@ -3365,19 +3364,19 @@
                                             Click="OnRealMapSearchClick" />
                                 </Grid>
 
+                                <ComboBox x:Name="RealMapSearchResultsBox"
+                                          Header="Resultados"
+                                          HorizontalAlignment="Stretch"
+                                          DisplayMemberPath="DisplayName"
+                                          PlaceholderText="Selecione um resultado"
+                                          SelectionChanged="OnRealMapSearchResultChanged" />
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <ComboBox x:Name="RealMapSearchResultsBox"
-                                              Header="Resultados"
-                                              DisplayMemberPath="DisplayName"
-                                              PlaceholderText="Selecione um resultado"
-                                              SelectionChanged="OnRealMapSearchResultChanged" />
                                     <NumberBox x:Name="RealMapAreaWidthPercentBox"
-                                               Grid.Column="1"
+                                               Grid.Column="0"
                                                Header="Largura %"
                                                Minimum="20"
                                                Maximum="95"
@@ -3386,7 +3385,7 @@
                                                SpinButtonPlacementMode="Compact"
                                                ValueChanged="OnRealMapAreaSelectionSizeChanged" />
                                     <NumberBox x:Name="RealMapAreaHeightPercentBox"
-                                               Grid.Column="2"
+                                               Grid.Column="1"
                                                Header="Altura %"
                                                Minimum="20"
                                                Maximum="95"
@@ -3396,11 +3395,7 @@
                                                ValueChanged="OnRealMapAreaSelectionSizeChanged" />
                                 </Grid>
 
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="6">
                                     <StackPanel Spacing="2">
                                         <TextBlock x:Name="RealMapAreaBoundsText"
                                                    Text="Mova o mapa para selecionar uma área."
@@ -3410,14 +3405,14 @@
                                         <TextBlock x:Name="RealMapAreaEstimateText"
                                                    Text="—"
                                                    FontSize="11"
+                                                   TextWrapping="Wrap"
                                                    FontWeight="SemiBold"
                                                    Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                                     </StackPanel>
-                                    <Button Grid.Column="1"
-                                            VerticalAlignment="Center"
+                                    <Button HorizontalAlignment="Stretch"
                                             Content="Recarregar mapa"
                                             Click="OnReloadRealMapAreaClick" />
-                                </Grid>
+                                </StackPanel>
 
                                 <TextBlock Text="Camadas da reconstrução automática" FontWeight="SemiBold" TextWrapping="Wrap" />
                                 <CheckBox Content="Vias e cruzamentos" IsChecked="{Binding IsChecked, ElementName=RealMapGenerateRoadsCheckBox, Mode=TwoWay}" />
@@ -5028,26 +5023,31 @@
                 <ScrollViewer
                     VerticalScrollBarVisibility="Auto">
                     <StackPanel Padding="12" Spacing="9">
-                        <Grid ColumnSpacing="8"
+                        <Grid ColumnSpacing="5" RowSpacing="4"
                               Background="Transparent">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
                             <StackPanel Spacing="1">
                                 <TextBlock Text="PROPRIEDADES"
-                                           FontSize="15"
+                                           FontSize="13"
                                            FontWeight="SemiBold"
-                                           CharacterSpacing="45" />
+                                           TextWrapping="Wrap"
+                                           CharacterSpacing="15" />
                                 <TextBlock x:Name="InspectorContextSubtitleText"
                                            Text="Selecione um item ou escolha uma ferramenta"
                                            FontSize="11"
                                            TextWrapping="Wrap"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
-                            <Border Grid.Column="1"
+                            <Border Grid.Row="1" Grid.ColumnSpan="3"
+                                    HorizontalAlignment="Left"
                                     Padding="7,3"
                                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                     CornerRadius="6"
@@ -5059,14 +5059,14 @@
                                            Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             </Border>
                             <Button x:Name="MinimizeInspectorPanelButton"
-                                    Grid.Column="2"
+                                    Grid.Column="1"
                                     Width="28"
                                     Height="28"
                                     Padding="0"
                                     Content="—"
                                     ToolTipService.ToolTip="Minimizar Inspector"
                                     Click="OnMinimizeInspectorPanelClick" />
-                            <Border Grid.Column="3"
+                            <Border Grid.Column="2"
                                     Width="28"
                                     Height="28"
                                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"

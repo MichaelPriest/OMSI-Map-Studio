@@ -28,3 +28,7 @@ O Geo Studio completo, minimapa permanente e visualizações simultâneas ainda 
 - Minimapa navegável de tiles reais, com região 9 × 6 ao redor do tile ativo e distinção entre tiles carregados e não carregados.
 - O minimapa representa a grade de tiles, não imagem aérea. Visualizações 3D/2D simultâneas e perfil longitudinal ainda não fazem parte deste lote.
 - Homologar navegação, sincronização de camadas, geração OSM, janelas e resoluções menores no Windows.
+
+## Etapa 5 — resolução compacta
+
+Faixa de módulos compacta, cabeçalhos com quebra de linha, contexto do Inspector em linha separada, comandos da biblioteca roláveis, limite de largura lateral abaixo de 1200 DIPs e prioridade do Geo Studio acoplado sobre a biblioteca. Resultados da busca ocupam linha própria. Sem mudanças de formatos OMSI. Homologar 1024 × 720, 1366 × 768 e 1920 × 1080, temas claro/escuro e DPI 100/125/150%. Capturas da revisão pendentes.
