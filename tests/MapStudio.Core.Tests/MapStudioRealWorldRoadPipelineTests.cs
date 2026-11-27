@@ -10,6 +10,7 @@ using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Structures;
+using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace MapStudio.Core.Tests;
@@ -77,7 +78,11 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                 Assert.Equal(west.Terrain.Heights[row * 61 + 60], east.Terrain.Heights[row * 61]);
             Assert.True(east.Terrain.Heights[^1] > east.Terrain.Heights[0]);
         }
-        finally { root.Delete(recursive: true); }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            root.Delete(recursive: true);
+        }
     }
 
     [Fact]
@@ -108,7 +113,11 @@ public sealed class MapStudioRealWorldRoadPipelineTests
             Assert.Equal(flat, await File.ReadAllBytesAsync(tile + ".terrain"));
             Assert.Equal(originalTile, await File.ReadAllBytesAsync(tile));
         }
-        finally { root.Delete(recursive: true); }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            root.Delete(recursive: true);
+        }
     }
 
     [Theory]
