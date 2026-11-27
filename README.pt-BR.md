@@ -2,85 +2,45 @@
 
 [English](README.en.md) · **Português (Brasil)**
 
-O **OMSI Map Studio** é um editor moderno e independente de mapas para **OMSI 2**, focado em tornar a criação de mapas mais fácil, segura e visual.
+Editor independente de mapas para **OMSI 2**, com viewport 3D nativo, ferramentas de construção e geração de mapas reais. O projeto é independente do OMSI NavBR Multiplayer.
 
-> Este projeto é completamente independente do OMSI NavBR Multiplayer. Possui repositório, arquitetura, versões e ciclo de desenvolvimento próprios.
+## Testar o editor nativo
 
-## Objetivos iniciais
+- [Build Windows x64 — CI 1720](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393) — 27/11/2026, commit `db032ec9`; baixar o artefato `OMSI-Map-Studio-Windows-x64-test` (GitHub pode exigir login; retenção de 14 dias).
+- [CI da main após integração](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060526562).
+- [Última prerelease numerada nesta atualização: v0.2.0-alpha.5-test.10.143-native](https://github.com/MichaelPriest/OMSI-Map-Studio/releases/tag/v0.2.0-alpha.5-test.10.143-native).
 
-- Detectar uma instalação real do OMSI 2 e seus mapas.
-- Ler `global.cfg` preservando conteúdo ainda desconhecido.
-- Extrair referências reais de tiles por meio das seções `[map]`.
-- Fornecer um host desktop em .NET 10 + WPF + WebView2.
-- Fornecer uma interface React + TypeScript + Babylon.js.
-- Nunca substituir dados reais ausentes por dados fake/mock em produção.
-- Tornar a construção de mapas simples para usuários que não conhecem os formatos internos do OMSI.
+Extraia todo o ZIP da build de teste para uma pasta separada e execute `MapStudio.Native.exe`. Trabalhe em um workspace de teste, preservando os mapas originais. A aprovação do CI não substitui a homologação no OMSI 2.
 
-## Primeira versão de teste
+## Funcionalidades
 
-A prerelease atual é **v0.1.0-alpha.8**. A gravação ainda é experimental, mas já inclui transformações de objetos existentes e inserção preservativa de novos objetos quando existe um template seguro do mesmo `.sco`, sempre com backup automático.
+| Área | Recursos |
+| --- | --- |
+| Editor 3D | Navegação, seleção, objetos O3D, splines SLI, terreno e edição por tiles |
+| Road Studio | Desenho direto, continuação, modo de precisão, rotatórias e perfil longitudinal (consulta) |
+| Geo Studio | Referência OSM sem chave, reconstrução por camadas, elevação Terrarium e Open-Meteo |
+| Construção | Biblioteca de assets, ferramentas de objetos, edificações, terreno e infraestrutura |
+| Segurança | Backups, validação e preservação de conteúdo OMSI desconhecido |
 
-Ela permite selecionar uma instalação real do OMSI 2, abrir manualmente um mapa, trabalhar em Mapa completo ou modo 3×3, visualizar objetos O3D e splines reais, editar X/Y/Z/rotação/pitch/bank, desfazer/refazer prévias, inserir objetos pela Biblioteca e usar **Colocar cópia** no objeto selecionado. Consulte [Testes da Alpha](docs/pt-BR/TESTING.md) para limitações e roteiro de validação.
+A atualização de 27/11/2026 integra relevo Terrarium compartilhado entre ruas e terreno, referência hidrográfica OSM com ilhas e cancelamento de download. A água é uma referência visual; superfícies físicas de água, integração completa de rotatórias e homologação visual continuam pendentes.
 
-## Requisitos de desenvolvimento
+## Documentação
 
-- .NET 10 SDK
-- Node.js 22+
-- Windows para executar o host desktop
+- [Manual do usuário](docs/pt-BR/USER_MANUAL.md)
+- [Roadmap](docs/pt-BR/ROADMAP.md)
+- [Arquitetura nativa](docs/pt-BR/NATIVE_MIGRATION.md)
+- [Paridade com OpenMapper](docs/pt-BR/OPENMAPPER_NATIVE_PARITY.md)
+- [Notas da build 1720](docs/pt-BR/releases/native-ci-1720.md)
+- [Galeria e roteiro de capturas reais](docs/pt-BR/EDITOR_GALLERY.md)
 
-## Core
+## Desenvolvimento
 
-    dotnet build src/MapStudio.Core/MapStudio.Core.csproj
-    dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj
+Stack nativa: .NET 10, WinUI 3, Direct3D 11/Vortice e SQLite. O Core é a autoridade dos formatos OMSI. WPF/WebView2 e React/Babylon.js pertencem à trilha legada.
 
-## Interface
+```powershell
+dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj
+dotnet test tests/MapStudio.Renderer.Tests/MapStudio.Renderer.Tests.csproj
+dotnet build src/MapStudio.Native/MapStudio.Native.csproj -c Release -p:Platform=x64
+```
 
-    cd src/MapStudio.UI
-    npm install
-    npm run dev
-
-Para usar a interface empacotada no aplicativo desktop, execute `npm run build` antes de compilar o projeto desktop.
-
-## Regra de compatibilidade
-
-Entender um comando do OMSI é opcional; **preservá-lo não é**.
-
-Se o editor abrir um comando que ainda não entende, esse conteúdo deve continuar existindo ao salvar o arquivo. Um documento que não foi alterado deve poder passar por leitura e gravação sem perda silenciosa de informações.
-
-## Idiomas da documentação
-
-Toda documentação oficial deve ser publicada em pelo menos:
-
-- `pt-BR`
-- `en`
-
-Ao adicionar ou alterar documentação, as versões dos dois idiomas devem ser atualizadas no mesmo conjunto de mudanças.
-
-Documentação de arquitetura:
-
-- [Arquitetura — Português](docs/pt-BR/ARCHITECTURE.md)
-- [Architecture — English](docs/en/ARCHITECTURE.md)
-
-
-### Biblioteca de Splines
-
-A Alpha.4 também varre `OMSI 2/Splines` sob demanda e permite pré-visualizar arquivos `.sli` instalados. A biblioteca oferece criação **Normal** e **Altura**. A persistência só é liberada quando o mapa contém um template real neutro do mesmo tipo: cinco extras explícitos zerados para `[spline]` e seis para `[spline_h]`. Header e extras são copiados desse template.
-
-
-## Manual do Usuário
-
-O guia de uso das funções atuais do editor está em:
-
-- [Manual do Usuário — Português](docs/pt-BR/USER_MANUAL.md)
-- [User Manual — English](docs/en/USER_MANUAL.md)
-
-A build nativa também inclui uma cópia local acessível pelo menu **Ajuda**.
-
-## Roadmap do projeto
-
-A direção técnica e funcional oficial está documentada em:
-
-- [Roadmap técnico e funcional — Português](docs/pt-BR/ROADMAP.md)
-- [Technical and functional roadmap — English](docs/en/ROADMAP.md)
-
-O roadmap define a stack mantida, Asset Index/cache, streaming por tiles, paridade com o editor OMSI, Traffic Rules, paths, tracks/trips, timetables, sinais, ferrovia, geodados e critérios para considerar o Map Studio um substituto funcional do editor original.
+A compilação do host nativo exige Windows. Documentação oficial em pt-BR e inglês. Não substituir dados ausentes por dados fictícios nem descartar comandos desconhecidos na gravação.

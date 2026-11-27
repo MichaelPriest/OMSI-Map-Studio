@@ -27,6 +27,8 @@ Permanent principles:
 
 ## 1. Official technology direction
 
+> **Native update (November 27, 2026):** the active track is .NET 10 / WinUI 3 / Direct3D 11 with Vortice and shared Core/SQLite. The WPF/WebView2/React stack below records the legacy architecture. See [native migration](../pt-BR/NATIVE_MIGRATION.md). Keyless Terrarium and OSM visual hydrography were integrated through PR #21; physical water, OMSI 2 acceptance and full junction parity remain pending. [Build 1720](releases/native-ci-1720.md).
+
 ### Stack to keep
 
 The target architecture remains:

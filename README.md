@@ -43,3 +43,8 @@ See the English version for full details.
 
 - 🇧🇷 [Roadmap técnico e funcional](docs/pt-BR/ROADMAP.md)
 - 🇬🇧 [Technical and functional roadmap](docs/en/ROADMAP.md)
+
+## Native Windows x64 / Editor nativo Windows x64
+
+- [Build de teste / Test build — CI 1720](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393)
+- [Galeria / Editor gallery (PT-BR)](docs/pt-BR/EDITOR_GALLERY.md) · [English](docs/en/EDITOR_GALLERY.md)

@@ -27,6 +27,8 @@ Princípios permanentes:
 
 ## 1. Direção tecnológica oficial
 
+> **Atualização nativa (27/11/2026):** a trilha ativa é .NET 10 / WinUI 3 / Direct3D 11 com Vortice e Core/SQLite compartilhados. A stack WPF/WebView2/React abaixo registra a arquitetura legada. Consulte [migração nativa](NATIVE_MIGRATION.md). Terrarium sem chave e hidrografia visual OSM integrados pelo PR #21; água física, homologação no OMSI 2 e paridade completa de junções permanecem pendentes. [Build 1720](releases/native-ci-1720.md).
+
 ### Stack mantida
 
 A arquitetura alvo continua sendo:

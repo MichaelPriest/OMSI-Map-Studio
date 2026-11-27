@@ -2,85 +2,45 @@
 
 **English** · [Português (Brasil)](README.pt-BR.md)
 
-**OMSI Map Studio** is a modern, standalone map editor for **OMSI 2**, focused on making map creation easier, safer and more visual.
+Standalone **OMSI 2** map editor with a native 3D viewport, construction tools and real-world map generation. Independent from OMSI NavBR Multiplayer.
 
-> This project is completely independent from OMSI NavBR Multiplayer. It has its own repository, architecture, releases and development lifecycle.
+## Test the native editor
 
-## Initial goals
+- [Windows x64 build — CI 1720](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393) — November 27, 2026, commit `db032ec9`; download the `OMSI-Map-Studio-Windows-x64-test` artifact (GitHub sign-in may be required; 14-day retention).
+- [Main branch CI after integration](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060526562).
+- [Latest numbered prerelease at this update: v0.2.0-alpha.5-test.10.143-native](https://github.com/MichaelPriest/OMSI-Map-Studio/releases/tag/v0.2.0-alpha.5-test.10.143-native).
 
-- Discover a real OMSI 2 installation and its maps.
-- Parse `global.cfg` while preserving content not yet understood.
-- Extract real tile references from `[map]` sections.
-- Provide a .NET 10 + WPF + WebView2 desktop host.
-- Provide a React + TypeScript + Babylon.js interface.
-- Never replace missing real production data with fake/mock data.
-- Make map building approachable for users who do not know OMSI's internal file formats.
+Extract the entire test ZIP into a separate folder and run `MapStudio.Native.exe`. Use a test workspace and preserve original maps. Passing CI does not replace hands-on validation in OMSI 2.
 
-## First test version
+## Features
 
-The current prerelease is **v0.1.0-alpha.8**. Writing is still experimental, but it now covers existing-object transforms and preservation-safe object insertion when a safe template of the same `.sco` is available, always with automatic backups.
+| Area | Features |
+| --- | --- |
+| 3D editor | Navigation, selection, O3D objects, SLI splines, terrain and tile editing |
+| Road Studio | Direct drawing, continuation, precision mode, roundabouts and read-only longitudinal profile |
+| Geo Studio | Keyless OSM reference, layered reconstruction, Terrarium and Open-Meteo elevation |
+| Construction | Asset library, object, building, terrain and infrastructure tools |
+| Safety | Backups, validation and preservation of unknown OMSI content |
 
-It can select a real OMSI 2 installation, manually open a map, work in Full map or 3×3 mode, display real O3D objects and splines, edit X/Y/Z/rotation/pitch/bank, undo/redo previews, insert objects from the Library, and use **Place copy** on the selected object. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
+The November 27, 2026 update integrates Terrarium elevation shared by roads and terrain, OSM hydrographic reference with islands, and download cancellation. Water remains a visual reference; physical water surfaces, full roundabout integration and visual acceptance remain pending.
 
-## Development requirements
+## Documentation
 
-- .NET 10 SDK
-- Node.js 22+
-- Windows to run the desktop host
+- [User manual](docs/en/USER_MANUAL.md)
+- [Roadmap](docs/en/ROADMAP.md)
+- [Native architecture](docs/pt-BR/NATIVE_MIGRATION.md)
+- [OpenMapper parity](docs/pt-BR/OPENMAPPER_NATIVE_PARITY.md)
+- [Build 1720 notes](docs/en/releases/native-ci-1720.md)
+- [Gallery and real screenshot checklist](docs/en/EDITOR_GALLERY.md)
 
-## Core
+## Development
 
-    dotnet build src/MapStudio.Core/MapStudio.Core.csproj
-    dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj
+Native stack: .NET 10, WinUI 3, Direct3D 11/Vortice and SQLite. Core is authoritative for OMSI formats. WPF/WebView2 and React/Babylon.js belong to the legacy track.
 
-## UI
+```powershell
+dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj
+dotnet test tests/MapStudio.Renderer.Tests/MapStudio.Renderer.Tests.csproj
+dotnet build src/MapStudio.Native/MapStudio.Native.csproj -c Release -p:Platform=x64
+```
 
-    cd src/MapStudio.UI
-    npm install
-    npm run dev
-
-To use the packaged UI in the desktop application, run `npm run build` before building the desktop project.
-
-## Compatibility rule
-
-Understanding an OMSI command is optional; **preserving it is not**.
-
-If the editor opens a command it does not understand yet, that content must still exist when the file is saved. An unchanged document must be able to round-trip without silent data loss.
-
-## Documentation languages
-
-All official documentation must be published in at least:
-
-- `pt-BR`
-- `en`
-
-When documentation is added or changed, both language versions must be updated in the same change set.
-
-Architecture documentation:
-
-- [Architecture — English](docs/en/ARCHITECTURE.md)
-- [Arquitetura — Português](docs/pt-BR/ARCHITECTURE.md)
-
-
-### Spline Library
-
-Alpha.4 also scans `OMSI 2/Splines` on demand and can preview installed `.sli` files. The library offers **Normal** and **Height** creation. Persistence is enabled only when the map contains a real neutral template of the same type: five explicit zero extras for `[spline]` and six for `[spline_h]`. Header and extras are copied from that template.
-
-
-## User Manual
-
-The current editor usage guide is available at:
-
-- [User Manual — English](docs/en/USER_MANUAL.md)
-- [Manual do Usuário — Português](docs/pt-BR/USER_MANUAL.md)
-
-The native build also bundles an offline copy available from the **Help** menu.
-
-## Project roadmap
-
-The official technical and functional direction is documented in:
-
-- [Technical and functional roadmap — English](docs/en/ROADMAP.md)
-- [Roadmap técnico e funcional — Português](docs/pt-BR/ROADMAP.md)
-
-The roadmap defines the retained stack, Asset Index/cache, tile streaming, original-editor parity, Traffic Rules, paths, tracks/trips, timetables, signals, rail, geodata, and the criteria for considering Map Studio a functional replacement for the original editor.
+Building the native host requires Windows. Official documentation is maintained in Brazilian Portuguese and English. Never replace missing real data with fabricated data or discard unknown commands on save.
