@@ -642,6 +642,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializeProfessionalWorkspace();
 
         var versionLabel =
             GetApplicationVersionLabel();
@@ -26762,6 +26763,7 @@ public sealed partial class MainWindow : Window
     private void UpdateMapSummary(
         NativeMapSnapshot snapshot)
     {
+        RefreshProfessionalMinimap(snapshot);
         var activeTile =
             snapshot.ActiveTile is null
                 ? "—"
@@ -27488,40 +27490,9 @@ public sealed partial class MainWindow : Window
         RealMapAreaWizardTabs.SelectedIndex =
             0;
 
-        if (
-            WorkspaceGrid.ActualWidth >
-                0 &&
-            WorkspaceGrid.ActualHeight >
-                0)
-        {
-            RealMapAreaWindow.Width =
-                Math.Min(
-                    800,
-                    Math.Max(
-                        360,
-                        WorkspaceGrid.ActualWidth -
-                            32));
-
-            RealMapAreaWindow.Height =
-                Math.Min(
-                    600,
-                    Math.Max(
-                        320,
-                        WorkspaceGrid.ActualHeight -
-                            32));
-
-            RealMapAreaWindowTranslate.X =
-                0;
-
-            RealMapAreaWindowTranslate.Y =
-                0;
-        }
-
-        if (_realMapAreaWindowMinimized)
-        {
-            SetRealMapAreaMinimized(
-                false);
-        }
+        _geoWorkspaceDocked = true;
+        _realMapAreaWindowMinimized = false;
+        ApplyGeoWorkspaceLayout();
 
         await InitializeRealMapAreaPickerAsync();
     }
@@ -28572,7 +28543,13 @@ setTimeout(postBounds, 250);
             visibility;
 
         RealMapAreaResizeGrip.Visibility =
-            visibility;
+            _geoWorkspaceDocked ? Visibility.Collapsed : visibility;
+
+        if (_geoWorkspaceDocked)
+        {
+            ApplyGeoWorkspaceLayout();
+            return;
+        }
 
         RealMapAreaWindow.Height =
             minimized
@@ -29667,7 +29644,7 @@ setTimeout(postBounds, 250);
         PointerRoutedEventArgs e)
     {
         if (
-            sender is not UIElement element)
+            _geoWorkspaceDocked || sender is not UIElement element)
         {
             return;
         }
@@ -29763,7 +29740,7 @@ setTimeout(postBounds, 250);
         PointerRoutedEventArgs e)
     {
         if (
-            sender is not UIElement element)
+            _geoWorkspaceDocked || sender is not UIElement element)
         {
             return;
         }

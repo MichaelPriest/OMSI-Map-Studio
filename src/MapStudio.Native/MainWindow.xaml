@@ -877,6 +877,8 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0"
@@ -2324,6 +2326,28 @@
                                   StrokeThickness="1.5" />
                         </Grid>
                     </Border>
+                    <Expander Grid.Row="5" Header="Camadas da cena" IsExpanded="False" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="2">
+                            <CheckBox x:Name="ProfessionalTerrainLayer" Content="Terreno" Tag="Terrain" Click="OnProfessionalLayerClick" MinHeight="28" />
+                            <CheckBox x:Name="ProfessionalObjectsLayer" Content="Objetos e cenários" Tag="Objects" Click="OnProfessionalLayerClick" MinHeight="28" />
+                            <CheckBox x:Name="ProfessionalSplinesLayer" Content="Ruas e splines" Tag="Splines" Click="OnProfessionalLayerClick" MinHeight="28" />
+                            <CheckBox x:Name="ProfessionalGridLayer" Content="Grade" Tag="Grid" Click="OnProfessionalLayerClick" MinHeight="28" />
+                            <CheckBox x:Name="ProfessionalProfilesLayer" Content="Perfis das splines" Tag="Profiles" Click="OnProfessionalLayerClick" MinHeight="28" />
+                            <CheckBox x:Name="ProfessionalReferenceLayer" Content="Referência geográfica" Tag="Reference" Click="OnProfessionalLayerClick" MinHeight="28" />
+                        </StackPanel>
+                    </Expander>
+                    <Expander Grid.Row="6" Header="Minimapa · tiles" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="ProfessionalMinimapStatus" Text="Abra um mapa" FontSize="10"
+                                       TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                            <Viewbox Stretch="Uniform" MaxHeight="124" HorizontalAlignment="Center">
+                                <Canvas x:Name="ProfessionalMinimapCanvas" Width="216" Height="144"
+                                        Background="{ThemeResource MapStudioWindowBackgroundBrush}" />
+                            </Viewbox>
+                            <Button Content="Navegador de tiles" Click="OnToggleTileNavigatorWindowClick"
+                                    HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}" />
+                        </StackPanel>
+                    </Expander>
                 </Grid>
             </Border>
 
@@ -3224,11 +3248,9 @@
                     Grid.RowSpan="3"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    Width="800"
-                    Height="600"
-                    Margin="16,16,0,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
+                    Margin="6"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
                     Visibility="Collapsed"
                     Canvas.ZIndex="108"
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"
@@ -3263,10 +3285,10 @@
                                       FontSize="16"
                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             <StackPanel>
-                                <TextBlock Text="CRIAR MAPA REAL"
+                                <TextBlock Text="GEO STUDIO · MAPAS REAIS"
                                            FontSize="13"
                                            FontWeight="SemiBold" />
-                                <TextBlock Text="Assistente em 4 etapas · área, fontes, reconstrução e progresso"
+                                <TextBlock Text="OpenStreetMap · seleção da região · fontes · reconstrução"
                                            FontSize="10"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
@@ -3275,6 +3297,7 @@
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
                                     Spacing="4">
+                            <Button x:Name="GeoDockButton" Content="Flutuar" Click="OnGeoDockClick" />
                             <Button x:Name="RealMapAreaMinimizeButton"
                                     Width="30"
                                     Height="30"
@@ -3302,13 +3325,15 @@
                                      IsClosable="False">
                             <Grid Margin="4,8,4,4"
                                   RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="280" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
+                                <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="10" Margin="0,0,10,0">
 
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
@@ -3325,8 +3350,7 @@
                                              PlaceholderText="Meu mapa real" />
                                 </Grid>
 
-                                <Grid Grid.Row="1"
-                                      ColumnSpacing="8">
+                                <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -3341,12 +3365,11 @@
                                             Click="OnRealMapSearchClick" />
                                 </Grid>
 
-                                <Grid Grid.Row="2"
-                                      ColumnSpacing="8">
+                                <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="112" />
-                                        <ColumnDefinition Width="112" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <ComboBox x:Name="RealMapSearchResultsBox"
                                               Header="Resultados"
@@ -3373,8 +3396,7 @@
                                                ValueChanged="OnRealMapAreaSelectionSizeChanged" />
                                 </Grid>
 
-                                <Grid Grid.Row="3"
-                                      ColumnSpacing="8">
+                                <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -3397,8 +3419,19 @@
                                             Click="OnReloadRealMapAreaClick" />
                                 </Grid>
 
+                                <TextBlock Text="Camadas da reconstrução automática" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <CheckBox Content="Vias e cruzamentos" IsChecked="{Binding IsChecked, ElementName=RealMapGenerateRoadsCheckBox, Mode=TwoWay}" />
+                                <CheckBox Content="Edificações" IsChecked="{Binding IsChecked, ElementName=RealMapGenerateBuildingsCheckBox, Mode=TwoWay}" />
+                                <CheckBox Content="Vegetação" IsChecked="{Binding IsChecked, ElementName=RealMapGenerateVegetationCheckBox, Mode=TwoWay}" />
+                                <CheckBox Content="Infraestrutura" IsChecked="{Binding IsChecked, ElementName=RealMapGenerateInfrastructureCheckBox, Mode=TwoWay}" />
+                                <CheckBox Content="Mobiliário urbano" IsChecked="{Binding IsChecked, ElementName=RealMapGenerateFurnitureCheckBox, Mode=TwoWay}" />
+                                <CheckBox Content="Aplicar elevação" IsChecked="{Binding IsChecked, ElementName=RealMapApplyElevationCheckBox, Mode=TwoWay}" />
+                                <Button Content="Configurar fontes e elevação" HorizontalAlignment="Stretch" Click="OnGeoSourcesClick" />
+                                <Button Content="Revisar e gerar mapa" HorizontalAlignment="Stretch" Click="OnGeoReconstructionClick" Background="{ThemeResource MapStudioAccentSurfaceBrush}" />
+                                </StackPanel>
+                                </ScrollViewer>
                                 <Grid x:Name="RealMapAreaMapRow"
-                                      Grid.Row="4"
+                                      Grid.Column="1"
                                       MinHeight="220">
                                     <WebView2 x:Name="RealMapAreaWebView"
                                               HorizontalAlignment="Stretch"

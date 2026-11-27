@@ -20,3 +20,11 @@ O Geo Studio completo, minimapa permanente e visualizações simultâneas ainda 
 - Explorador de cena simultâneo à biblioteca hospedada, com buscas independentes.
 - Selecionar um asset com mapa aberto não substitui automaticamente o viewport por uma prévia; a prévia 3D permanece acessível por comando explícito.
 - Campos de comprimento e raio identificados em metros. Validação visual e funcional ainda necessária.
+
+## Etapa 4 — Geo Studio, camadas e minimapa
+
+- Geo Studio expandido no workspace, com seleção geográfica central, controles laterais, camadas de reconstrução e atalhos para fontes e geração. Mantém o assistente existente e opção flutuante.
+- Camadas de cena sincronizadas com os comandos de visibilidade existentes.
+- Minimapa navegável de tiles reais, com região 9 × 6 ao redor do tile ativo e distinção entre tiles carregados e não carregados.
+- O minimapa representa a grade de tiles, não imagem aérea. Visualizações 3D/2D simultâneas e perfil longitudinal ainda não fazem parte deste lote.
+- Homologar navegação, sincronização de camadas, geração OSM, janelas e resoluções menores no Windows.
