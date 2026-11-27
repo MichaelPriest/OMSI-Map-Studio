@@ -12,3 +12,11 @@ Referência: mockups aprovados do editor principal, Road Studio e Geo Studio.
 Executar no Windows: abrir mapa, selecionar Road Studio, selecionar uma spline, desenhar e conectar trechos; testar filtro, favoritos, arrastar/soltar, alternar acoplado/flutuante e minimizar/restaurar; verificar mudança de ferramenta, tela cheia, resolução pequena e temas claro/escuro. Verificar que as janelas de geração real, transporte e carregamento continuam sobre o workspace.
 
 O Geo Studio completo, minimapa permanente e visualizações simultâneas ainda não foram implementados nesta etapa.
+
+## Etapa 3 — Road Studio e navegador de assets
+
+- Acesso antecipado a reta, curva, pontos de controle, cruzamentos, snap, continuidade e conexão automática.
+- Filtros rápidos por tipo de asset, favoritos e pesquisa vinculada ao filtro existente.
+- Explorador de cena simultâneo à biblioteca hospedada, com buscas independentes.
+- Selecionar um asset com mapa aberto não substitui automaticamente o viewport por uma prévia; a prévia 3D permanece acessível por comando explícito.
+- Campos de comprimento e raio identificados em metros. Validação visual e funcional ainda necessária.

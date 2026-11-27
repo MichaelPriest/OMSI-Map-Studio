@@ -1559,13 +1559,16 @@ public sealed partial class MainWindow : Window
                 : Visibility.Collapsed;
     }
 
+    private bool HasHostedAssetLibrary => AssetLibraryToolWindow.Visibility == Visibility.Visible;
+
     private void SetLibraryWorkspaceChrome(
         bool libraryWorkspace)
     {
+        libraryWorkspace = libraryWorkspace && !HasHostedAssetLibrary;
         ExplorerPanelTitleText.Text =
             libraryWorkspace
                 ? "BIBLIOTECA"
-                : "PROJETO";
+                : "EXPLORADOR DO MAPA";
 
         ExplorerModeGrid.Visibility =
             libraryWorkspace
@@ -1629,7 +1632,7 @@ public sealed partial class MainWindow : Window
         {
             RefreshMapExplorer();
         }
-        else if (_libraryMode)
+        else if (_libraryMode && !HasHostedAssetLibrary)
         {
             _libraryFilterDebounceTimer.Stop();
             _libraryFilterDebounceTimer.Start();
@@ -2074,6 +2077,10 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        if (_assetLibraryDocked && !HasHostedAssetLibrary)
+        {
+            OpenAssetLibraryToolWindow();
+        }
         _libraryMode =
             true;
 
@@ -2106,8 +2113,7 @@ public sealed partial class MainWindow : Window
         TrafficControlPanel.Visibility =
             Visibility.Collapsed;
 
-        ExplorerListView.Visibility =
-            Visibility.Collapsed;
+        ExplorerListView.Visibility = HasHostedAssetLibrary ? Visibility.Visible : Visibility.Collapsed;
 
         SetAssetLibraryPanelProjectVisibility(
             true);
@@ -2116,12 +2122,13 @@ public sealed partial class MainWindow : Window
             false);
 
         ExplorerSearchBox.PlaceholderText =
-            "Buscar na biblioteca...";
+            HasHostedAssetLibrary ? "Buscar objetos e splines..." : "Buscar na biblioteca...";
 
         UpdateExplorerModeVisual(
             LibraryExplorerModeButton,
             "Assets, categorias, IA, favoritos e coleções");
 
+        if (HasHostedAssetLibrary) RefreshExplorer(force: true);
         await LoadAssetLibraryAsync();
     }
 
@@ -2486,6 +2493,24 @@ public sealed partial class MainWindow : Window
                 : Visibility.Collapsed;
     }
 
+    private void OnAssetQuickFilterClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string tag }) return;
+        if (tag == "favorites")
+        {
+            LibraryViewComboBox.SelectedIndex = 1;
+            LibraryKindComboBox.SelectedIndex = 0;
+        }
+        else if (int.TryParse(tag, out var kind))
+        {
+            LibraryViewComboBox.SelectedIndex = 0;
+            LibraryKindComboBox.SelectedIndex = kind;
+        }
+    }
+
+    private async void OnPreviewSelectedAssetClick(object sender, RoutedEventArgs e) =>
+        await PreviewSelectedAssetAsync();
+
     private async void OnAssetLibrarySelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -2554,6 +2579,16 @@ public sealed partial class MainWindow : Window
         _patternLineStart =
             null;
 
+        if (HasHostedAssetLibrary && _session.CurrentMap is not null)
+        {
+            _assetPreviewCancellation?.Cancel();
+            return;
+        }
+        await PreviewSelectedAssetAsync();
+    }
+
+    private async Task PreviewSelectedAssetAsync()
+    {
         if (
             !_libraryMode ||
             _session.OmsiRootPath is null ||
@@ -4589,8 +4624,10 @@ public sealed partial class MainWindow : Window
 
             Viewport.RestoreSceneView();
 
+            CloseAssetLibraryToolWindow();
             _libraryMode =
                 false;
+            UpdateExplorerModeVisual(SceneExplorerModeButton, "Cena e conteúdo do mapa");
 
             ExplorerListView.Visibility =
                 Visibility.Visible;
@@ -20740,14 +20777,13 @@ public sealed partial class MainWindow : Window
         SetTransportPanelProjectVisibility(
             false);
 
-        ExplorerListView.Visibility =
-            Visibility.Collapsed;
+        ExplorerListView.Visibility = HasHostedAssetLibrary ? Visibility.Visible : Visibility.Collapsed;
 
         SetAssetLibraryPanelProjectVisibility(
             true);
 
         ExplorerSearchBox.PlaceholderText =
-            "Buscar na biblioteca...";
+            HasHostedAssetLibrary ? "Buscar objetos e splines..." : "Buscar na biblioteca...";
 
         if (
             LibraryKindComboBox
@@ -20759,9 +20795,18 @@ public sealed partial class MainWindow : Window
                 kindIndex;
         }
 
-        ExplorerSearchBox.Text =
-            searchText ??
-            string.Empty;
+        if (HasHostedAssetLibrary)
+        {
+            AssetLibrarySearchBox.Text = searchText ?? string.Empty;
+            UpdateExplorerModeVisual(SceneExplorerModeButton, "Cena e conteúdo do mapa");
+            RefreshExplorer(force: true);
+        }
+        else
+        {
+            AssetLibrarySearchBox.Text = searchText ?? string.Empty;
+            ExplorerSearchBox.Text = searchText ?? string.Empty;
+            UpdateExplorerModeVisual(LibraryExplorerModeButton, "Assets e categorias");
+        }
 
         await LoadAssetLibraryAsync();
 
@@ -24983,6 +25028,7 @@ public sealed partial class MainWindow : Window
                 Visibility.Visible)
         {
             CloseAssetLibraryToolWindow();
+            OnSceneExplorerModeClick(sender, e);
 
             StatusText.Text =
                 "Biblioteca voltou ao painel Projeto.";
@@ -25110,6 +25156,7 @@ public sealed partial class MainWindow : Window
         RoutedEventArgs e)
     {
         CloseAssetLibraryToolWindow();
+        OnSceneExplorerModeClick(sender, e);
 
         StatusText.Text =
             "Biblioteca devolvida ao painel Projeto.";
@@ -25191,6 +25238,7 @@ public sealed partial class MainWindow : Window
         _assetLibraryToolWindowMinimized =
             minimized;
 
+        AssetQuickBar.Visibility = minimized ? Visibility.Collapsed : Visibility.Visible;
         AssetLibraryFloatingHost.Visibility =
             minimized
                 ? Visibility.Collapsed

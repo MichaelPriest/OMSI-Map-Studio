@@ -3009,6 +3009,7 @@
                       RowSpacing="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
@@ -3041,6 +3042,9 @@
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
                                     Spacing="4">
+                            <Button Content="Prévia 3D" Style="{StaticResource EditorToolbarButtonStyle}"
+                                    ToolTipService.ToolTip="Inspecionar o asset selecionado no viewport"
+                                    Click="OnPreviewSelectedAssetClick" />
                             <Button x:Name="AssetLibraryDockToggleButton"
                                     Content="Desacoplar"
                                     ToolTipService.ToolTip="Alternar entre biblioteca inferior e janela flutuante"
@@ -3061,8 +3065,28 @@
                         </StackPanel>
                     </Grid>
 
+                    <ScrollViewer x:Name="AssetQuickBar" Grid.Row="1" HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <Button Content="Todos" Tag="0" Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Click="OnAssetQuickFilterClick" />
+                            <Button Content="Ruas / SLI" Tag="2" Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Click="OnAssetQuickFilterClick" />
+                            <Button Content="Objetos / SCO" Tag="1" Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Click="OnAssetQuickFilterClick" />
+                            <Button Content="Modelos" Tag="3" Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Click="OnAssetQuickFilterClick" />
+                            <Button Content="Texturas" Tag="4" Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Click="OnAssetQuickFilterClick" />
+                            <Button Content="☆ Favoritos" Tag="favorites" Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Click="OnAssetQuickFilterClick" />
+                            <TextBox Width="170" PlaceholderText="Pesquisar assets..."
+                                     Text="{Binding Text, ElementName=AssetLibrarySearchBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </ScrollViewer>
+
                     <ContentControl x:Name="AssetLibraryFloatingHost"
-                                    Grid.Row="1"
+                                    Grid.Row="2"
                                     HorizontalContentAlignment="Stretch"
                                     VerticalContentAlignment="Stretch" />
 
@@ -4067,7 +4091,7 @@
                                         Click="OnRoadEditEndpointsClick">
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <FontIcon Glyph="↔" FontSize="14" />
-                                        <TextBlock Text="Editar pontas" />
+                                        <TextBlock Text="Pontos de controle" />
                                     </StackPanel>
                                 </Button>
 
@@ -4075,6 +4099,26 @@
                                         Height="24"
                                         Margin="2,0"
                                         Background="{ThemeResource MapStudioBorderBrush}" />
+
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Cruzamentos" Click="OnToolCrossingsClick"
+                                        ToolTipService.ToolTip="Abrir ferramentas nativas de cruzamento" />
+                                <Button x:Name="RoadSnapButton"
+                                        Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Snap: on"
+                                        Click="OnRoadSnapToggleClick" />
+                                <Button x:Name="RoadContinuousButton"
+                                        Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Contínuo: on"
+                                        Click="OnRoadContinuousToggleClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        ToolTipService.ToolTip="Corrigir automaticamente Previous/Next da spline selecionada usando endpoints próximos"
+                                        Click="OnRoadAutoConnectClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="⛓" FontSize="13" />
+                                        <TextBlock Text="Auto conectar" />
+                                    </StackPanel>
+                                </Button>
 
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         ToolTipService.ToolTip="Duplicar a spline selecionada e reposicionar"
@@ -4166,23 +4210,6 @@
                                            SmallChange="1"
                                            SpinButtonPlacementMode="Compact"
                                            ToolTipService.ToolTip="Inclinação máxima recomendada em porcentagem; acima disso o editor mostra alerta" />
-
-                                <Button x:Name="RoadSnapButton"
-                                        Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Snap: on"
-                                        Click="OnRoadSnapToggleClick" />
-                                <Button x:Name="RoadContinuousButton"
-                                        Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Contínuo: on"
-                                        Click="OnRoadContinuousToggleClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        ToolTipService.ToolTip="Corrigir automaticamente Previous/Next da spline selecionada usando endpoints próximos"
-                                        Click="OnRoadAutoConnectClick">
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <FontIcon Glyph="⛓" FontSize="13" />
-                                        <TextBlock Text="Auto conectar" />
-                                    </StackPanel>
-                                </Button>
 
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Mais ▾">
@@ -5090,7 +5117,7 @@
                                 CornerRadius="8"
                                 Padding="10">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Geometria e vínculos da via"
+                                <TextBlock Text="Geometria da spline"
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
@@ -5101,13 +5128,13 @@
                                     </Grid.ColumnDefinitions>
                                     <NumberBox x:Name="InspectorLengthBox"
                                                Grid.Column="0"
-                                               Header="Comprimento"
+                                               Header="Comprimento (m)"
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="0.25"
                                                Minimum="0" />
                                     <NumberBox x:Name="InspectorRadiusBox"
                                                Grid.Column="1"
-                                               Header="Raio"
+                                               Header="Raio (m)"
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="0.25" />
                                 </Grid>
