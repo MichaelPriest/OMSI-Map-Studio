@@ -32,3 +32,7 @@ O Geo Studio completo, minimapa permanente e visualizações simultâneas ainda 
 ## Etapa 5 — resolução compacta
 
 Faixa de módulos compacta, cabeçalhos com quebra de linha, contexto do Inspector em linha separada, comandos da biblioteca roláveis, limite de largura lateral abaixo de 1200 DIPs e prioridade do Geo Studio acoplado sobre a biblioteca. Resultados da busca ocupam linha própria. Sem mudanças de formatos OMSI. Homologar 1024 × 720, 1366 × 768 e 1920 × 1080, temas claro/escuro e DPI 100/125/150%. Capturas da revisão pendentes.
+
+## Etapa 6 — hierarquia visual
+
+Duas faixas de navegação no desktop, ações frequentes junto ao menu e ações secundárias agrupadas em Mais. Barra contextual plana e rolável, câmera em faixa reservada, trilho vertical menor com rolagem, ações de projeto em duas linhas, minimapa inicialmente recolhido, biblioteca limitada à altura do workspace e Geo Studio com fundo opaco. Todos os nomes de controles e eventos existentes preservados. Validar abertura do menu Mais, alternância de módulos, tela cheia, biblioteca e Geo Studio com as capturas de CI.

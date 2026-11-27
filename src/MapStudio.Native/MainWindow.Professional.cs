@@ -26,6 +26,7 @@ public sealed partial class MainWindow
         var compact = e.NewSize.Width > 0 && e.NewSize.Width < 1200;
         ExplorerColumn.MaxWidth = compact ? 250 : double.PositiveInfinity;
         InspectorColumn.MaxWidth = compact ? 255 : double.PositiveInfinity;
+        AssetLibraryToolWindow.MaxHeight = Math.Max(155, Math.Min(285, e.NewSize.Height * 0.36));
     }
 
     private void SyncProfessionalLayers()
@@ -119,7 +120,7 @@ public sealed partial class MainWindow
         }
         RealMapAreaWindow.Width = docked ? double.NaN : Math.Min(960, Math.Max(280, WorkspaceGrid.ActualWidth - 32));
         RealMapAreaWindow.Height = _realMapAreaWindowMinimized ? 70 : docked ? double.NaN : Math.Min(660, Math.Max(200, WorkspaceGrid.ActualHeight - 32));
-        RealMapAreaWindow.Margin = docked ? new Thickness(6) : new Thickness(16, 16, 0, 0);
+        RealMapAreaWindow.Margin = docked ? new Thickness(0) : new Thickness(16, 16, 0, 0);
         RealMapAreaWindow.HorizontalAlignment = docked ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
         RealMapAreaWindow.VerticalAlignment = docked && !_realMapAreaWindowMinimized ? VerticalAlignment.Stretch : VerticalAlignment.Top;
         RealMapAreaWindowTranslate.X = 0;

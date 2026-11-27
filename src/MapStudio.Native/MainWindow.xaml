@@ -90,11 +90,11 @@
             <Style x:Key="EditorModuleRailButtonStyle"
                    TargetType="Button">
                 <Setter Property="Width"
-                        Value="44" />
+                        Value="34" />
                 <Setter Property="Height"
-                        Value="44" />
+                        Value="34" />
                 <Setter Property="Padding"
-                        Value="7" />
+                        Value="4" />
                 <Setter Property="Background"
                         Value="{StaticResource MapToolDefaultBackgroundBrush}" />
                 <Setter Property="BorderBrush"
@@ -223,7 +223,6 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -233,8 +232,8 @@
 
             <Border Grid.Row="0"
                     Grid.Column="0"
-                    Margin="8,4,10,4"
-                    Padding="12,5"
+                    Margin="6,3,6,3"
+                    Padding="7,3"
                     Background="{ThemeResource MapStudioSurfaceAltBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
@@ -254,20 +253,20 @@
                     </Border>
                     <StackPanel VerticalAlignment="Center"
                                 Spacing="-2">
-                        <TextBlock Text="OMSI MAP STUDIO"
+                        <TextBlock Text="MAP STUDIO"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         <TextBlock Text="PROFESSIONAL"
                                    FontSize="9"
-                                   CharacterSpacing="110"
+                                   CharacterSpacing="35"
                                    Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <MenuBar Grid.Row="0"
-                     Grid.Column="1">
+                     Grid.Column="1" VerticalAlignment="Center">
                 <MenuBarItem Title="Arquivo">
                     <MenuFlyoutItem
                         Text="Workspace Map Studio"
@@ -632,39 +631,15 @@
                 </Grid>
             </ScrollViewer>
 
-            <ScrollViewer
-                Grid.Row="2"
-                Grid.Column="0"
-                Grid.ColumnSpan="3"
-                HorizontalScrollMode="Auto"
-                HorizontalScrollBarVisibility="Hidden"
-                VerticalScrollMode="Disabled"
-                VerticalScrollBarVisibility="Disabled">
-                <Border Margin="8,2,8,6"
-                        Padding="8,6"
-                        Background="{ThemeResource MapStudioSurfaceAltBrush}"
-                        BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="9">
-                    <Grid ColumnSpacing="14">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0"
-                                    Orientation="Horizontal"
-                                    Spacing="7"
-                                    HorizontalAlignment="Left">
+<StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center" Margin="0,0,8,0">
                             <Button x:Name="SaveChangesButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
                                     IsEnabled="False"
                                     ToolTipService.ToolTip="Salvar alterações (Ctrl+S)"
                                     Click="OnSaveChangesClick">
-                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                <StackPanel Orientation="Horizontal" Spacing="0">
                                     <SymbolIcon Symbol="Save" />
-                                    <TextBlock Text="Salvar" />
+                                    
                                 </StackPanel>
                             </Button>
                             <Button x:Name="UndoButton"
@@ -672,9 +647,9 @@
                                     IsEnabled="False"
                                     ToolTipService.ToolTip="Desfazer (Ctrl+Z)"
                                     Click="OnUndoClick">
-                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                <StackPanel Orientation="Horizontal" Spacing="0">
                                     <SymbolIcon Symbol="Undo" />
-                                    <TextBlock Text="Desfazer" />
+                                    
                                 </StackPanel>
                             </Button>
                             <Button x:Name="RedoButton"
@@ -682,9 +657,9 @@
                                     IsEnabled="False"
                                     ToolTipService.ToolTip="Refazer (Ctrl+Y)"
                                     Click="OnRedoClick">
-                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                <StackPanel Orientation="Horizontal" Spacing="0">
                                     <SymbolIcon Symbol="Redo" />
-                                    <TextBlock Text="Refazer" />
+                                    
                                 </StackPanel>
                             </Button>
                             <Rectangle Width="1"
@@ -696,9 +671,13 @@
                                     Click="OnFullscreenClick">
                                 <SymbolIcon Symbol="FullScreen" />
                             </Button>
-                        </StackPanel>
-
-                        <Border Grid.Column="1"
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}" Content="Mais"
+                    AutomationProperties.Name="Mais ações" ToolTipService.ToolTip="Workspace, iluminação, IA, tiles e painéis">
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                        <ScrollViewer MaxHeight="480" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Width="260" Spacing="8">
+                                <Border HorizontalAlignment="Stretch"
                                 Padding="10,4"
                                 Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                 BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
@@ -722,11 +701,7 @@
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
-
-                        <StackPanel Grid.Column="2"
-                                    Orientation="Horizontal"
-                                    Spacing="7"
-                                    HorizontalAlignment="Right">
+                                <StackPanel Spacing="6">
                             <CheckBox x:Name="NightPreviewCheckBox"
                                       Content="Dia/noite"
                                       VerticalAlignment="Center"
@@ -741,7 +716,7 @@
                                     ToolTipService.ToolTip="Usar opcionalmente mapas e itens da instalação do OMSI"
                                     Click="OnOpenOmsiClick" />
                             <ComboBox x:Name="AiProfileSelectorBox"
-                                      Width="170"
+                                      HorizontalAlignment="Stretch"
                                       PlaceholderText="Perfil de IA"
                                       ToolTipService.ToolTip="Seleciona imediatamente o perfil de IA ativo para as ferramentas do mapa"
                                       SelectionChanged="OnAiProfileSelectorChanged" />
@@ -834,9 +809,12 @@
                                     IsEnabled="False"
                                     Click="OnOpenMapCatalogClick" />
                         </StackPanel>
-                    </Grid>
-                </Border>
-            </ScrollViewer>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+</StackPanel>
         </Grid>
 
         <Grid x:Name="WorkspaceGrid"
@@ -862,11 +840,11 @@
                     Grid.Row="1"
                     Grid.RowSpan="2"
                     Grid.Column="0"
-                    Margin="6"
-                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    Margin="3"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="6">
+                    CornerRadius="3">
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="FullscreenExplorerTranslate" />
                 </Border.RenderTransform>
@@ -1046,27 +1024,26 @@
                                        Visibility="Collapsed"
                                        Text="mapa completo" />
 
-                            <Grid ColumnSpacing="5">
+                            <Grid ColumnSpacing="5" RowSpacing="5">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0"
+                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}" Grid.Column="0"
                                         Content="Novo"
                                         ToolTipService.ToolTip="Criar um novo mapa no Workspace"
                                         Click="OnCreateStandaloneMapClick" />
-                                <Button Grid.Column="1"
+                                <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}" Grid.Column="1"
                                         Content="Abrir"
                                         ToolTipService.ToolTip="Abrir um mapa do catálogo"
                                         IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}"
                                         Click="OnOpenMapCatalogClick" />
-                                <Button Grid.Column="2"
+                                <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}" Grid.Row="1" Grid.Column="0"
                                         Content="Importar"
                                         ToolTipService.ToolTip="Importar mapa existente para o Workspace"
                                         Click="OnImportStandaloneMapClick" />
-                                <Button Grid.Column="3"
+                                <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}" Grid.Row="1" Grid.Column="1"
                                         Content="+ Assets"
                                         ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
                                         Click="OnAddAssetFolderClick" />
@@ -2338,7 +2315,7 @@
                             <CheckBox x:Name="ProfessionalReferenceLayer" Content="Referência geográfica" Tag="Reference" Click="OnProfessionalLayerClick" MinHeight="28" />
                         </StackPanel>
                     </Expander>
-                    <Expander Grid.Row="6" Header="Minimapa · tiles" IsExpanded="True" HorizontalAlignment="Stretch">
+                    <Expander Grid.Row="6" Header="Minimapa · tiles" IsExpanded="False" HorizontalAlignment="Stretch">
                         <StackPanel Spacing="4">
                             <TextBlock x:Name="ProfessionalMinimapStatus" Text="Abra um mapa" FontSize="10"
                                        TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextMutedBrush}" />
@@ -2368,7 +2345,7 @@
                 x:Name="Viewport"
                 Grid.Row="1"
                 Grid.Column="2"
-                Margin="0,8"
+                Margin="0,46,0,6"
                 AllowDrop="True"
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
@@ -2376,17 +2353,18 @@
             <Border x:Name="ViewportCommandBar"
                     Grid.Row="1"
                     Grid.Column="2"
-                    HorizontalAlignment="Center"
+                    HorizontalAlignment="Stretch"
                     VerticalAlignment="Top"
-                    Margin="8,14,8,0"
-                    Padding="8,6"
+                    Margin="0,4,0,0"
+                    Padding="4,3"
                     Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
                     CornerRadius="7"
                     Canvas.ZIndex="57">
-                <StackPanel Orientation="Horizontal"
-                            Spacing="5">
+                <ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Spacing="4">
                     <Border Padding="8,3"
                             Background="{ThemeResource MapStudioAccentSurfaceBrush}"
                             CornerRadius="5">
@@ -2397,11 +2375,11 @@
                                    Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                     </Border>
                     <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="3D · Perspectiva"
+                            Content="3D"
                             ToolTipService.ToolTip="Câmera em perspectiva"
                             Click="OnPerspectiveViewClick" />
                     <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="2D · Topo"
+                            Content="2D"
                             ToolTipService.ToolTip="Vista superior"
                             Click="OnTopViewClick" />
                     <Button Style="{StaticResource EditorToolbarButtonStyle}"
@@ -2417,6 +2395,7 @@
                             ToolTipService.ToolTip="Mostrar/ocultar a referência de mapa"
                             Click="OnToggleMapReferenceVisibilityClick" />
                 </StackPanel>
+                </ScrollViewer>
             </Border>
 
             <Border x:Name="MapReferenceAttributionBorder"
@@ -3253,12 +3232,12 @@
                     Grid.RowSpan="3"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    Margin="6"
+                    Margin="0"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Visibility="Collapsed"
                     Canvas.ZIndex="115"
-                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
                     CornerRadius="12">
@@ -3963,12 +3942,12 @@
                     Grid.ColumnSpan="5"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Top"
-                    Margin="6,3,6,3"
-                    Padding="8,6"
-                    Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
+                    Margin="0,1,0,2"
+                    Padding="6,3"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
-                    CornerRadius="11"
+                    CornerRadius="0"
                     Canvas.ZIndex="48">
                 <Grid ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
@@ -3983,7 +3962,7 @@
                             CornerRadius="3" />
 
                     <StackPanel Grid.Column="1"
-                                MinWidth="126"
+                                MinWidth="92"
                                 VerticalAlignment="Center"
                                 Spacing="1">
                         <TextBlock x:Name="ContextToolTitleText"
@@ -3991,14 +3970,12 @@
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                        <TextBlock Text="Ferramentas contextuais"
-                                   FontSize="10"
-                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                        
                     </StackPanel>
 
                     <ScrollViewer Grid.Column="2"
                                   HorizontalScrollMode="Auto"
-                                  HorizontalScrollBarVisibility="Hidden"
+                                  HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled">
                         <Grid>
@@ -4047,18 +4024,8 @@
                                         Content="Validar mapa"
                                         ToolTipService.ToolTip="Analisar dependências, TTData, links e estrutura do mapa"
                                         Click="OnToolValidationClick" />
-                                <Border Padding="9,4"
-                                        Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
-                                        BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="7"
-                                        VerticalAlignment="Center">
-                                    <TextBlock Text="Clique de novo no mesmo ponto para alternar itens sobrepostos"
-                                               MaxWidth="260"
-                                               FontSize="10"
-                                               TextWrapping="Wrap"
-                                               Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
-                                </Border>
+                                <TextBlock Text="Clique novamente para alternar a seleção" FontSize="10" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
 
                             <StackPanel x:Name="ObjectContextPanel"
@@ -4548,15 +4515,17 @@
                     Grid.Row="1"
                     Grid.Column="2"
                     HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    Margin="8,8,0,86"
+                    VerticalAlignment="Stretch"
+                    Margin="6,50,0,10"
                     Padding="5"
                     Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Canvas.ZIndex="58">
-                <StackPanel Spacing="4">
+                <ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="3">
                     <Button x:Name="ModuleSelectionButton"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Seleção"
@@ -4653,6 +4622,7 @@
                               Data="M 4,4 Q 4,2 7,2 L 19,2 Q 22,2 22,5 L 22,18 L 4,18 Z M 7,6 L 19,6 L 19,12 L 7,12 Z M 8,18 L 8,22 M 18,18 L 18,22" />
                     </Button>
                 </StackPanel>
+                </ScrollViewer>
             </Border>
 
             <Border x:Name="MapToolPalette"
@@ -5012,11 +4982,11 @@
                     Grid.Row="1"
                     Grid.RowSpan="2"
                     Grid.Column="4"
-                    Margin="6"
-                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    Margin="3"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="6">
+                    CornerRadius="3">
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="FullscreenInspectorTranslate" />
                 </Border.RenderTransform>
