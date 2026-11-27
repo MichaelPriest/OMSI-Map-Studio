@@ -54,3 +54,10 @@ OpenStreetMap é o mapa-base padrão. A referência sobre o terreno é gerada lo
 ### Keyless reference (EN)
 
 OpenStreetMap is the default map picker. The local ground overlay renders OSM vector road and building geometry into georeferenced PNG, without Google or CARTO credentials, within the active tile and loaded neighbors. It uses the existing OSM data cache, not bulk public raster tile downloads. Esri is a separate authorized online imagery preview, not an export/offline source. Labels, water and vegetation in the reference remain pending.
+
+
+### Elevação real sem chave: AWS Terrarium
+
+O assistente de mapa real oferece AWS Terrarium / Mapzen como fonte adicional, sem API key, tanto para terreno isolado como para reconstrução automática. Os PNGs Terrarium são decodificados em um único componente compartilhado entre Core e Renderer, com cache local, interpolação entre pixels e tiles e resolução adaptada à extensão. O pipeline aplica uma superfície e uma cota de referência comum à região. O endpoint público Open-Meteo também pode ser usado sem chave no modo por tile. A resolução nativa varia por região e a grade de amostragem limita o detalhe final; não representa levantamento topográfico de engenharia. Homologação visual e testes com dados reais pendentes.
+
+**EN:** AWS Terrarium / Mapzen is available as a keyless terrain provider for both terrain-only and full reconstruction. Shared PNG decoding, cached tiles, bilinear sampling and a common regional baseline are used. The public Open-Meteo per-tile key guard was removed. Actual source resolution varies; live visual testing remains required.

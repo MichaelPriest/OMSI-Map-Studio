@@ -10,7 +10,8 @@ public enum NativeRealWorldElevationMode
 {
     None,
     Google,
-    OpenMeteo
+    OpenMeteo,
+    Terrarium
 }
 
 public sealed record NativeRealWorldMapGenerationResult(
@@ -64,7 +65,8 @@ public sealed class NativeRealWorldMapGenerationService
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
             bool useOpenAerialMapEvidence = false,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All,
+            bool useTerrariumElevation = false)
     {
         var buildingVisualEvidenceProvider =
             CreateBuildingVisualEvidenceProvider(
@@ -113,7 +115,7 @@ public sealed class NativeRealWorldMapGenerationService
                 .TryGetOpenMeteoApiKey();
 
         if (
-            useSavedOpenMeteoElevation)
+            useSavedOpenMeteoElevation || useTerrariumElevation)
         {
             var pipeline =
                 await _pipeline
@@ -125,7 +127,7 @@ public sealed class NativeRealWorldMapGenerationService
                         north,
                         east,
                         anchor,
-                        openMeteoKey,
+                        useTerrariumElevation ? null : openMeteoKey,
                         elevationRows,
                         elevationColumns,
                         streetFurnitureEvidence,
@@ -134,12 +136,13 @@ public sealed class NativeRealWorldMapGenerationService
                         elevationProgress,
                         cancellationToken,
                         buildingVisualEvidenceProvider,
-                        layers)
+                        layers,
+                        useTerrarium: useTerrariumElevation)
                     .ConfigureAwait(false);
 
             return new NativeRealWorldMapGenerationResult(
                 pipeline,
-                NativeRealWorldElevationMode.OpenMeteo);
+                useTerrariumElevation ? NativeRealWorldElevationMode.Terrarium : NativeRealWorldElevationMode.OpenMeteo);
         }
 
         var withoutElevation =

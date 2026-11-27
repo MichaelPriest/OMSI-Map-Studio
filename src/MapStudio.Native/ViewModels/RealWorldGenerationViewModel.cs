@@ -255,6 +255,7 @@ public sealed class RealWorldGenerationViewModel :
         {
             NativeRealWorldElevationMode.Google =>
                 "Google",
+            NativeRealWorldElevationMode.Terrarium => "AWS Terrarium / Mapzen",
             NativeRealWorldElevationMode.OpenMeteo =>
                 "Open-Meteo/Copernicus",
             _ =>
@@ -287,7 +288,8 @@ public sealed class RealWorldGenerationViewModel :
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
             bool useOpenAerialMapEvidence = false,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All,
+            bool useTerrariumElevation = false)
     {
         if (IsBusy)
         {
@@ -338,7 +340,8 @@ public sealed class RealWorldGenerationViewModel :
                         useSavedOpenMeteoElevation,
                         useBuildingVisualEvidence,
                         useOpenAerialMapEvidence,
-                        layers);
+                        layers,
+                        useTerrariumElevation);
 
             Summary =
                 summary;

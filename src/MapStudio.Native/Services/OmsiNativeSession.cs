@@ -1524,11 +1524,7 @@ public sealed class OmsiNativeSession
             CancellationToken cancellationToken =
                 default)
     {
-        if (
-            string.IsNullOrWhiteSpace(
-                apiKey) ||
-            sampleCount is
-                < 3 or > 33)
+        if (sampleCount is < 3 or > 33)
         {
             throw new InvalidDataException(
                 "invalidOpenMeteoElevationRequest");

@@ -28746,7 +28746,7 @@ setTimeout(postBounds, 250);
                     RealMapElevationProviderBox
                         .SelectedIndex,
                     0,
-                    2);
+                    3);
 
             NativeStartupDiagnostics.Write(
                 $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode} fullReconstruction={fullReconstruction} elevationRequested={applyElevation} elevationProvider={elevationProviderIndex} localVisualEvidence={RealMapUseBuildingVisualEvidenceCheckBox.IsChecked == true} openAerialMapEvidence={RealMapUseOpenAerialMapEvidenceCheckBox.IsChecked == true}");
@@ -28906,7 +28906,8 @@ setTimeout(postBounds, 250);
                                 RealMapUseOpenAerialMapEvidenceCheckBox
                                     .IsChecked ==
                                 true,
-                            layers: generationLayers);
+                            layers: generationLayers,
+                            useTerrariumElevation: applyElevation && elevationProviderIndex == 3);
 
                     if (
                         generationRunSummary
@@ -29115,13 +29116,32 @@ setTimeout(postBounds, 250);
                 RealMapElevationProviderBox
                     .SelectedIndex,
                 0,
-                2);
+                3);
 
         if (providerIndex == 0)
         {
             StatusText.Text =
                 "Mapa real criado sem elevação automática.";
 
+            return;
+        }
+
+        if (providerIndex == 3)
+        {
+            var root = _session.OmsiRootPath ?? throw new InvalidOperationException("omsiRootRequired");
+            var geo = await _session.LoadMapGeoreferenceAsync()
+                ?? throw new InvalidDataException("mapGeoreferenceRequired");
+            var anchor = new MapStudioGeographicAnchor(geo.Latitude, geo.Longitude,
+                OmsiTileGrid.GetOriginX(geo.AnchorTileX) + geo.AnchorX,
+                OmsiTileGrid.GetOriginZ(geo.AnchorTileY) + geo.AnchorY);
+            var bounds = MapStudioElevationCoverageResolver.Resolve(snapshot.Map.Tiles, anchor);
+            var surface = await new MapStudioTerrariumElevationSurfaceClient().DownloadAsync(
+                bounds.South, bounds.West, bounds.North, bounds.East);
+            await new MapStudioTerrainElevationBatchApplier().ApplyAsync(
+                root, snapshot.Map.DirectoryPath, anchor, surface);
+            var reloaded = await _session.OpenMapAsync(snapshot.Map.DirectoryPath, loadFullMap: true);
+            await ApplyMapSnapshotAsync(reloaded, focusActiveTile: false);
+            StatusText.Text = "Elevação AWS Terrarium / Mapzen aplicada sem API key.";
             return;
         }
 

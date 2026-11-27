@@ -3361,6 +3361,7 @@
                                                 <ComboBoxItem Content="Nenhuma" />
                                                 <ComboBoxItem Content="Open-Meteo / Copernicus GLO-90 · gratuito sem chave" />
                                                 <ComboBoxItem Content="Google Elevation · chave do usuário" />
+                                                <ComboBoxItem Content="AWS Terrarium / Mapzen · sem API key" />
                                             </ComboBox>
 
                                             <PasswordBox x:Name="RealMapOpenMeteoKeyBox"
