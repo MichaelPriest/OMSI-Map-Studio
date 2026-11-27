@@ -17,3 +17,7 @@ Drawing, straight, curve, snap and continuous modes come first; curve/endpoints 
 ## Stage 8 — focused Inspector
 
 Fixed header and selection, independently scrollable properties, Apply/Duplicate/Delete at the bottom when available. Core geometry remains accessible; terrain matching and links are collapsible. Terrain tools separate brush, textures and polygons. Lighter borders and status ellipsis. Existing control names and handlers preserved. Validate selection, editing and persistence on Windows, including compact heights.
+
+## Stage 9 — viewport and projects
+
+Below 1250 DIPs, tool selection uses the side library instead of automatically opening the bottom tray. Search remains visible, Explorer tabs stay available, actions have bounded height and thumbnails have dedicated space. Vertical rail no longer overlaps viewport. Module icons reuse native vector geometry. Empty-scene welcome actions create, open, import or open Geo Studio; hidden with a map or another tool. Stage 8 passed CI; stage 9 still requires CI and captures.

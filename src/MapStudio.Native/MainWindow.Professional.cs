@@ -19,8 +19,19 @@ public sealed partial class MainWindow
         }
         SyncProfessionalLayers();
         WorkspaceGrid.SizeChanged += OnProfessionalWorkspaceSizeChanged;
+        MapText.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => RefreshProfessionalWelcome());
+        SelectionContextPanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => RefreshProfessionalWelcome());
+        MainRoot.Loaded += (_, _) => RefreshProfessionalWelcome();
         AssetLibraryToolWindow.RegisterPropertyChangedCallback(FrameworkElement.VerticalAlignmentProperty,
             (_, _) => ApplyProfessionalAssetTrayBounds(WorkspaceGrid.ActualHeight));
+    }
+
+    private bool PreferProfessionalAssetSidebar => WorkspaceGrid.ActualWidth > 0 && WorkspaceGrid.ActualWidth < 1250;
+
+    private void RefreshProfessionalWelcome()
+    {
+        ProfessionalWelcomePanel.Visibility = _session.CurrentMap is null && SelectionContextPanel.Visibility == Visibility.Visible
+            ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnProfessionalWorkspaceSizeChanged(object sender, SizeChangedEventArgs e)
@@ -29,10 +40,19 @@ public sealed partial class MainWindow
         ExplorerColumn.MaxWidth = compact ? 250 : double.PositiveInfinity;
         InspectorColumn.MaxWidth = compact ? 255 : double.PositiveInfinity;
         ApplyProfessionalAssetTrayBounds(e.NewSize.Height);
+        if (PreferProfessionalAssetSidebar && _assetLibraryDocked && HasHostedAssetLibrary && _libraryMode && !IsFullscreen())
+        {
+            CloseAssetLibraryToolWindow();
+            ExplorerListView.Visibility = Visibility.Collapsed;
+            if (ExplorerPanel.Visibility != Visibility.Visible) ToggleExplorerPanel();
+            UpdateExplorerModeVisual(LibraryExplorerModeButton, "Assets e categorias");
+        }
     }
 
     private void ApplyProfessionalAssetTrayBounds(double workspaceHeight)
     {
+        AssetDockActionsScroll.MaxHeight = !HasHostedAssetLibrary && workspaceHeight > 0
+            ? Math.Max(96, Math.Min(160, workspaceHeight * 0.28)) : double.PositiveInfinity;
         AssetLibraryToolWindow.MaxHeight = _assetLibraryDocked && workspaceHeight > 0
             ? Math.Max(155, Math.Min(285, workspaceHeight * 0.40))
             : double.PositiveInfinity;

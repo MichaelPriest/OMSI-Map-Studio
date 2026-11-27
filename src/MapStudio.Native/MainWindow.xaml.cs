@@ -1569,13 +1569,13 @@ public sealed partial class MainWindow : Window
         libraryWorkspace = libraryWorkspace && !HasHostedAssetLibrary;
         ExplorerPanelTitleText.Text =
             libraryWorkspace
-                ? "BIBLIOTECA"
-                : "EXPLORADOR DO MAPA";
+                ? "Biblioteca"
+                : "Explorer";
 
-        ExplorerModeGrid.Visibility =
-            libraryWorkspace
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+        ExplorerModeGrid.Visibility = Visibility.Visible;
+        ProfessionalLayersExpander.Visibility = libraryWorkspace ? Visibility.Collapsed : Visibility.Visible;
+        ProfessionalMinimapExpander.Visibility = libraryWorkspace ? Visibility.Collapsed : Visibility.Visible;
+        ApplyProfessionalAssetTrayBounds(WorkspaceGrid.ActualHeight);
 
         ExplorerSearchGrid.Visibility =
             libraryWorkspace
@@ -2079,7 +2079,7 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        if (_assetLibraryDocked && !HasHostedAssetLibrary)
+        if (_assetLibraryDocked && !HasHostedAssetLibrary && !PreferProfessionalAssetSidebar)
         {
             OpenAssetLibraryToolWindow();
         }
@@ -20800,7 +20800,7 @@ public sealed partial class MainWindow : Window
         string? searchText,
         string status)
     {
-        if (_assetLibraryDocked)
+        if (_assetLibraryDocked && !PreferProfessionalAssetSidebar)
         {
             OpenAssetLibraryToolWindow();
         }
@@ -25157,7 +25157,8 @@ public sealed partial class MainWindow : Window
         Grid.SetRowSpan(AssetDockActionsScroll, docked ? 5 : 1);
         AssetDockActionsScroll.Margin = docked ? new Thickness(6, 0, 0, 0) : new Thickness(0);
         AssetDockFiltersScroll.MaxHeight = docked ? 100 : 340;
-        LibraryThumbnailBorder.Height = docked ? 0 : 128;
+        LibraryThumbnailBorder.Height = docked ? 0 : PreferProfessionalAssetSidebar && !HasHostedAssetLibrary ? 64 : 128;
+        ApplyProfessionalAssetTrayBounds(WorkspaceGrid.ActualHeight);
     }
 
     private void OpenAssetLibraryToolWindow()

@@ -44,3 +44,7 @@ Desenho, reta, curva, snap e continuidade ficam no início; edição de curva/en
 ## Etapa 8 — Inspector funcional
 
 Cabeçalho e seleção fixos, propriedades com rolagem independente, ações Aplicar/Duplicar/Excluir no rodapé quando disponíveis. Geometria principal sempre acessível; ajustes terreno/via e vínculos em seções recolhíveis. Ferramentas de terreno separam pincel, texturas e polígonos. Bordas mais discretas e status com reticências. Preservados nomes e eventos dos controles. Validar seleção, edição e gravação no Windows, inclusive altura compacta.
+
+## Etapa 9 — viewport e projetos
+
+Abaixo de 1250 DIPs, seleção de ferramentas usa biblioteca lateral em vez da bandeja inferior automática. Pesquisa sempre visível, abas do Explorer disponíveis, ações com altura limitada e miniaturas com espaço próprio. A barra de ferramentas vertical não cobre o viewport. Ícones de módulos reaproveitam as geometrias vetoriais nativas. Tela inicial contextual com ações reais de novo mapa, abrir, importar e Geo Studio; desaparece quando há mapa ou outra ferramenta. Validação da etapa 8 aprovada; etapa 9 ainda requer CI e capturas.

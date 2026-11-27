@@ -557,7 +557,12 @@
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTerrainButton, Mode=OneWay}"
                             AutomationProperties.Name="Terreno" Click="OnToolTerrainClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon Glyph="&#xE909;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <Path Width="16"
+                              Height="16"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.7"
+                              Data="M 2,20 L 8,10 L 12,15 L 16,6 L 23,20 Z M 5,20 L 20,20" />
                             <TextBlock Text="Terreno" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
@@ -568,7 +573,12 @@
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleRoadsButton, Mode=OneWay}"
                             AutomationProperties.Name="Road Studio" Click="OnToolSplinesClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon Glyph="&#xE804;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <Path Width="16"
+                              Height="16"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.7"
+                              Data="M 4,22 C 8,16 8,8 12,2 M 20,22 C 16,16 16,8 12,2 M 9,17 L 15,17 M 10.5,11 L 13.5,11" />
                             <TextBlock Text="Road Studio" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
@@ -579,7 +589,12 @@
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleObjectsButton, Mode=OneWay}"
                             AutomationProperties.Name="Cenários" Click="OnToolObjectsClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon Glyph="&#xE8B9;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <Path Width="16"
+                              Height="16"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.7"
+                              Data="M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z M 3,7 L 12,12 L 21,7 M 12,12 L 12,22" />
                             <TextBlock Text="Cenários" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
@@ -590,7 +605,12 @@
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTrafficButton, Mode=OneWay}"
                             AutomationProperties.Name="Tráfego" Click="OnToolTrafficClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon Glyph="&#xE7C0;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <Path Width="16"
+                              Height="16"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.7"
+                              Data="M 7,2 L 17,2 L 17,22 L 7,22 Z M 12,6 A 2,2 0 1 0 12,6.1 M 12,12 A 2,2 0 1 0 12,12.1 M 12,18 A 2,2 0 1 0 12,18.1" />
                             <TextBlock Text="Tráfego" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
@@ -601,7 +621,7 @@
                             BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                             AutomationProperties.Name="Geo Studio" Click="OnCreateCoordinateMapClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon Glyph="&#xE909;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <Path Width="16" Height="16" Stretch="Uniform" Stroke="{ThemeResource MapStudioTextPrimaryBrush}" StrokeThickness="1.7" Data="M 12,2 A 10,10 0 1 1 11.99,2 M 2,12 L 22,12 M 12,2 C 5,7 5,17 12,22 M 12,2 C 19,7 19,17 12,22" />
                             <TextBlock Text="Geo Studio" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
@@ -612,7 +632,12 @@
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTransportButton, Mode=OneWay}"
                             AutomationProperties.Name="Transporte" Click="OnToolTransportClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon Glyph="&#xE806;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                            <Path Width="16"
+                              Height="16"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.7"
+                              Data="M 4,4 Q 4,2 7,2 L 19,2 Q 22,2 22,5 L 22,18 L 4,18 Z M 7,6 L 19,6 L 19,12 L 7,12 Z M 8,18 L 8,22 M 18,18 L 18,22" />
                             <TextBlock Text="Transporte" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
@@ -869,7 +894,7 @@
 
                         <StackPanel Spacing="1">
                             <TextBlock x:Name="ExplorerPanelTitleText"
-                                       Text="EXPLORADOR DO MAPA"
+                                       Text="Explorer"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        TextWrapping="Wrap"
@@ -978,8 +1003,8 @@
                                 <TextBlock Text="↔"
                                            FontSize="14"
                                            HorizontalAlignment="Center" />
-                                <TextBlock Text="Transporte"
-                                           FontSize="9.5"
+                                <TextBlock Text="Rotas"
+                                           FontSize="10"
                                            HorizontalAlignment="Center" />
                             </StackPanel>
                         </Button>
@@ -1188,8 +1213,11 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <Expander x:Name="AssetFiltersExpander"
-                                      Grid.Row="0"
+                            <StackPanel Grid.Row="0" Spacing="4"><TextBox x:Name="AssetLibrarySearchBox"
+                                             PlaceholderText="Buscar assets..."
+                                             TextChanged="OnAssetLibrarySearchTextChanged" />
+<Expander x:Name="AssetFiltersExpander"
+                                      
                                       Header="Filtros e categorias"
                                       IsExpanded="False"
                                       HorizontalAlignment="Stretch">
@@ -1237,9 +1265,7 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <TextBox x:Name="AssetLibrarySearchBox"
-                                             PlaceholderText="Buscar assets, pastas, categorias..."
-                                             TextChanged="OnAssetLibrarySearchTextChanged" />
+                                    
 
                                     <Grid ColumnSpacing="6">
                                         <Grid.ColumnDefinitions>
@@ -1337,6 +1363,7 @@
                                     </Border>
                                 </ScrollViewer>
                             </Expander>
+</StackPanel>
 
                             <ScrollViewer x:Name="AssetDockActionsScroll" Grid.Row="1"
                                           VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
@@ -1640,7 +1667,7 @@
                             <TextBlock x:Name="LibraryStatusText"
                                        Grid.Row="2"
                                        Text="Índice de assets não carregado."
-                                       FontSize="12"
+                                       FontSize="10" MaxLines="2" TextTrimming="CharacterEllipsis"
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
 
@@ -2305,7 +2332,7 @@
                                   StrokeThickness="1.5" />
                         </Grid>
                     </Border>
-                    <Expander Grid.Row="5" Header="Camadas da cena" IsExpanded="False" HorizontalAlignment="Stretch">
+                    <Expander x:Name="ProfessionalLayersExpander" Grid.Row="5" Header="Camadas da cena" IsExpanded="False" HorizontalAlignment="Stretch">
                         <StackPanel Spacing="2">
                             <CheckBox x:Name="ProfessionalTerrainLayer" Content="Terreno" Tag="Terrain" Click="OnProfessionalLayerClick" MinHeight="28" />
                             <CheckBox x:Name="ProfessionalObjectsLayer" Content="Objetos e cenários" Tag="Objects" Click="OnProfessionalLayerClick" MinHeight="28" />
@@ -2315,7 +2342,7 @@
                             <CheckBox x:Name="ProfessionalReferenceLayer" Content="Referência geográfica" Tag="Reference" Click="OnProfessionalLayerClick" MinHeight="28" />
                         </StackPanel>
                     </Expander>
-                    <Expander Grid.Row="6" Header="Minimapa · tiles" IsExpanded="False" HorizontalAlignment="Stretch">
+                    <Expander x:Name="ProfessionalMinimapExpander" Grid.Row="6" Header="Minimapa · tiles" IsExpanded="False" HorizontalAlignment="Stretch">
                         <StackPanel Spacing="4">
                             <TextBlock x:Name="ProfessionalMinimapStatus" Text="Abra um mapa" FontSize="10"
                                        TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextMutedBrush}" />
@@ -2345,7 +2372,7 @@
                 x:Name="Viewport"
                 Grid.Row="1"
                 Grid.Column="2"
-                Margin="0,46,0,6"
+                Margin="54,46,0,6"
                 AllowDrop="True"
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
@@ -2398,6 +2425,22 @@
                 </ScrollViewer>
             </Border>
 
+            <Border x:Name="ProfessionalWelcomePanel" Grid.Row="1" Grid.Column="2"
+                    Margin="64,56,10,12" MaxWidth="430" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}" CornerRadius="8"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}" BorderThickness="1" Padding="18"
+                    Canvas.ZIndex="56" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Comece um mapa" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="Crie um projeto, abra um mapa existente ou reconstrua uma região real." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextSecondaryBrush}"/>
+                        <Button Content="Novo mapa" HorizontalAlignment="Stretch" Click="OnCreateStandaloneMapClick" Background="{ThemeResource MapStudioAccentSurfaceBrush}"/>
+                        <Button Content="Abrir mapa" HorizontalAlignment="Stretch" IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}" Click="OnOpenMapCatalogClick"/>
+                        <Button Content="Importar mapa OMSI" HorizontalAlignment="Stretch" Click="OnImportStandaloneMapClick"/>
+                        <Button Content="Criar mapa real · Geo Studio" HorizontalAlignment="Stretch" Click="OnCreateCoordinateMapClick"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
             <Border x:Name="MapReferenceAttributionBorder"
                     Grid.Row="1"
                     Grid.Column="2"
