@@ -25,6 +25,8 @@ public sealed partial class MainWindow
         WorkspaceGrid.SizeChanged += OnProfessionalWorkspaceSizeChanged;
         DesktopChromePanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => { SyncProfessionalRail(); RefreshProfessionalWelcome(); });
         SyncProfessionalRail();
+        AssetLibraryListView.SelectionChanged += (_, _) => SyncProfessionalAssetActions();
+        SyncProfessionalAssetActions();
         MapText.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => RefreshProfessionalWelcome());
         SelectionContextPanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => RefreshProfessionalWelcome());
         MainRoot.Loaded += (_, _) =>
@@ -71,9 +73,23 @@ public sealed partial class MainWindow
 
     private void SyncProfessionalRail()
     {
-        var visibility = DesktopChromePanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
-        foreach (var button in new[] { ModuleObjectsButton, ModuleRoadsButton, ModuleTerrainButton, ModuleTrafficButton, ModuleTransportButton })
+        var visibility = DesktopChromePanel.Visibility == Visibility.Visible && ProfessionalModuleRibbon.Visibility == Visibility.Visible
+            ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var button in new[] { ModuleObjectsButton, ModuleRoadsButton, ModuleTerrainButton, ModuleTrafficButton, ModuleTransportButton, ProfessionalGeoRailButton, ProfessionalValidationRailButton })
             button.Visibility = visibility;
+    }
+
+    private void OnProfessionalModuleRibbonClick(object sender, RoutedEventArgs e)
+    {
+        ProfessionalModuleRibbon.Visibility = ProfessionalModuleRibbonMenuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+        SyncProfessionalRail();
+    }
+
+    private void SyncProfessionalAssetActions()
+    {
+        var selected = AssetLibraryListView.SelectedItem is not null;
+        AssetDockActionsScroll.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+        AssetDockActionsColumn.Width = new GridLength(selected && Grid.GetColumn(AssetDockActionsScroll) == 1 ? 190 : 0);
     }
 
     private bool PreferProfessionalAssetSidebar => WorkspaceGrid.ActualWidth > 0 && WorkspaceGrid.ActualWidth < 1250;

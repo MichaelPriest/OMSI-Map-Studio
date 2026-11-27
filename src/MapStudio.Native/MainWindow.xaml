@@ -367,6 +367,7 @@
                         Text="Alternar Inspector"
                         Click="OnToggleInspectorClick" />
                     <MenuFlyoutItem Text="Tela inicial (sem mapa)" Click="OnProfessionalShowWelcomeClick" />
+                    <ToggleMenuFlyoutItem x:Name="ProfessionalModuleRibbonMenuItem" Text="Faixa horizontal de módulos" IsChecked="False" Click="OnProfessionalModuleRibbonClick" />
                     <ToggleMenuFlyoutItem x:Name="ProfessionalAutoInspectorMenuItem" Text="Propriedades automáticas" IsChecked="True" Click="OnProfessionalAutoInspectorClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Mapa">
@@ -523,7 +524,7 @@
                 </MenuBarItem>
             </MenuBar>
 
-            <ScrollViewer Grid.Row="1" Grid.ColumnSpan="3"
+            <ScrollViewer x:Name="ProfessionalModuleRibbon" Grid.Row="1" Grid.ColumnSpan="3" Visibility="Collapsed"
                           HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
                           VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
                 <Grid Margin="8,2,8,3" ColumnSpacing="2" MinWidth="810">
@@ -1154,6 +1155,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <StackPanel Grid.Row="0" Spacing="4"><TextBox x:Name="AssetLibrarySearchBox"
@@ -1308,7 +1310,7 @@
                             </Expander>
 </StackPanel>
 
-                            <ScrollViewer x:Name="AssetDockActionsScroll" Grid.Row="1"
+                            <ScrollViewer x:Name="AssetDockActionsScroll" Grid.Row="5" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
                             <StackPanel Spacing="6">
                                 <Border Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
@@ -4541,7 +4543,7 @@
                     Grid.Column="2"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
-                    MaxHeight="350"
+                    MaxHeight="460"
                     Margin="3,4,0,4"
                     Padding="3"
                     Background="{ThemeResource MapStudioChromeBackgroundBrush}"
@@ -4576,7 +4578,7 @@
                               Data="M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z M 3,7 L 12,12 L 21,7 M 12,12 L 12,22" />
                     </Button>
 
-                    <Button x:Name="ModuleRoadsButton"
+                    <Button x:Name="ModuleRoadsButton" AutomationProperties.Name="Road Studio"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Ruas e splines"
                             Click="OnToolSplinesClick">
@@ -4646,6 +4648,14 @@
                               Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                               StrokeThickness="1.8"
                               Data="M 4,4 Q 4,2 7,2 L 19,2 Q 22,2 22,5 L 22,18 L 4,18 Z M 7,6 L 19,6 L 19,12 L 7,12 Z M 8,18 L 8,22 M 18,18 L 18,22" />
+                    </Button>
+                <Button x:Name="ProfessionalGeoRailButton" AutomationProperties.Name="Geo Studio"
+                            Style="{StaticResource EditorModuleRailButtonStyle}" ToolTipService.ToolTip="Geo Studio · mapa real" Click="OnCreateCoordinateMapClick">
+                        <Path Width="22" Height="22" Stretch="Uniform" Stroke="{ThemeResource MapStudioTextPrimaryBrush}" StrokeThickness="1.7" Data="M 12,2 A 10,10 0 1 1 11.99,2 M 2,12 L 22,12 M 12,2 C 5,7 5,17 12,22 M 12,2 C 19,7 19,17 12,22" />
+                    </Button>
+                    <Button x:Name="ProfessionalValidationRailButton" AutomationProperties.Name="Testes"
+                            Style="{StaticResource EditorModuleRailButtonStyle}" ToolTipService.ToolTip="Validar mapa" Click="OnToolValidationClick">
+                        <SymbolIcon Symbol="Accept" />
                     </Button>
                 </StackPanel>
                 </ScrollViewer>

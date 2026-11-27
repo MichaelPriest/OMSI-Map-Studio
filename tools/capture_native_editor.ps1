@@ -105,11 +105,26 @@ try {
     Start-Sleep -Seconds 3
     Save-EditorWindow $Name $handle
     if ($CaptureModules) {
+        $root = [Windows.Automation.AutomationElement]::FromHandle($handle)
+        $welcomeCondition = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::NameProperty,'Ir para o editor →')
+        $welcome = $root.FindFirst([Windows.Automation.TreeScope]::Descendants,$welcomeCondition)
+        if ($null -ne $welcome -and -not $welcome.Current.IsOffscreen -and $welcome.Current.IsEnabled) {
+            $welcomePattern = $null
+            if ($welcome.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$welcomePattern)) {
+                ([Windows.Automation.InvokePattern]$welcomePattern).Invoke()
+                Start-Sleep -Seconds 2
+            }
+        }
         foreach ($module in @(@{ label='Road Studio'; file='01-road-studio-shell' },@{ label='Geo Studio'; file='02-geo-studio-shell' })) {
             try {
                 $root = [Windows.Automation.AutomationElement]::FromHandle($handle)
                 $condition = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::NameProperty,$module.label)
-                $control = $root.FindFirst([Windows.Automation.TreeScope]::Descendants,$condition)
+                $control = $null
+                $candidates = $root.FindAll([Windows.Automation.TreeScope]::Descendants,$condition)
+                for ($index = 0; $index -lt $candidates.Count; $index++) {
+                    $candidate = $candidates.Item($index)
+                    if ($candidate.Current.IsEnabled -and -not $candidate.Current.IsOffscreen) { $control = $candidate; break }
+                }
                 if ($null -eq $control -or -not $control.Current.IsEnabled -or $control.Current.IsOffscreen) { throw 'Module unavailable without a loaded workspace.' }
                 $pattern = $null
                 if (-not $control.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) { throw 'Module does not expose InvokePattern.' }

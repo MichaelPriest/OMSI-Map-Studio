@@ -25149,11 +25149,12 @@ public sealed partial class MainWindow : Window
     {
         AssetDockActionsColumn.Width = new GridLength(docked ? 190 : 0);
         Grid.SetColumn(AssetDockActionsScroll, docked ? 1 : 0);
-        Grid.SetRow(AssetDockActionsScroll, docked ? 0 : 1);
-        Grid.SetRowSpan(AssetDockActionsScroll, docked ? 5 : 1);
+        Grid.SetRow(AssetDockActionsScroll, docked ? 0 : 5);
+        Grid.SetRowSpan(AssetDockActionsScroll, docked ? 6 : 1);
         AssetDockActionsScroll.Margin = docked ? new Thickness(6, 0, 0, 0) : new Thickness(0);
         AssetDockFiltersScroll.MaxHeight = docked ? 100 : 340;
         LibraryThumbnailBorder.Height = docked ? 0 : PreferProfessionalAssetSidebar && !HasHostedAssetLibrary ? 64 : 128;
+        SyncProfessionalAssetActions();
         ApplyProfessionalAssetTrayBounds(WorkspaceGrid.ActualHeight);
     }
 

@@ -60,3 +60,7 @@ Restaurada a paleta anterior à etapa 10: foco na disposição, não na cor. Con
 ## Etapa 12 — separação de início e edição
 
 Tela inicial ocupa o workspace sem expor painéis vazios; quatro ações reais de projeto, acesso explícito ao editor e retorno pelo menu Visualizar quando nenhum mapa estiver aberto. Em tela cheia a tela inicial é ocultada. Explorer usa lista compacta sem cards por objeto, preserva tipo/detalhe e caminho em tooltip. Marca superior simplificada. Paleta e motor inalterados. Capturas e CI da etapa 12 pendentes.
+
+## Etapa 13 — menos barras e biblioteca sob demanda
+
+Faixa horizontal de módulos recolhida por padrão, reativável em Visualizar. Trilho compacto concentra as ferramentas, incluindo Geo Studio e validação. Biblioteca mostra primeiro pesquisa, filtros e resultados; ações do asset aparecem após seleção, abaixo da lista no painel lateral ou ao lado no modo acoplado. Captura automática sai da tela inicial e seleciona os controles visíveis por UI Automation. Cores e motor preservados; compilação e capturas da etapa 13 pendentes.
