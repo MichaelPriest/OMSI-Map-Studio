@@ -1,3 +1,4 @@
+using MapStudio.Core.Generation.Terrain;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using MapStudio.Core.Generation.Roads;
@@ -257,6 +258,8 @@ public sealed class RealWorldGenerationViewModel :
                 "Google",
             NativeRealWorldElevationMode.OpenMeteo =>
                 "Open-Meteo/Copernicus",
+            NativeRealWorldElevationMode.Terrarium =>
+                MapStudioTerrariumElevationClient.Attribution,
             _ =>
                 "sem DEM"
         };
@@ -287,7 +290,8 @@ public sealed class RealWorldGenerationViewModel :
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
             bool useOpenAerialMapEvidence = false,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All,
+            bool useTerrariumElevation = false)
     {
         if (IsBusy)
         {
@@ -338,7 +342,8 @@ public sealed class RealWorldGenerationViewModel :
                         useSavedOpenMeteoElevation,
                         useBuildingVisualEvidence,
                         useOpenAerialMapEvidence,
-                        layers);
+                        layers,
+                        useTerrariumElevation);
 
             Summary =
                 summary;

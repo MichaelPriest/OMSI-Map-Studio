@@ -47,7 +47,10 @@ public static class NativePngDecoder
     }
 
     public static NativeDecodedPng? TryDecode(
-        ReadOnlySpan<byte> bytes)
+        ReadOnlySpan<byte> bytes) => TryDecode(bytes, requiredSize: null);
+
+    public static NativeDecodedPng? TryDecode(
+        ReadOnlySpan<byte> bytes, (int Width, int Height)? requiredSize)
     {
         try
         {
@@ -136,6 +139,11 @@ public static class NativePngDecoder
                                     data.Slice(
                                         4,
                                         4)));
+
+                    if (requiredSize is { } size && (width != size.Width || height != size.Height))
+                    {
+                        return null;
+                    }
 
                     bitDepth = data[8];
                     colorType = data[9];

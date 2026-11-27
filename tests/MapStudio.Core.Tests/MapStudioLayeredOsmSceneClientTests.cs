@@ -10,6 +10,45 @@ namespace MapStudio.Core.Tests;
 public sealed class MapStudioLayeredOsmSceneClientTests
 {
     [Fact]
+    public async Task ReferenceDownloadsWaterAndReusesTaggedRoadsWhenOverpassReturnsSkeletons()
+    {
+        var cache = Directory.CreateTempSubdirectory("mapstudio-reference-");
+        try
+        {
+            var queries = new ConcurrentQueue<string>();
+            using var http = new HttpClient(new DelegateHandler(request =>
+            {
+                var query = ReadQuery(request);
+                queries.Enqueue(query);
+                if (query.Contains("riverbank", StringComparison.Ordinal))
+                    return XmlResponse("""
+                        <osm version="0.6">
+                          <node id="3" lat="0" lon="0.0004"/><way id="20"><nd ref="1"/><nd ref="3"/><tag k="waterway" v="river"/></way>
+                          <way id="10"><nd ref="1"/><nd ref="2"/></way>
+                        </osm>
+                        """);
+                if (query.Contains("motorway", StringComparison.Ordinal))
+                    return XmlResponse("""
+                        <osm version="0.6">
+                          <node id="1" lat="0" lon="0"/><node id="2" lat="0.0003" lon="0"/>
+                          <way id="10"><nd ref="1"/><nd ref="2"/><tag k="highway" v="residential"/></way>
+                        </osm>
+                        """);
+                return XmlResponse("<osm version=\"0.6\"/>");
+            }));
+            var client = new MapStudioLayeredOsmSceneClient(http, [new Uri("https://scene.test/api/interpreter")]);
+            var first = await client.DownloadReferenceAsync(0, 0, 0.0007, 0.0007, cache.FullName);
+            var cached = await client.DownloadReferenceAsync(0, 0, 0.0007, 0.0007, cache.FullName);
+            Assert.Equal(3, queries.Count);
+            Assert.Contains(queries, q => q.Contains("riverbank") && q.Contains("multipolygon") && q.Contains(">;out skel"));
+            Assert.Contains("residential", first.OsmXml);
+            Assert.Contains("waterway", first.OsmXml);
+            Assert.Equal(first.OsmXml, cached.OsmXml);
+        }
+        finally { cache.Delete(recursive: true); }
+    }
+
+    [Fact]
     public async Task DownloaderSeparatesHeavySceneCategoriesIntoFiveLayerQueries()
     {
         var queries =

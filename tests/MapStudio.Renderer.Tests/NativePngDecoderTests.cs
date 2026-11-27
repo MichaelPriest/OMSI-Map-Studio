@@ -8,6 +8,14 @@ namespace MapStudio.Renderer.Tests;
 public sealed class NativePngDecoderTests
 {
     [Fact]
+    public void RejectsWrongTileShapeEvenWhenPixelCountMatches()
+    {
+        var png = BuildRgbaPng(2, 1, [128, 80, 0, 255, 128, 81, 0, 255]);
+        Assert.Null(NativePngDecoder.TryDecode(png, (1, 2)));
+        Assert.NotNull(NativePngDecoder.TryDecode(png, (2, 1)));
+    }
+
+    [Fact]
     public void DecodesNonInterlacedRgbaPngWithoutWic()
     {
         var png =

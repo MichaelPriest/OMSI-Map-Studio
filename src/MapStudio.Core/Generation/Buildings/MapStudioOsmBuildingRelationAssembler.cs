@@ -186,7 +186,7 @@ public sealed class MapStudioOsmBuildingRelationAssembler
                     wayId =>
                         !ways.ContainsKey(
                             wayId)) ||
-                !TryAssembleRings(
+                !MapStudioOsmRingAssembler.TryAssemble(
                     outerWayIds,
                     ways,
                     out var rings))
@@ -331,125 +331,6 @@ public sealed class MapStudioOsmBuildingRelationAssembler
             consumedWayIds,
             ignoredRelations,
             missingNodeReferences);
-    }
-
-    private static bool TryAssembleRings(
-        IReadOnlyList<long> wayIds,
-        IReadOnlyDictionary<long, long[]> ways,
-        out IReadOnlyList<IReadOnlyList<long>> rings)
-    {
-        var pending =
-            wayIds
-                .Select(
-                    wayId =>
-                        ways[wayId]
-                            .ToList())
-                .Where(
-                    nodes =>
-                        nodes.Count >=
-                        2)
-                .ToList();
-
-        var output =
-            new List<IReadOnlyList<long>>();
-
-        while (
-            pending.Count >
-            0)
-        {
-            var chain =
-                pending[0];
-
-            pending.RemoveAt(
-                0);
-
-            while (
-                chain.Count <
-                    2 ||
-                chain[0] !=
-                    chain[^1])
-            {
-                if (
-                    chain.Count <
-                    2)
-                {
-                    rings =
-                        Array.Empty<
-                            IReadOnlyList<long>>();
-
-                    return false;
-                }
-
-                var tail =
-                    chain[^1];
-
-                var matchIndex =
-                    pending.FindIndex(
-                        candidate =>
-                            candidate.Count >=
-                                2 &&
-                            (
-                                candidate[0] ==
-                                    tail ||
-                                candidate[^1] ==
-                                    tail
-                            ));
-
-                if (
-                    matchIndex <
-                    0)
-                {
-                    rings =
-                        Array.Empty<
-                            IReadOnlyList<long>>();
-
-                    return false;
-                }
-
-                var next =
-                    pending[
-                        matchIndex];
-
-                pending.RemoveAt(
-                    matchIndex);
-
-                if (
-                    next[^1] ==
-                    tail)
-                {
-                    next.Reverse();
-                }
-
-                chain.AddRange(
-                    next.Skip(
-                        1));
-            }
-
-            if (
-                chain.Count <
-                    4)
-            {
-                rings =
-                    Array.Empty<
-                        IReadOnlyList<long>>();
-
-                return false;
-            }
-
-            chain.RemoveAt(
-                chain.Count -
-                1);
-
-            output.Add(
-                chain);
-        }
-
-        rings =
-            output;
-
-        return
-            output.Count >
-            0;
     }
 
     private static Dictionary<string, string?>

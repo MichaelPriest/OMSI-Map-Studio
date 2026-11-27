@@ -610,6 +610,7 @@ public sealed partial class MainWindow : Window
     private double _trafficPathsResizeOriginWidth;
     private double _trafficPathsResizeOriginHeight;
 
+    private CancellationTokenSource? _terrariumTerrainCancellation;
     private bool _realMapAreaInitialized;
     private bool _realMapAreaMessageHooked;
     private bool _draggingRealMapAreaWindow;
@@ -22791,6 +22792,14 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        if (_terrariumTerrainCancellation is { } terrainCancellation)
+        {
+            terrainCancellation.Cancel();
+            LoadingCancelButton.IsEnabled = false;
+            UpdateLoading("Cancelando elevação Terrarium", "Interrompendo a aplicação do relevo.");
+            return;
+        }
+
         if (
             !RealWorldGenerationStatusPanel
                 .ViewModel
@@ -28286,6 +28295,15 @@ setTimeout(postBounds, 250);
                 GridUnitType.Star);
     }
 
+    private NativeRealWorldElevationMode SelectedRealMapElevation =>
+        (RealMapElevationProviderBox.SelectedItem as ComboBoxItem)?.Tag switch
+        {
+            "Terrarium" => NativeRealWorldElevationMode.Terrarium,
+            "Google" => NativeRealWorldElevationMode.Google,
+            "OpenMeteo" => NativeRealWorldElevationMode.OpenMeteo,
+            _ => NativeRealWorldElevationMode.None
+        };
+
     private void OnRealMapElevationProviderChanged(
         object sender,
         SelectionChangedEventArgs e) =>
@@ -28301,10 +28319,7 @@ setTimeout(postBounds, 250);
             return;
         }
 
-        var openMeteo =
-            RealMapElevationProviderBox
-                .SelectedIndex ==
-            1;
+        var openMeteo = SelectedRealMapElevation == NativeRealWorldElevationMode.OpenMeteo;
 
         RealMapOpenMeteoKeyBox.Visibility =
             openMeteo
@@ -28867,32 +28882,43 @@ setTimeout(postBounds, 250);
                     .IsChecked ==
                 true;
 
-            var elevationProviderIndex =
-                Math.Clamp(
-                    RealMapElevationProviderBox
-                        .SelectedIndex,
-                    0,
-                    2);
+            var elevationProvider = SelectedRealMapElevation;
+            var terrainSummary = string.Empty;
 
             NativeStartupDiagnostics.Write(
-                $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode} fullReconstruction={fullReconstruction} elevationRequested={applyElevation} elevationProvider={elevationProviderIndex} localVisualEvidence={RealMapUseBuildingVisualEvidenceCheckBox.IsChecked == true} openAerialMapEvidence={RealMapUseOpenAerialMapEvidenceCheckBox.IsChecked == true}");
+                $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode} fullReconstruction={fullReconstruction} elevationRequested={applyElevation} elevationProvider={elevationProvider} localVisualEvidence={RealMapUseBuildingVisualEvidenceCheckBox.IsChecked == true} openAerialMapEvidence={RealMapUseOpenAerialMapEvidenceCheckBox.IsChecked == true}");
 
             if (
                 applyElevation &&
                 !fullReconstruction)
             {
+                using var terrainCancellation = new CancellationTokenSource();
+                if (elevationProvider == NativeRealWorldElevationMode.Terrarium)
+                {
+                    _terrariumTerrainCancellation = terrainCancellation;
+                    LoadingCancelButton.Visibility = Visibility.Visible;
+                }
+
                 try
                 {
-                    creationStage =
-                        "aplicação da elevação inicial";
-
-                    await ApplyRealMapAreaElevationAsync(
-                        finalSnapshot);
+                    creationStage = "aplicação da elevação inicial";
+                    terrainSummary = await ApplyRealMapAreaElevationAsync(
+                        finalSnapshot, elevationProvider, terrainCancellation.Token);
+                }
+                catch (OperationCanceledException) when (terrainCancellation.IsCancellationRequested)
+                {
+                    StatusText.Text = "Mapa criado. Aplicação do relevo Terrarium cancelada.";
+                    return;
                 }
                 catch (Exception exception)
                 {
                     postCreateWarnings.Add(
                         $"elevação: {exception.Message}");
+                }
+                finally
+                {
+                    _terrariumTerrainCancellation = null;
+                    LoadingCancelButton.Visibility = Visibility.Collapsed;
                 }
             }
 
@@ -28904,16 +28930,7 @@ setTimeout(postBounds, 250);
                     ?? throw new InvalidDataException(
                         "Mapa real sem georreferência para reconstrução automática.");
 
-                var anchorGeo =
-                    new MapStudioGeographicAnchor(
-                        georeference.Latitude,
-                        georeference.Longitude,
-                        OmsiTileGrid.GetOriginX(
-                                georeference.AnchorTileX) +
-                            georeference.AnchorX,
-                        OmsiTileGrid.GetOriginZ(
-                                georeference.AnchorTileY) +
-                            georeference.AnchorY);
+                var anchorGeo = georeference.ToGeographicAnchor();
 
                 var omsiRoot =
                     _session.OmsiRootPath
@@ -29018,12 +29035,13 @@ setTimeout(postBounds, 250);
                             anchorGeo,
                             useSavedGoogleElevation:
                                 applyElevation &&
-                                elevationProviderIndex ==
-                                    2,
+                                elevationProvider == NativeRealWorldElevationMode.Google,
                             useSavedOpenMeteoElevation:
                                 applyElevation &&
-                                elevationProviderIndex ==
-                                    1,
+                                elevationProvider == NativeRealWorldElevationMode.OpenMeteo,
+                            useTerrariumElevation:
+                                applyElevation &&
+                                elevationProvider == NativeRealWorldElevationMode.Terrarium,
                             useBuildingVisualEvidence:
                                 RealMapUseBuildingVisualEvidenceCheckBox
                                     .IsChecked ==
@@ -29197,7 +29215,7 @@ setTimeout(postBounds, 250);
                     ? RealWorldGenerationStatusPanel
                         .ViewModel
                         .SummaryText
-                    : string.Empty;
+                    : terrainSummary;
 
             StatusText.Text =
                 postCreateWarnings.Count ==
@@ -29233,52 +29251,61 @@ setTimeout(postBounds, 250);
         }
     }
 
-    private async Task ApplyRealMapAreaElevationAsync(
-        NativeMapSnapshot snapshot)
+    private async Task<string> ApplyRealMapAreaElevationAsync(
+        NativeMapSnapshot snapshot, NativeRealWorldElevationMode provider, CancellationToken cancellationToken)
     {
-        var providerIndex =
-            Math.Clamp(
-                RealMapElevationProviderBox
-                    .SelectedIndex,
-                0,
-                2);
-
-        if (providerIndex == 0)
+        if (provider == NativeRealWorldElevationMode.None)
         {
-            StatusText.Text =
-                "Mapa real criado sem elevação automática.";
+            return string.Empty;
+        }
 
-            return;
+        if (provider == NativeRealWorldElevationMode.Terrarium)
+        {
+            var root = _session.OmsiRootPath ?? throw new InvalidOperationException("omsiRootRequired");
+            var georeference = await _session.LoadMapGeoreferenceAsync(cancellationToken)
+                ?? throw new InvalidDataException("Mapa sem georreferência para aplicar relevo Terrarium.");
+
+            UpdateLoading("Aplicando relevo Terrarium", MapStudioTerrariumElevationClient.Attribution);
+            var progress = new Progress<MapStudioElevationDownloadProgress>(update =>
+            {
+                if (_terrariumTerrainCancellation?.Token == cancellationToken && !cancellationToken.IsCancellationRequested)
+                {
+                    UpdateLoading("Aplicando relevo Terrarium",
+                        $"{update.CompletedSamples}/{update.TotalSamples} amostras · {MapStudioTerrariumElevationClient.Attribution}",
+                        (double)update.CompletedSamples / update.TotalSamples, "Elevação");
+                }
+            });
+            var result = await NativeTerrariumElevation.ApplyToTerrainAsync(
+                root, snapshot.Map, georeference.ToGeographicAnchor(), progress, cancellationToken);
+
+            // Once the batch commits, finish refreshing the map even if the user clicks Cancel.
+            _terrariumTerrainCancellation = null;
+            LoadingCancelButton.Visibility = Visibility.Collapsed;
+            var elevatedMap = await _session.OpenMapAsync(snapshot.Map.DirectoryPath, loadFullMap: true);
+            await ApplyMapSnapshotAsync(elevatedMap, focusActiveTile: false);
+            return $"Relevo Terrarium aplicado a {result.Tiles.Count} tile(s) · {MapStudioTerrariumElevationClient.Attribution}";
         }
 
         if (
             snapshot.Map.Tiles.Count >
                 36)
         {
-            StatusText.Text =
-                "Mapa real criado. Elevação automática foi ignorada acima de 36 tiles para evitar chamadas/custos inesperados; use a ferramenta de elevação por região.";
-
-            return;
+            return "Elevação ignorada acima de 36 tiles. Use a ferramenta de elevação por região.";
         }
 
         var apiKey =
-            providerIndex ==
-                1
+            provider == NativeRealWorldElevationMode.OpenMeteo
                 ? NativeMapCredentialStore
                     .TryGetOpenMeteoApiKey()
                 : NativeMapCredentialStore
                     .TryGetGoogleMapsApiKey();
 
         if (
-            providerIndex ==
-                2 &&
+            provider == NativeRealWorldElevationMode.Google &&
             string.IsNullOrWhiteSpace(
                 apiKey))
         {
-            StatusText.Text =
-                "Mapa real criado. Elevação Google não aplicada porque não há API key salva.";
-
-            return;
+            return "Elevação Google requer uma chave salva.";
         }
 
         foreach (
@@ -29286,8 +29313,7 @@ setTimeout(postBounds, 250);
                 snapshot.Map.Tiles)
         {
             var grid =
-                providerIndex ==
-                    1
+                provider == NativeRealWorldElevationMode.OpenMeteo
                     ? await _session
                         .LoadOpenMeteoElevationGridAsync(
                             apiKey,
@@ -29317,9 +29343,7 @@ setTimeout(postBounds, 250);
                     false);
         }
 
-        StatusText.Text =
-            providerIndex ==
-                1
+        return provider == NativeRealWorldElevationMode.OpenMeteo
                 ? string.IsNullOrWhiteSpace(
                     apiKey)
                     ? "Elevação Open-Meteo/Copernicus GLO-90 aplicada pelo endpoint público gratuito."
@@ -32891,7 +32915,8 @@ setTimeout(postBounds, 250);
                     selection.Kind ==
                         PickingKind.Object
                         ? @"SceneryobjectsPastaobjeto.sco"
-                        : @"SplinesPastaua.sli",
+                        : @"SplinesPasta
+ua.sli",
                 MinWidth = 430
             };
 

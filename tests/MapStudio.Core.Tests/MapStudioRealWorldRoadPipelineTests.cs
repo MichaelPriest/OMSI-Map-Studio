@@ -16,6 +16,101 @@ namespace MapStudio.Core.Tests;
 
 public sealed class MapStudioRealWorldRoadPipelineTests
 {
+    [Fact]
+    public async Task TerrariumAppliesOneDatumAcrossTilesAndElevatesPersistedRoads()
+    {
+        var root = Directory.CreateTempSubdirectory("mapstudio-terrarium-map-");
+        try
+        {
+            var map = await CreateMapAsync(root.FullName);
+            var tile0 = Path.Combine(map, "tile_0_0.map");
+            var tile1 = Path.Combine(map, "tile_1_0.map");
+            File.Copy(tile0, tile1);
+            await File.AppendAllTextAsync(Path.Combine(map, "global.cfg"), "[map]\r\n1\r\n0\r\ntile_1_0.map\r\n");
+            var flat = OmsiTerrainWriter.Write(new OmsiTerrainGrid(60, new float[61 * 61]));
+            await File.WriteAllBytesAsync(tile0 + ".terrain", flat);
+            await File.WriteAllBytesAsync(tile1 + ".terrain", flat);
+
+            var anchor = new MapStudioGeographicAnchor(-23.55, -46.63, 50, 50);
+            var origin = MapStudioTerrariumElevationClient.PixelCoordinates(anchor.Latitude, anchor.Longitude, 15);
+            using var demHttp = new HttpClient(new DelegateHandler(request =>
+            {
+                Assert.Empty(request.RequestUri!.Query);
+                var tileY = int.Parse(Path.GetFileNameWithoutExtension(request.RequestUri.AbsolutePath),
+                    System.Globalization.CultureInfo.InvariantCulture);
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(BitConverter.GetBytes(tileY)) };
+            }));
+            var dem = new MapStudioTerrariumElevationClient(demHttp, bytes =>
+            {
+                var firstRow = BitConverter.ToInt32(bytes) * 256;
+                var rgba = new byte[256 * 256 * 4];
+                for (var i = 0; i < rgba.Length; i += 4)
+                {
+                    var row = firstRow + i / (256 * 4);
+                    var encoded = (int)((32768 + 600 + (row - (int)origin.Y) / 16.0) * 256);
+                    rgba[i] = (byte)(encoded >> 16);
+                    rgba[i + 1] = (byte)(encoded >> 8);
+                    rgba[i + 2] = (byte)encoded;
+                    rgba[i + 3] = 255;
+                }
+                return rgba;
+            });
+            using var osmHttp = new HttpClient(new DelegateHandler(_ => XmlResponse(ElevationRoadXml)));
+            var pipeline = new MapStudioRealWorldMapPipeline(new MapStudioOverpassSceneClient(
+                osmHttp, [new Uri("https://scene.test/api/interpreter")]));
+            var result = await pipeline.RunAutoIndexedWithTerrariumElevationAsync(
+                root.FullName, map, -23.5501, -46.6301, -23.5499, -46.6299, anchor, dem,
+                layers: MapStudioRealWorldLayers.Roads);
+
+            Assert.NotNull(result.Elevation);
+            Assert.Equal(0, result.Elevation.UncoveredSamples);
+            Assert.Equal(2, result.Elevation.ModifiedTileCount);
+            Assert.All(result.Elevation.Tiles, t => Assert.Equal(flat, File.ReadAllBytes(t.BackupPath)));
+            var west = await new OmsiTileReader().ReadContentAsync(tile0);
+            var east = await new OmsiTileReader().ReadContentAsync(tile1);
+            var spline = Assert.Single(west.Splines);
+            Assert.True(spline.Z > 0);
+            Assert.True(spline.GradientStart > 0);
+            Assert.NotNull(west.Terrain);
+            Assert.NotNull(east.Terrain);
+            for (var row = 0; row < 61; row++)
+                Assert.Equal(west.Terrain.Heights[row * 61 + 60], east.Terrain.Heights[row * 61]);
+            Assert.True(east.Terrain.Heights[^1] > east.Terrain.Heights[0]);
+        }
+        finally { root.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public async Task CancellingTerrariumBeforeReconstructionPreservesTerrainAndSkipsOsm()
+    {
+        var root = Directory.CreateTempSubdirectory("mapstudio-terrarium-cancel-");
+        try
+        {
+            var map = await CreateMapAsync(root.FullName);
+            var tile = Path.Combine(map, "tile_0_0.map");
+            var originalTile = await File.ReadAllBytesAsync(tile);
+            var flat = OmsiTerrainWriter.Write(new OmsiTerrainGrid(60, new float[61 * 61]));
+            await File.WriteAllBytesAsync(tile + ".terrain", flat);
+            using var cancel = new CancellationTokenSource();
+            using var demHttp = new HttpClient(new DelegateHandler(_ =>
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([1]) }));
+            var dem = new MapStudioTerrariumElevationClient(demHttp, _ =>
+            {
+                cancel.Cancel();
+                return Enumerable.Repeat((byte)255, 256 * 256 * 4).ToArray();
+            });
+            using var osmHttp = new HttpClient(new DelegateHandler(_ => throw new InvalidOperationException("Unexpected OSM request")));
+            var pipeline = new MapStudioRealWorldMapPipeline(new MapStudioOverpassSceneClient(
+                osmHttp, [new Uri("https://scene.test/api/interpreter")]));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pipeline.RunAutoIndexedWithTerrariumElevationAsync(
+                root.FullName, map, -23.5501, -46.6301, -23.5499, -46.6299,
+                new MapStudioGeographicAnchor(-23.55, -46.63, 50, 50), dem, cancellationToken: cancel.Token));
+            Assert.Equal(flat, await File.ReadAllBytesAsync(tile + ".terrain"));
+            Assert.Equal(originalTile, await File.ReadAllBytesAsync(tile));
+        }
+        finally { root.Delete(recursive: true); }
+    }
+
     [Theory]
     [InlineData(MapStudioRealWorldLayers.Roads)]
     [InlineData(MapStudioRealWorldLayers.Vegetation)]

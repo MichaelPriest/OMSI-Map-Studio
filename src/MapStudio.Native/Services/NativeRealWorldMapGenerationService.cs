@@ -10,7 +10,8 @@ public enum NativeRealWorldElevationMode
 {
     None,
     Google,
-    OpenMeteo
+    OpenMeteo,
+    Terrarium
 }
 
 public sealed record NativeRealWorldMapGenerationResult(
@@ -47,8 +48,8 @@ public sealed class NativeRealWorldMapGenerationService
             double north,
             double east,
             MapStudioGeographicAnchor anchor,
-            int elevationRows = 17,
-            int elevationColumns = 17,
+            int? elevationRows = null,
+            int? elevationColumns = null,
             IReadOnlyDictionary<
                 string,
                 IReadOnlyList<MapStudioSceneEvidence>>?
@@ -64,13 +65,23 @@ public sealed class NativeRealWorldMapGenerationService
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
             bool useOpenAerialMapEvidence = false,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All,
+            bool useTerrariumElevation = false)
     {
         var buildingVisualEvidenceProvider =
             CreateBuildingVisualEvidenceProvider(
                 mapDirectory,
                 useBuildingVisualEvidence && layers.HasFlag(MapStudioRealWorldLayers.Buildings),
                 useOpenAerialMapEvidence && layers.HasFlag(MapStudioRealWorldLayers.Buildings));
+
+        if (useTerrariumElevation)
+        {
+            var pipeline = await _pipeline.RunAutoIndexedWithTerrariumElevationAsync(
+                omsiRoot, mapDirectory, south, west, north, east, anchor, NativeTerrariumElevation.Client,
+                elevationRows, elevationColumns, streetFurnitureEvidence, progress, assetIndexProgress,
+                elevationProgress, cancellationToken, buildingVisualEvidenceProvider, layers).ConfigureAwait(false);
+            return new NativeRealWorldMapGenerationResult(pipeline, NativeRealWorldElevationMode.Terrarium);
+        }
 
         var googleKey =
             NativeMapCredentialStore
@@ -92,8 +103,8 @@ public sealed class NativeRealWorldMapGenerationService
                         east,
                         anchor,
                         googleKey,
-                        elevationRows,
-                        elevationColumns,
+                        elevationRows ?? 17,
+                        elevationColumns ?? 17,
                         streetFurnitureEvidence,
                         progress,
                         assetIndexProgress,
@@ -126,8 +137,8 @@ public sealed class NativeRealWorldMapGenerationService
                         east,
                         anchor,
                         openMeteoKey,
-                        elevationRows,
-                        elevationColumns,
+                        elevationRows ?? 17,
+                        elevationColumns ?? 17,
                         streetFurnitureEvidence,
                         progress,
                         assetIndexProgress,

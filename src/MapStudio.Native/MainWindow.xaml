@@ -3513,7 +3513,7 @@
                                                       Content="Tenho autorização/licença para visualizar Esri World Imagery"
                                                       ToolTipService.ToolTip="A Esri exige licença e atribuição; somente visualização online, sem exportação ou cache offline."
                                                       IsChecked="False" />
-                                            <TextBlock Text="OpenStreetMap: referência 3D vetorial gerada localmente, sem chave. Esri: somente visualização autorizada no seletor."
+                                            <TextBlock Text="A referência OpenStreetMap desenha vias, edificações, rios e lagos sobre o terreno. Esri exige autorização para visualização no seletor."
                                                        TextWrapping="Wrap" FontSize="10" />
                                             <StackPanel x:Name="RealMapCartoKeyPanel"
                                                         Visibility="Collapsed"
@@ -3550,8 +3550,9 @@
                                                       HorizontalAlignment="Stretch"
                                                       SelectionChanged="OnRealMapElevationProviderChanged">
                                                 <ComboBoxItem Content="Nenhuma" />
-                                                <ComboBoxItem Content="Open-Meteo / Copernicus GLO-90 · gratuito sem chave" />
-                                                <ComboBoxItem Content="Google Elevation · chave do usuário" />
+                                                <ComboBoxItem Tag="OpenMeteo" Content="Open-Meteo / Copernicus GLO-90 · gratuito sem chave" />
+                                                <ComboBoxItem Tag="Google" Content="Google Elevation · chave do usuário" />
+                                                <ComboBoxItem Tag="Terrarium" Content="Terrarium · AWS Terrain Tiles / Mapzen · sem chave" />
                                             </ComboBox>
 
                                             <PasswordBox x:Name="RealMapOpenMeteoKeyBox"
@@ -3591,7 +3592,7 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <TextBlock Text="OpenStreetMap fornece os dados vetoriais. Open-Meteo/Copernicus funciona pelo endpoint público sem chave; a chave comercial é opcional. Google Elevation usa credencial do próprio usuário."
+                                    <TextBlock Text="OpenStreetMap fornece os dados vetoriais. Para o relevo, Terrarium (AWS Terrain Tiles / Mapzen) e Open-Meteo funcionam sem chave. Google Elevation usa a chave do usuário."
                                                FontSize="10"
                                                TextWrapping="Wrap"
                                                Foreground="{ThemeResource MapStudioTextMutedBrush}" />
