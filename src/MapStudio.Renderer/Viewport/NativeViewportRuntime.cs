@@ -1853,6 +1853,11 @@ public sealed class NativeViewportRuntime : IDisposable
                 NativeSplinePlacementStage.AwaitingEnd &&
             _splineStartWorld is { } start)
         {
+            // Use the same endpoint snap and elevation rules for the ghost
+            // as for the click that commits the road. Keep the raw pointer
+            // above so advancing the placement resolves it exactly once.
+            ResolveSplineEndSnap(Scene, ref point);
+
             if (
                 _splineEasyRoadEnabled &&
                 !_splinePlacementIsHeight)
@@ -1938,6 +1943,90 @@ public sealed class NativeViewportRuntime : IDisposable
 
         RenderInitialFrame();
         return true;
+    }
+
+    private NativeSplineEndpointSnap? ResolveSplineEndSnap(
+        NativeSceneSnapshot scene,
+        ref Vector3 point)
+    {
+        NativeSplineEndpointSnap?
+            endSnap =
+                null;
+
+        if (
+            _splineEndpointSnapEnabled &&
+            !_splinePlacementIsHeight)
+        {
+            endSnap =
+                NativeSplineEndpointSnapFinder
+                    .FindFreeEndpoint(
+                        scene,
+                        point,
+                        NativeSplineEndpointKind.Start,
+                        _splineEndpointSnapDistance,
+                        _splinePreviousId);
+
+            if (endSnap is not null)
+            {
+                var snappedPoint =
+                    endSnap.WorldPoint;
+
+                if (
+                    _splineElevationMode ==
+                        NativeRoadElevationMode
+                            .FollowTerrain ||
+                    _splineStartWorld is not
+                        { } snapStart)
+                {
+                    point =
+                        snappedPoint;
+                }
+                else
+                {
+                    var terrainHeightAtSnap =
+                        point.Y;
+
+                    if (
+                        NativeTerrainSampler
+                            .TryGetHeightAtWorldPoint(
+                                scene,
+                                snappedPoint.X,
+                                snappedPoint.Z,
+                                out var sampledHeight))
+                    {
+                        terrainHeightAtSnap =
+                            (float)
+                                sampledHeight;
+                    }
+
+                    point =
+                        new Vector3(
+                            snappedPoint.X,
+                            NativeSplinePlacementMath
+                                .ResolveRoadEndpointHeight(
+                                    terrainHeightAtSnap,
+                                    snapStart.Y,
+                                    _splineElevationMode,
+                                    _splineElevationOffset),
+                            snappedPoint.Z);
+
+                    if (
+                        Math.Abs(
+                            point.Y -
+                            snappedPoint.Y) >
+                        0.25f)
+                    {
+                        // Keep horizontal snap, but do not create
+                        // an invalid Previous/Next connection across
+                        // a vertical gap chosen by the elevation mode.
+                        endSnap =
+                            null;
+                    }
+                }
+            }
+        }
+
+        return endSnap;
     }
 
     public bool TryAdvanceSplinePlacement(
@@ -2036,82 +2125,7 @@ public sealed class NativeViewportRuntime : IDisposable
             _splinePlacementStage ==
             NativeSplinePlacementStage.AwaitingEnd)
         {
-            NativeSplineEndpointSnap?
-                endSnap =
-                    null;
-
-            if (
-                _splineEndpointSnapEnabled &&
-                !_splinePlacementIsHeight)
-            {
-                endSnap =
-                    NativeSplineEndpointSnapFinder
-                        .FindFreeEndpoint(
-                            Scene,
-                            point,
-                            NativeSplineEndpointKind.Start,
-                            _splineEndpointSnapDistance,
-                            _splinePreviousId);
-
-                if (endSnap is not null)
-                {
-                    var snappedPoint =
-                        endSnap.WorldPoint;
-
-                    if (
-                        _splineElevationMode ==
-                            NativeRoadElevationMode
-                                .FollowTerrain ||
-                        _splineStartWorld is not
-                            { } snapStart)
-                    {
-                        point =
-                            snappedPoint;
-                    }
-                    else
-                    {
-                        var terrainHeightAtSnap =
-                            point.Y;
-
-                        if (
-                            NativeTerrainSampler
-                                .TryGetHeightAtWorldPoint(
-                                    Scene,
-                                    snappedPoint.X,
-                                    snappedPoint.Z,
-                                    out var sampledHeight))
-                        {
-                            terrainHeightAtSnap =
-                                (float)
-                                    sampledHeight;
-                        }
-
-                        point =
-                            new Vector3(
-                                snappedPoint.X,
-                                NativeSplinePlacementMath
-                                    .ResolveRoadEndpointHeight(
-                                        terrainHeightAtSnap,
-                                        snapStart.Y,
-                                        _splineElevationMode,
-                                        _splineElevationOffset),
-                                snappedPoint.Z);
-
-                        if (
-                            Math.Abs(
-                                point.Y -
-                                snappedPoint.Y) >
-                            0.25f)
-                        {
-                            // Keep horizontal snap, but do not create
-                            // an invalid Previous/Next connection across
-                            // a vertical gap chosen by the elevation mode.
-                            endSnap =
-                                null;
-                        }
-                    }
-                }
-            }
+            var endSnap = ResolveSplineEndSnap(Scene, ref point);
 
             _splineNextId =
                 _splineAutoConnectEnabled &&
