@@ -1,0 +1,62 @@
+name: Import reviewed editor screenshots
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/import-reviewed-screenshots.yml'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Download and verify reviewed captures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 46061034695 --name OMSI-Map-Studio-editor-screenshots --dir reviewed-captures
+          python - <<'PY'
+          import hashlib, json, pathlib, shutil
+          root = pathlib.Path('reviewed-captures')
+          dest = pathlib.Path('docs/images/editor')
+          expected = {
+              '00-startup.png': '2d82cc03e4f4d32a26e691004c66baeff92c11860d682c494b995645e04c0ab8',
+              '01-road-studio-shell.png': '06e51468514435833e5a9a71c0b22b323571e7b78f0a50c127ffaf92a6ff09ac',
+              '02-geo-studio-shell.png': '7bd17f8489e83b923bfb7ee8ac101c9522112063acfedf060316248bdf129c2c',
+          }
+          manifest = json.loads((root/'capture-manifest.json').read_text(encoding='utf-8-sig'))
+          assert {x['file']:x['sha256'] for x in manifest} == expected
+          assert all(x['commit']=='ba92f02d1366403a8756b1d57e01b851ee3419ff' for x in manifest)
+          dest.mkdir(parents=True, exist_ok=True)
+          for name, digest in expected.items():
+              data = (root/name).read_bytes()
+              assert data.startswith(b'\x89PNG\r\n\x1a\n')
+              assert hashlib.sha256(data).hexdigest() == digest
+              (dest/name).write_bytes(data)
+          shutil.copyfile(root/'capture-manifest.json', dest/'capture-manifest.json')
+          for lang in ('pt-BR','en'):
+              pt = lang == 'pt-BR'
+              gallery = pathlib.Path('docs')/lang/'EDITOR_GALLERY.md'
+              text = gallery.read_text(encoding='utf-8')
+              text = text.replace('Nesta atualização não há novas capturas verificadas.', 'As três capturas iniciais abaixo foram revisadas visualmente.')
+              text = text.replace('No new verified screenshots are available in this update.', 'The three initial captures below have been visually reviewed.')
+              marker = '## Capturas reais revisadas' if pt else '## Reviewed real screenshots'
+              if marker not in text:
+                  sections = [('Interface principal' if pt else 'Main interface','00-startup.png'), ('Road Studio','01-road-studio-shell.png'), ('Geo Studio','02-geo-studio-shell.png')]
+                  note = ('Capturas reais WinUI de 27/11/2026, commit ba92f02, 1024 × 720, sem mapa carregado. Há recortes de texto e sobreposição de biblioteca no Geo Studio nesta resolução; não são evidência de homologação de mapa.' if pt else 'Actual WinUI captures from November 27, 2026, commit ba92f02, 1024 × 720, without a loaded map. Text clipping and library overlap in Geo Studio are visible at this resolution; these do not establish map acceptance.')
+                  text += '\n\n'+marker+'\n\n'+note+'\n\n'+'\n\n'.join('### '+title+'\n\n!['+title+'](../images/editor/'+name+')' for title,name in sections)+'\n\n[Manifest](../images/editor/capture-manifest.json)\n'
+              gallery.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit reviewed screenshots and gallery
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/images/editor docs/pt-BR/EDITOR_GALLERY.md docs/en/EDITOR_GALLERY.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "docs: add three reviewed native editor screenshots"
+          git push origin HEAD:main
