@@ -71,3 +71,7 @@ Base externa: openMapper main, docs/FEATURES.md (licença AGPL-3.0-only). Compar
 | P2 | Scripts, colaboração, edição de malha, plano SVG, merge de tiles | Avaliar separadamente; ausência não comprovada por execução |
 
 Não copiar código AGPL; implementação GPS independente baseada nos formatos XML e no grafo próprio. Não declarar paridade até testes de mapa real e reload.
+
+### Desenho direto — paridade de interação
+
+Estrada fácil confirma por padrão tanto no segundo clique quanto ao soltar um arrasto. O botão Revisão alterna para a confirmação manual original, inclusive nos trechos contínuos. O modo usa a solução geométrica existente e a mesma inserção com backup; não muda os formatos OMSI. Homologar primeiro trecho, continuação, cancelamento, revisão, encaixe em via existente e falha de geometria. A confirmação de curvas manuais continua independente.

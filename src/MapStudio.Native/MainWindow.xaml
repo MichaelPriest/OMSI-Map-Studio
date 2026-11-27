@@ -4092,7 +4092,7 @@
                                         Click="OnRoadPresetEasyClick">
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <FontIcon Glyph="✥" FontSize="13" />
-                                        <TextBlock Text="Arrastar" />
+                                        <TextBlock Text="Desenhar via" />
                                     </StackPanel>
                                 </Button>
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
@@ -4136,6 +4136,9 @@
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Cruzamentos" Click="OnToolCrossingsClick"
                                         ToolTipService.ToolTip="Abrir ferramentas nativas de cruzamento" />
+                                <Button x:Name="RoadReviewButton" Content="Revisão: off" Style="{StaticResource EditorToolbarButtonStyle}"
+                                        ToolTipService.ToolTip="Ative para ajustar as coordenadas e curvatura antes de confirmar cada trecho"
+                                        Click="OnRoadReviewClick" />
                                 <Button x:Name="RoadSnapButton"
                                         Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Snap: on"

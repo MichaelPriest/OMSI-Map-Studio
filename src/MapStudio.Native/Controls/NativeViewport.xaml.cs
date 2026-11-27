@@ -767,6 +767,17 @@ public sealed partial class NativeViewport : UserControl
         return true;
     }
 
+    public bool ReviewEasyRoadBeforeInsertion { get; set; }
+
+    private void ConfirmEasyRoadIfDirect(ref NativeSplinePlacementRequest? placement, ref string status)
+    {
+        if (!ReviewEasyRoadBeforeInsertion && placement is null && _runtime is { } runtime &&
+            runtime.SplinePlacementStage == NativeSplinePlacementStage.AwaitingEasyRoadConfirm)
+        {
+            runtime.TryConfirmEasyRoad(out placement, out status);
+        }
+    }
+
     public bool TryConfirmEasyRoad(
         out NativeSplinePlacementRequest?
             request,
@@ -3235,10 +3246,13 @@ public sealed partial class NativeViewport : UserControl
 
                     PointerStatusChanged?.Invoke(
                         this,
-                        "Início fixado. Clique no fim ou arraste e solte para criar.");
+                        ReviewEasyRoadBeforeInsertion
+                            ? "Início fixado. Defina o fim para revisar o trecho."
+                            : "Início fixado. Clique no fim ou arraste e solte para criar.");
                 }
                 else
                 {
+                    ConfirmEasyRoadIfDirect(ref splinePlacement, ref splineStatus);
                     if (
                         splinePlacement is not null)
                     {
@@ -4341,16 +4355,7 @@ public sealed partial class NativeViewport : UserControl
                     out var splinePlacement,
                     out var splineStatus))
             {
-                if (
-                    splinePlacement is null &&
-                    _runtime.SplinePlacementStage ==
-                        NativeSplinePlacementStage
-                            .AwaitingEasyRoadConfirm)
-                {
-                    _runtime.TryConfirmEasyRoad(
-                        out splinePlacement,
-                        out splineStatus);
-                }
+                ConfirmEasyRoadIfDirect(ref splinePlacement, ref splineStatus);
 
                 if (splinePlacement is not null)
                 {

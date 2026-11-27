@@ -3623,7 +3623,7 @@ public sealed partial class MainWindow : Window
                             : "[spline_h] altura: clique início e fim."
                         : SplineEasyRoadCheckBox.IsChecked ==
                         true
-                        ? "Rua: clique no início, arraste a prévia e solte no fim." +
+                        ? "Rua: clique início e fim ou arraste e solte. Use Revisão para ajuste manual." +
                           (
                               Math.Abs(
                                   SplineElevationOffsetBox.Value) >
@@ -11308,6 +11308,15 @@ public sealed partial class MainWindow : Window
                 : "Ruas: cada segmento será criado separadamente.";
     }
 
+    private void OnRoadReviewClick(object sender, RoutedEventArgs e)
+    {
+        Viewport.ReviewEasyRoadBeforeInsertion = !Viewport.ReviewEasyRoadBeforeInsertion;
+        RoadReviewButton.Content = Viewport.ReviewEasyRoadBeforeInsertion ? "Revisão: on" : "Revisão: off";
+        StatusText.Text = Viewport.ReviewEasyRoadBeforeInsertion
+            ? "Ruas: revise os pontos e a curva antes de confirmar o trecho."
+            : "Ruas: dois cliques ou arrasto criam o trecho diretamente.";
+    }
+
     private void OnRoadPresetEasyClick(
         object sender,
         RoutedEventArgs e)
@@ -11323,7 +11332,7 @@ public sealed partial class MainWindow : Window
                 true,
             manualCurve:
                 false,
-            "Ruas: modo Arrastar ativo. Pressione no início, arraste a prévia e solte no fim.");
+            "Ruas: desenho direto ativo. Clique início e fim ou arraste; Revisão permite ajustar antes de salvar.");
     }
 
     private void OnRoadPresetStraightClick(
