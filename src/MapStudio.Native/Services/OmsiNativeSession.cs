@@ -1525,8 +1525,6 @@ public sealed class OmsiNativeSession
                 default)
     {
         if (
-            string.IsNullOrWhiteSpace(
-                apiKey) ||
             sampleCount is
                 < 3 or > 33)
         {
