@@ -10,7 +10,11 @@ public sealed record NativeSplinePlacementShape(
     double Radius,
     double GradientStart,
     double GradientEnd,
-    bool IsCurved);
+    bool IsCurved)
+{
+    public NativeSplinePlacementShape? Continuation { get; init; }
+    public double TotalLength => Length + (Continuation?.Length ?? 0);
+}
 
 public static class NativeSplinePlacementMath
 {

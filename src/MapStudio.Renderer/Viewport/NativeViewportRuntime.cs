@@ -329,8 +329,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var shape =
             _splinePlacementShape;
 
+        if (shape is not null && _splinePlacementStage == NativeSplinePlacementStage.AwaitingEnd)
+        {
+            value = shape.Continuation?.End ?? shape.End;
+        }
         var length =
-            shape?.Length ??
+            shape?.TotalLength ??
             Math.Sqrt(
                 Math.Pow(
                     value.X -
@@ -1962,9 +1966,24 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             var a = NativeSplinePathMath.GetFrame(previous, previous.Spline.Length);
             var b = NativeSplinePathMath.GetFrame(next, 0);
-            return NativeSplineCompleteToSolver.TrySolveShape(
-                a with { Center = start }, b with { Center = end },
-                double.MaxValue, out shape, out _);
+            a = a with { Center = start };
+            b = b with { Center = end };
+            if (NativeSplineCompleteToSolver.TrySolveShape(a, b, double.MaxValue, out shape, out _))
+            {
+                return true;
+            }
+            if (string.Equals(previous.Spline.SplinePath, _placementSplinePath, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(next.Spline.SplinePath, _placementSplinePath, StringComparison.OrdinalIgnoreCase) &&
+                NativeSplineCompleteToSolver.TrySolveBiarc(a, b, double.MaxValue, out var first, out var second) &&
+                first is not null && second is not null && scene.Tiles.Any(tile =>
+                    tile.Reference.X == (int)Math.Floor(second.Start.X / OmsiTileGrid.TileSize) &&
+                    tile.Reference.Y == (int)Math.Floor(second.Start.Z / OmsiTileGrid.TileSize)))
+            {
+                shape = first with { Continuation = second };
+                return true;
+            }
+            shape = null;
+            return false;
         }
 
         if (previous is not null)
@@ -2246,7 +2265,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 RenderInitialFrame();
 
                 status =
-                    endShape.IsCurved
+                    endShape.Continuation is not null
+                        ? $"Conexão em dois arcos tangentes · {endShape.TotalLength:F1} m. Confirme a Estrada fácil."
+                        : endShape.IsCurved
                         ? $"Fim definido · offset {_splineEasyRoadCurveOffset:+0.0;-0.0;0.0} m. Ajuste os pontos/curva e confirme."
                         : "Fim definido. Ajuste os pontos se necessário e confirme a Estrada fácil.";
 
@@ -2596,7 +2617,9 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         status =
-            shape.IsCurved
+            shape.Continuation is not null
+                ? "Estrada fácil: conexão em dois arcos confirmada."
+                : shape.IsCurved
                 ? "Estrada fácil curva confirmada."
                 : "Estrada fácil reta confirmada.";
 
@@ -9777,7 +9800,7 @@ public sealed class NativeViewportRuntime : IDisposable
             return null;
         }
 
-        return new NativeSplinePlacementRequest(
+        var request = new NativeSplinePlacementRequest(
             tile.Reference,
             _placementSplinePath,
             _splinePreviousId,
@@ -9796,6 +9819,20 @@ public sealed class NativeViewportRuntime : IDisposable
             shape.End,
             _splineNextId,
             _splinePlacementIsHeight);
+
+        if (shape.Continuation is { } next)
+        {
+            var continuation = CreateSplinePlacementRequest(next);
+            if (continuation is null || _splinePreviousId < 0 || _splineNextId < 0)
+            {
+                return null;
+            }
+            request = request with
+            {
+                Continuation = continuation with { PreviousSplineId = -1, NextSplineId = -1 }
+            };
+        }
+        return request;
     }
 
     private static bool TryResolveIndexedAssetPath(
