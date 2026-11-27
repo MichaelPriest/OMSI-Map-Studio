@@ -27487,6 +27487,12 @@ public sealed partial class MainWindow : Window
         await RealMapAreaWebView
             .EnsureCoreWebView2Async();
 
+        if (RealMapAreaWebView.CoreWebView2 is { } core &&
+            !core.Settings.UserAgent.Contains("OMSI-Map-Studio/", StringComparison.Ordinal))
+        {
+            core.Settings.UserAgent += " OMSI-Map-Studio/0.2 (+https://github.com/MichaelPriest/OMSI-Map-Studio)";
+        }
+
         if (
             !_realMapAreaMessageHooked &&
             RealMapAreaWebView.CoreWebView2 is not
@@ -27769,7 +27775,7 @@ function initMap() {
             esri ? "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" :
             hasCartoKey
                 ? "© OpenStreetMap contributors © CARTO"
-                : "© OpenStreetMap contributors · https://www.openstreetmap.org/copyright";
+                : "<a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">© OpenStreetMap contributors</a>";
 
         return $$"""
 <!doctype html>
@@ -29224,10 +29230,10 @@ setTimeout(postBounds, 250);
                         key);
         }
         else if (RealMapProviderBox.SelectedIndex == 2 &&
-            NativeMapCredentialStore.TryGetCartoBasemapsApiKey() is { Length: > 0 } key)
+            NativeMapCredentialStore.TryGetCartoBasemapsApiKey() is { Length: > 0 } savedCartoKey)
         {
-            cartoApiKey = key;
-            reference = await _session.LoadCartoReferenceAsync(key);
+            cartoApiKey = savedCartoKey;
+            reference = await _session.LoadCartoReferenceAsync(savedCartoKey);
         }
         else
         {
@@ -30718,7 +30724,10 @@ setTimeout(postBounds, 250);
         var osm = currentReference.MapType == "osm-vector";
         if (osm && !_referenceOverlayVisible) return;
         if (osm && snapshot.ActiveTile is { } active &&
-            currentReference.Tiles.Any(t => t.TileX == active.X && t.TileY == active.Y))
+            currentReference.AnchorWorldX - currentReference.WidthMeters / 2 <= OmsiTileGrid.GetOriginX(active.X) &&
+            currentReference.AnchorWorldX + currentReference.WidthMeters / 2 >= OmsiTileGrid.GetOriginX(active.X) + OmsiTileGrid.TileSize &&
+            currentReference.AnchorWorldZ - currentReference.HeightMeters / 2 <= OmsiTileGrid.GetOriginZ(active.Y) &&
+            currentReference.AnchorWorldZ + currentReference.HeightMeters / 2 >= OmsiTileGrid.GetOriginZ(active.Y) + OmsiTileGrid.TileSize)
             return;
         var apiKey = osm ? null :
             _activeCartoBasemapsApiKey ??
@@ -30764,8 +30773,11 @@ setTimeout(postBounds, 250);
             if (
                 previousPaths.SequenceEqual(
                     refreshedPaths,
-                    StringComparer
-                        .OrdinalIgnoreCase))
+                    StringComparer.OrdinalIgnoreCase) &&
+                currentReference.AnchorWorldX == refreshed.AnchorWorldX &&
+                currentReference.AnchorWorldZ == refreshed.AnchorWorldZ &&
+                currentReference.Width == refreshed.Width &&
+                currentReference.Height == refreshed.Height)
             {
                 return;
             }

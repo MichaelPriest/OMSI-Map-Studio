@@ -45,3 +45,12 @@ Cada recurso deve ser classificado como **equivalente**, **parcial**, **ausente*
 ### Seleção de camadas do mapa real
 
 Na etapa Reconstrução, o modo automático permite escolher vias/cruzamentos, edificações, vegetação, infraestrutura e mobiliário urbano separadamente. A seleção padrão continua completa. A elevação e a referência visual mantêm controles independentes. As camadas desmarcadas não executam seus geradores; a sessão conserva backup e rollback. A seleção de classes de vias/SLI, água, linhas OSM e DEM Terrarium continuam pendentes de paridade.
+
+
+### Referência gratuita sem chave
+
+OpenStreetMap é o mapa-base padrão. A referência sobre o terreno é gerada localmente em PNG a partir da geometria vetorial OSM, usando a mesma projeção geográfica do gerador de vias, com contornos de edificações e vias por largura. A região é limitada ao tile ativo e vizinhos carregados (até 3 × 3); o cache de dados OSM é reaproveitado. Não são baixados mosaicos de tiles raster públicos para uso offline. Atribuição ODbL visível; Google e CARTO seguem opcionais. Esri World Imagery é uma opção separada para visualização online quando o usuário possui licença/autorização; não é incluída no PNG local nem exportada. Esta referência ainda não desenha rótulos, água ou vegetação.
+
+### Keyless reference (EN)
+
+OpenStreetMap is the default map picker. The local ground overlay renders OSM vector road and building geometry into georeferenced PNG, without Google or CARTO credentials, within the active tile and loaded neighbors. It uses the existing OSM data cache, not bulk public raster tile downloads. Esri is a separate authorized online imagery preview, not an export/offline source. Labels, water and vegetation in the reference remain pending.
