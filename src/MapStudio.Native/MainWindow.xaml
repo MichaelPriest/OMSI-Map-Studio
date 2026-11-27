@@ -43,7 +43,7 @@
                 <Setter Property="BorderThickness"
                         Value="1" />
                 <Setter Property="CornerRadius"
-                        Value="9" />
+                        Value="4" />
                 <Setter Property="HorizontalContentAlignment"
                         Value="Center" />
                 <Setter Property="VerticalContentAlignment"
@@ -64,7 +64,7 @@
                 <Setter Property="BorderThickness"
                         Value="1" />
                 <Setter Property="CornerRadius"
-                        Value="6" />
+                        Value="4" />
             </Style>
             <Style x:Key="ExplorerModeButtonStyle"
                    TargetType="Button">
@@ -81,7 +81,7 @@
                 <Setter Property="BorderThickness"
                         Value="1" />
                 <Setter Property="CornerRadius"
-                        Value="7" />
+                        Value="4" />
                 <Setter Property="HorizontalContentAlignment"
                         Value="Center" />
                 <Setter Property="VerticalContentAlignment"
@@ -102,7 +102,7 @@
                 <Setter Property="BorderThickness"
                         Value="1" />
                 <Setter Property="CornerRadius"
-                        Value="6" />
+                        Value="4" />
                 <Setter Property="HorizontalContentAlignment"
                         Value="Center" />
                 <Setter Property="VerticalContentAlignment"
@@ -529,7 +529,7 @@
             <ScrollViewer Grid.Row="1" Grid.ColumnSpan="3"
                           HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
                           VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
-                <Grid Margin="8,2,8,3" ColumnSpacing="5" MinWidth="900">
+                <Grid Margin="8,2,8,3" ColumnSpacing="2" MinWidth="810">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
@@ -540,19 +540,19 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
-                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
-                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    <Button Grid.Column="0" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
+                            Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
                             AutomationProperties.Name="Projeto" Click="OnOpenWorkspaceClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <FontIcon Glyph="&#xE8B7;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Projeto" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Projeto" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="1" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
+                    <Button Grid.Column="1" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleTerrainButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTerrainButton, Mode=OneWay}"
                             AutomationProperties.Name="Terreno" Click="OnToolTerrainClick">
@@ -563,12 +563,12 @@
                               Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                               StrokeThickness="1.7"
                               Data="M 2,20 L 8,10 L 12,15 L 16,6 L 23,20 Z M 5,20 L 20,20" />
-                            <TextBlock Text="Terreno" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Terreno" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="2" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
+                    <Button Grid.Column="2" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleRoadsButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleRoadsButton, Mode=OneWay}"
                             AutomationProperties.Name="Road Studio" Click="OnToolSplinesClick">
@@ -579,12 +579,12 @@
                               Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                               StrokeThickness="1.7"
                               Data="M 4,22 C 8,16 8,8 12,2 M 20,22 C 16,16 16,8 12,2 M 9,17 L 15,17 M 10.5,11 L 13.5,11" />
-                            <TextBlock Text="Road Studio" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Road Studio" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="3" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
+                    <Button Grid.Column="3" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleObjectsButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleObjectsButton, Mode=OneWay}"
                             AutomationProperties.Name="Cenários" Click="OnToolObjectsClick">
@@ -595,12 +595,12 @@
                               Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                               StrokeThickness="1.7"
                               Data="M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z M 3,7 L 12,12 L 21,7 M 12,12 L 12,22" />
-                            <TextBlock Text="Cenários" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Cenários" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="4" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
+                    <Button Grid.Column="4" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleTrafficButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTrafficButton, Mode=OneWay}"
                             AutomationProperties.Name="Tráfego" Click="OnToolTrafficClick">
@@ -611,23 +611,23 @@
                               Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                               StrokeThickness="1.7"
                               Data="M 7,2 L 17,2 L 17,22 L 7,22 Z M 12,6 A 2,2 0 1 0 12,6.1 M 12,12 A 2,2 0 1 0 12,12.1 M 12,18 A 2,2 0 1 0 12,18.1" />
-                            <TextBlock Text="Tráfego" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Tráfego" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="5" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
-                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
-                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    <Button Grid.Column="5" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
+                            Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
                             AutomationProperties.Name="Geo Studio" Click="OnCreateCoordinateMapClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <Path Width="16" Height="16" Stretch="Uniform" Stroke="{ThemeResource MapStudioTextPrimaryBrush}" StrokeThickness="1.7" Data="M 12,2 A 10,10 0 1 1 11.99,2 M 2,12 L 22,12 M 12,2 C 5,7 5,17 12,22 M 12,2 C 19,7 19,17 12,22" />
-                            <TextBlock Text="Geo Studio" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Geo Studio" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="6" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
+                    <Button Grid.Column="6" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
                             Background="{Binding Background, ElementName=ModuleTransportButton, Mode=OneWay}"
                             BorderBrush="{Binding BorderBrush, ElementName=ModuleTransportButton, Mode=OneWay}"
                             AutomationProperties.Name="Transporte" Click="OnToolTransportClick">
@@ -638,18 +638,18 @@
                               Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                               StrokeThickness="1.7"
                               Data="M 4,4 Q 4,2 7,2 L 19,2 Q 22,2 22,5 L 22,18 L 4,18 Z M 7,6 L 19,6 L 19,12 L 7,12 Z M 8,18 L 8,22 M 18,18 L 18,22" />
-                            <TextBlock Text="Transporte" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Transporte" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="7" HorizontalAlignment="Stretch" MinHeight="39" Padding="6,6"
-                            HorizontalContentAlignment="Center" CornerRadius="6" BorderThickness="1"
-                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
-                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    <Button Grid.Column="7" HorizontalAlignment="Stretch" MinHeight="35" Padding="4,5"
+                            HorizontalContentAlignment="Center" CornerRadius="4" BorderThickness="1"
+                            Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
                             AutomationProperties.Name="Testes" Click="OnToolValidationClick">
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <FontIcon Glyph="&#xE73E;" FontSize="15" Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                            <TextBlock Text="Testes" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                            <TextBlock Text="Testes" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"
                                        Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         </StackPanel>
                     </Button>
@@ -900,7 +900,7 @@
                                        TextWrapping="Wrap"
                                        CharacterSpacing="15" />
                             <TextBlock x:Name="ExplorerModeSubtitleText"
-                                       Text="Cena e conteúdo do mapa"
+                                       Text="Cena do mapa"
                                        TextWrapping="Wrap"
                                        FontSize="11"
                                        Foreground="{ThemeResource MapStudioTextMutedBrush}" />
@@ -2384,10 +2384,10 @@
                     VerticalAlignment="Top"
                     Margin="0,4,0,0"
                     Padding="4,3"
-                    Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
-                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="7"
+                    CornerRadius="3"
                     Canvas.ZIndex="57">
                 <ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
                               VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
@@ -2427,17 +2427,17 @@
 
             <Border x:Name="ProfessionalWelcomePanel" Grid.Row="1" Grid.Column="2"
                     Margin="64,56,10,12" MaxWidth="430" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="{ThemeResource MapStudioChromeBackgroundBrush}" CornerRadius="8"
-                    BorderBrush="{ThemeResource MapStudioBorderBrush}" BorderThickness="1" Padding="18"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}" CornerRadius="3"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}" BorderThickness="1" Padding="14"
                     Canvas.ZIndex="56" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Comece um mapa" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                        <TextBlock Text="Crie um projeto, abra um mapa existente ou reconstrua uma região real." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextSecondaryBrush}"/>
+                    <StackPanel Spacing="7">
+                        <TextBlock Text="Comece um mapa" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="Crie ou abra um mapa para começar." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextSecondaryBrush}"/>
                         <Button Content="Novo mapa" HorizontalAlignment="Stretch" Click="OnCreateStandaloneMapClick" Background="{ThemeResource MapStudioAccentSurfaceBrush}"/>
                         <Button Content="Abrir mapa" HorizontalAlignment="Stretch" IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}" Click="OnOpenMapCatalogClick"/>
                         <Button Content="Importar mapa OMSI" HorizontalAlignment="Stretch" Click="OnImportStandaloneMapClick"/>
-                        <Button Content="Criar mapa real · Geo Studio" HorizontalAlignment="Stretch" Click="OnCreateCoordinateMapClick"/>
+                        <Button Content="Geo Studio · mapa real" HorizontalAlignment="Stretch" Click="OnCreateCoordinateMapClick"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -3045,10 +3045,10 @@
                     VerticalAlignment="Stretch"
                     Visibility="Collapsed"
                     Canvas.ZIndex="110"
-                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
-                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="10">
+                    CornerRadius="3">
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="AssetLibraryToolWindowTranslate" />
                 </Border.RenderTransform>
@@ -3988,9 +3988,9 @@
                     Margin="0,1,0,2"
                     Padding="6,3"
                     Background="{ThemeResource MapStudioChromeBackgroundBrush}"
-                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="0"
+                    CornerRadius="3"
                     Canvas.ZIndex="48">
                 <Grid ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
@@ -4589,13 +4589,14 @@
                     Grid.Row="1"
                     Grid.Column="2"
                     HorizontalAlignment="Left"
-                    VerticalAlignment="Stretch"
+                    VerticalAlignment="Top"
+                    MaxHeight="350"
                     Margin="6,50,0,10"
-                    Padding="5"
-                    Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
-                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    Padding="3"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
+                    CornerRadius="4"
                     Canvas.ZIndex="58">
                 <ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
@@ -4612,7 +4613,7 @@
                               Data="M 2,2 L 20,10 L 12,12 L 16,20 L 12,22 L 8,14 L 3,19 Z" />
                     </Button>
 
-                    <Button x:Name="ModuleObjectsButton"
+                    <Button x:Name="ModuleObjectsButton" Visibility="Collapsed"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Objetos e cenário"
                             Click="OnToolObjectsClick">
@@ -4624,7 +4625,7 @@
                               Data="M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z M 3,7 L 12,12 L 21,7 M 12,12 L 12,22" />
                     </Button>
 
-                    <Button x:Name="ModuleRoadsButton"
+                    <Button x:Name="ModuleRoadsButton" Visibility="Collapsed"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Ruas e splines"
                             Click="OnToolSplinesClick">
@@ -4636,7 +4637,7 @@
                               Data="M 4,22 C 8,16 8,8 12,2 M 20,22 C 16,16 16,8 12,2 M 9,17 L 15,17 M 10.5,11 L 13.5,11" />
                     </Button>
 
-                    <Button x:Name="ModuleTerrainButton"
+                    <Button x:Name="ModuleTerrainButton" Visibility="Collapsed"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Terreno e água"
                             Click="OnToolTerrainClick">
@@ -4672,7 +4673,7 @@
                               Data="M 9,2 L 15,2 L 15,9 L 22,9 L 22,15 L 15,15 L 15,22 L 9,22 L 9,15 L 2,15 L 2,9 L 9,9 Z M 12,4 L 12,20 M 4,12 L 20,12" />
                     </Button>
 
-                    <Button x:Name="ModuleTrafficButton"
+                    <Button x:Name="ModuleTrafficButton" Visibility="Collapsed"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Tráfego e semáforos"
                             Click="OnToolTrafficClick">
@@ -4684,7 +4685,7 @@
                               Data="M 7,2 L 17,2 L 17,22 L 7,22 Z M 12,6 A 2,2 0 1 0 12,6.1 M 12,12 A 2,2 0 1 0 12,12.1 M 12,18 A 2,2 0 1 0 12,18.1" />
                     </Button>
 
-                    <Button x:Name="ModuleTransportButton"
+                    <Button x:Name="ModuleTransportButton" Visibility="Collapsed"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Transporte e operação"
                             Click="OnToolTransportClick">

@@ -21,3 +21,7 @@ Fixed header and selection, independently scrollable properties, Apply/Duplicate
 ## Stage 9 — viewport and projects
 
 Below 1250 DIPs, tool selection uses the side library instead of automatically opening the bottom tray. Search remains visible, Explorer tabs stay available, actions have bounded height and thumbnails have dedicated space. Vertical rail no longer overlaps viewport. Module icons reuse native vector geometry. Empty-scene welcome actions create, open, import or open Geo Studio; hidden with a map or another tool. Stage 8 passed CI; stage 9 still requires CI and captures.
+
+## Stage 10 — clean visual language
+
+Neutral graphite/light palette, blue selection, subtle dividers and compact modules. Desktop rail only shows selection, vegetation and crossings rather than duplicating the top modules; fullscreen restores all rail shortcuts. Existing controls and handlers preserved, high contrast dictionary unchanged. Validate light/dark themes, tool switching and F11. Screenshots pending.

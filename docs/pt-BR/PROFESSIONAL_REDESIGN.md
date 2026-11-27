@@ -48,3 +48,7 @@ Cabeçalho e seleção fixos, propriedades com rolagem independente, ações Apl
 ## Etapa 9 — viewport e projetos
 
 Abaixo de 1250 DIPs, seleção de ferramentas usa biblioteca lateral em vez da bandeja inferior automática. Pesquisa sempre visível, abas do Explorer disponíveis, ações com altura limitada e miniaturas com espaço próprio. A barra de ferramentas vertical não cobre o viewport. Ícones de módulos reaproveitam as geometrias vetoriais nativas. Tela inicial contextual com ações reais de novo mapa, abrir, importar e Geo Studio; desaparece quando há mapa ou outra ferramenta. Validação da etapa 8 aprovada; etapa 9 ainda requer CI e capturas.
+
+## Etapa 10 — linguagem visual Clean
+
+Paleta neutra grafite/claro, azul para seleção, contornos discretos e módulos compactos. No desktop, o trilho vertical contém apenas seleção, vegetação e cruzamentos, sem repetir os módulos superiores; em tela cheia, todos os atalhos voltam. Controles e eventos preservados, tema de alto contraste intacto. Validar tema claro/escuro, troca de ferramenta e F11. Capturas pendentes.

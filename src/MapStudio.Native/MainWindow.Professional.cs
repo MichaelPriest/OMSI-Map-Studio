@@ -19,11 +19,20 @@ public sealed partial class MainWindow
         }
         SyncProfessionalLayers();
         WorkspaceGrid.SizeChanged += OnProfessionalWorkspaceSizeChanged;
+        DesktopChromePanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => SyncProfessionalRail());
+        SyncProfessionalRail();
         MapText.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => RefreshProfessionalWelcome());
         SelectionContextPanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => RefreshProfessionalWelcome());
         MainRoot.Loaded += (_, _) => RefreshProfessionalWelcome();
         AssetLibraryToolWindow.RegisterPropertyChangedCallback(FrameworkElement.VerticalAlignmentProperty,
             (_, _) => ApplyProfessionalAssetTrayBounds(WorkspaceGrid.ActualHeight));
+    }
+
+    private void SyncProfessionalRail()
+    {
+        var visibility = DesktopChromePanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var button in new[] { ModuleObjectsButton, ModuleRoadsButton, ModuleTerrainButton, ModuleTrafficButton, ModuleTransportButton })
+            button.Visibility = visibility;
     }
 
     private bool PreferProfessionalAssetSidebar => WorkspaceGrid.ActualWidth > 0 && WorkspaceGrid.ActualWidth < 1250;
