@@ -11,6 +11,7 @@ on:
       - "tests/MapStudio.Core.Tests/**"
       - "tests/MapStudio.Renderer.Tests/**"
       - ".github/workflows/native-ci.yml"
+      - "tools/capture_native_editor.ps1"
   pull_request:
     branches:
       - feature/alpha3-material-preview
@@ -22,6 +23,7 @@ on:
       - "tests/MapStudio.Core.Tests/**"
       - "tests/MapStudio.Renderer.Tests/**"
       - ".github/workflows/native-ci.yml"
+      - "tools/capture_native_editor.ps1"
   workflow_dispatch:
 
 permissions:
@@ -153,5 +155,42 @@ jobs:
         with:
           name: OMSI-Map-Studio-Windows-x64-test
           path: artifacts/OMSI-Map-Studio-test/
+          if-no-files-found: error
+          retention-days: 14
+
+
+  capture-editor:
+    name: Capture real editor window (best effort)
+    needs: validate-native
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: OMSI-Map-Studio-Windows-x64-test
+          path: artifacts/native-editor
+      - name: Capture actual application window
+        id: capture
+        continue-on-error: true
+        shell: powershell
+        run: |
+          ./tools/capture_native_editor.ps1 -Executable artifacts/native-editor/MapStudio.Native.exe -OutputDirectory artifacts/editor-screenshots -Commit "$env:GITHUB_SHA" -CaptureModules
+      - name: Report screenshot availability
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.capture.outcome }}' -ne 'success') {
+            'No verified startup screenshot; interactive desktop or app startup unavailable.' >> $env:GITHUB_STEP_SUMMARY
+            Write-Warning 'Screenshot capture failed. Build validation is independent.'
+          } else {
+            'Actual window capture available as an artifact; review visually before adding to documentation.' >> $env:GITHUB_STEP_SUMMARY
+          }
+      - name: Upload screenshots for review
+        if: steps.capture.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-editor-screenshots
+          path: artifacts/editor-screenshots/
           if-no-files-found: error
           retention-days: 14
