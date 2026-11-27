@@ -514,10 +514,10 @@ public static class NativeSplinePlacementMath
             return false;
         }
 
+        // Sagitta is the side of the arc midpoint, opposite the
+        // side of its circle centre (OMSI signed curvature).
         var signedRadius =
-            Math.Sign(
-                sagitta) *
-            radiusMagnitude;
+            -Math.Sign(sagitta) * radiusMagnitude;
 
         var halfAngle =
             Math.Asin(
@@ -530,10 +530,7 @@ public static class NativeSplinePlacementMath
                     )));
 
         var signedAngle =
-            Math.Sign(
-                sagitta) *
-            halfAngle *
-            2.0;
+            Math.Sign(signedRadius) * halfAngle * 2.0;
 
         var chordBearing =
             Math.Atan2(

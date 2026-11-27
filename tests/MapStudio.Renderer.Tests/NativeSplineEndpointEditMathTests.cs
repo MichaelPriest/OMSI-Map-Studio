@@ -60,9 +60,7 @@ public sealed class NativeSplineEndpointEditMathTests
                 .EstimateCurveOffset(
                     original!);
 
-        Assert.True(
-            offset >
-            0);
+        Assert.Equal(4.0, offset, 6);
 
         Assert.True(
             NativeSplineEndpointEditMath
@@ -84,7 +82,7 @@ public sealed class NativeSplineEndpointEditMathTests
         Assert.True(
             rebuilt!.IsCurved);
         Assert.True(
-            rebuilt.Radius >
+            rebuilt.Radius <
             0);
     }
 
