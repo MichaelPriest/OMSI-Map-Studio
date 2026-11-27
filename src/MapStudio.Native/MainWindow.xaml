@@ -4163,6 +4163,8 @@
                                         </Flyout>
                                     </Button.Flyout>
                                 </Button>
+                                <Button Content="Perfil longitudinal" Style="{StaticResource EditorToolbarButtonStyle}"
+                                        ToolTipService.ToolTip="Comparar cotas da spline selecionada e terreno" Click="OnRoadProfileClick" />
                                 <Button x:Name="RoadReviewButton" Content="Revisão: off" Style="{StaticResource EditorToolbarButtonStyle}"
                                         ToolTipService.ToolTip="Ative para ajustar as coordenadas e curvatura antes de confirmar cada trecho"
                                         Click="OnRoadReviewClick" />
@@ -5233,6 +5235,7 @@
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="1" />
                                 </Grid>
+                                <Button Content="Ver perfil longitudinal" HorizontalAlignment="Stretch" Click="OnRoadProfileClick" />
                                 <Button x:Name="LevelSplineToTerrainButton"
                                         Content="Ajustar via ao terreno"
                                         HorizontalAlignment="Stretch"

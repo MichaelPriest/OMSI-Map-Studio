@@ -2592,6 +2592,13 @@ public sealed class NativeViewportRuntime : IDisposable
         return state is not null;
     }
 
+    public NativeRoadProfile? GetSelectedRoadProfile()
+    {
+        if (Scene is not { } scene) return null;
+        var spline = scene.Splines.FirstOrDefault(s => s.PickingId == _selectedPickingId);
+        return spline is null ? null : NativeRoadProfileSampler.Build(scene, spline);
+    }
+
     public bool TryBuildRoundabout(double radius, bool clockwise, out NativeProceduralRoadPlacementBuildResult? batch, out string status)
     {
         batch = null;

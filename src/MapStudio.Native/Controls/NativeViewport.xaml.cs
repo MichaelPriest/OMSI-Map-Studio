@@ -767,6 +767,8 @@ public sealed partial class NativeViewport : UserControl
         return true;
     }
 
+    public NativeRoadProfile? GetSelectedRoadProfile() => _runtime?.GetSelectedRoadProfile();
+
     public bool TryBuildRoundabout(double radius, bool clockwise, out NativeProceduralRoadPlacementBuildResult? batch, out string status)
     {
         batch = null;
