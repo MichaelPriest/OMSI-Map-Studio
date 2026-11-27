@@ -1504,12 +1504,12 @@ public sealed class NativeViewportRuntime : IDisposable
             _splineEasyRoadEnabled &&
             !_splinePlacementIsHeight)
         {
-            NativeSplinePlacementMath
-                .TryCreateArcFromOffset(
-                    start,
-                    endPoint,
-                    _splineEasyRoadCurveOffset,
-                    out shape);
+            var nextId = _splineNextId;
+            if (_splinePlacementStage == NativeSplinePlacementStage.AwaitingEnd)
+            {
+                nextId = ResolveSplineEndSnap(Scene, ref endPoint)?.SplineId ?? -1;
+            }
+            TryCreateEasyRoadShape(start, endPoint, nextId, out shape);
         }
         else
         {
@@ -1612,14 +1612,14 @@ public sealed class NativeViewportRuntime : IDisposable
 
         NativeSplinePlacementShape? shape;
 
+        var nextId = _splineNextId;
+        if (_splinePlacementStage == NativeSplinePlacementStage.AwaitingEnd)
+        {
+            nextId = ResolveSplineEndSnap(Scene, ref endPoint)?.SplineId ?? -1;
+        }
         var valid =
             _splineEasyRoadEnabled
-                ? NativeSplinePlacementMath
-                    .TryCreateArcFromOffset(
-                        start,
-                        endPoint,
-                        _splineEasyRoadCurveOffset,
-                        out shape)
+                ? TryCreateEasyRoadShape(start, endPoint, nextId, out shape)
                 : NativeSplinePlacementMath
                     .TryCreateStraight(
                         start,
@@ -1856,18 +1856,14 @@ public sealed class NativeViewportRuntime : IDisposable
             // Use the same endpoint snap and elevation rules for the ghost
             // as for the click that commits the road. Keep the raw pointer
             // above so advancing the placement resolves it exactly once.
-            ResolveSplineEndSnap(Scene, ref point);
+            var previewSnap = ResolveSplineEndSnap(Scene, ref point);
 
             if (
                 _splineEasyRoadEnabled &&
                 !_splinePlacementIsHeight)
             {
-                NativeSplinePlacementMath
-                    .TryCreateArcFromOffset(
-                        start,
-                        point,
-                        _splineEasyRoadCurveOffset,
-                        out shape);
+                TryCreateEasyRoadShape(start, point,
+                    previewSnap?.SplineId ?? -1, out shape);
             }
             else
             {
@@ -1943,6 +1939,62 @@ public sealed class NativeViewportRuntime : IDisposable
 
         RenderInitialFrame();
         return true;
+    }
+
+    private bool TryCreateEasyRoadShape(
+        Vector3 start, Vector3 end, int nextSplineId,
+        out NativeSplinePlacementShape? shape)
+    {
+        // An explicitly adjusted bend remains a manual operation.
+        // Automatic continuation is used only when no offset was requested.
+        if (Math.Abs(_splineEasyRoadCurveOffset) >= 0.05 ||
+            Scene is not { } scene || !_splineAutoConnectEnabled)
+        {
+            return NativeSplinePlacementMath.TryCreateArcFromOffset(
+                start, end, _splineEasyRoadCurveOffset, out shape);
+        }
+
+        var previous = _splinePreviousId < 0 ? null : scene.Splines
+            .FirstOrDefault(s => s.Spline.SplineId == _splinePreviousId);
+        var next = nextSplineId < 0 ? null : scene.Splines
+            .FirstOrDefault(s => s.Spline.SplineId == nextSplineId);
+        if (previous is not null && next is not null)
+        {
+            var a = NativeSplinePathMath.GetFrame(previous, previous.Spline.Length);
+            var b = NativeSplinePathMath.GetFrame(next, 0);
+            return NativeSplineCompleteToSolver.TrySolveShape(
+                a with { Center = start }, b with { Center = end },
+                double.MaxValue, out shape, out _);
+        }
+
+        if (previous is not null)
+        {
+            var frame = NativeSplinePathMath.GetFrame(previous, previous.Spline.Length);
+            return NativeSplinePlacementMath.TryCreateTangentArc(
+                start, end, frame.Forward, out shape);
+        }
+
+        if (next is not null)
+        {
+            var frame = NativeSplinePathMath.GetFrame(next, 0);
+            if (!NativeSplinePlacementMath.TryCreateTangentArc(
+                    end, start, -frame.Forward, out var reversed) ||
+                reversed is null)
+            {
+                shape = null;
+                return false;
+            }
+
+            var endHeading = reversed.Rotation + (reversed.IsCurved
+                ? reversed.Length / reversed.Radius * 180 / Math.PI : 0);
+            shape = new NativeSplinePlacementShape(start, end,
+                ((endHeading + 180) % 360 + 360) % 360,
+                reversed.Length, -reversed.Radius, -reversed.GradientEnd,
+                -reversed.GradientStart, reversed.IsCurved);
+            return true;
+        }
+
+        return NativeSplinePlacementMath.TryCreateStraight(start, end, out shape);
     }
 
     private NativeSplineEndpointSnap? ResolveSplineEndSnap(
@@ -2146,12 +2198,7 @@ public sealed class NativeViewportRuntime : IDisposable
             var endShapeValid =
                 _splineEasyRoadEnabled &&
                 !_splinePlacementIsHeight
-                    ? NativeSplinePlacementMath
-                        .TryCreateArcFromOffset(
-                            start,
-                            point,
-                            _splineEasyRoadCurveOffset,
-                            out endShape)
+                    ? TryCreateEasyRoadShape(start, point, _splineNextId, out endShape)
                     : NativeSplinePlacementMath
                         .TryCreateStraight(
                             start,
@@ -2162,7 +2209,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 !endShapeValid ||
                 endShape is null)
             {
-                status = "Ponto final inválido.";
+                status = "Não foi possível construir uma curva compatível. Afaste o ponto, ajuste a curva ou desative a conexão automática.";
                 return false;
             }
 
