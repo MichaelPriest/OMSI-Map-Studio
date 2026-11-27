@@ -405,22 +405,24 @@ Use **Map > Create real map by area...** to build a map without manually typing 
 4. Adjust **Area width %** and **Area height %** to enlarge or reduce the center selection frame. Geographic bounds are recalculated from the frame in real time.
 5. Review estimated physical dimensions and required 300 m OMSI tiles.
 6. Enter folder/name.
-7. Under **OpenStreetMap roads**, choose:
-   - **Create terrain / reference only**;
-   - **Import roads as guides** — previews the graph in the viewport without writing splines;
-   - **Generate roads automatically after preview** — classifies roads, prepares splines/junctions and requires confirmation after preview before writing.
-8. Optionally enable **Apply elevation automatically**, choose **Open-Meteo / Copernicus GLO-90** or **Google Elevation**, and/or enable **Visual terrain reference**.
-9. Click **Create area**.
+7. Under **OpenStreetMap roads**, select a mode. **Create terrain / reference only** prepares the area. **Import roads as guides** opens the graph for review. **Automatic reconstruction by layer** writes the selected layers and reopens the map.
+8. Under **Sources → Elevation source**, choose **Terrarium · AWS Terrain Tiles / Mapzen**, **Open-Meteo / Copernicus GLO-90** or **Google Elevation** and enable **Apply elevation automatically**.
+9. To see roads, buildings, rivers and lakes on the terrain, choose **OpenStreetMap** as the basemap and enable **Visual terrain reference**.
+10. Review the area and start creation.
 
 The window can be moved, resized and minimized inside the editor.
 
 **CARTO / OpenStreetMap:** the CARTO basemap used as the visual background now requires a **CARTO Basemaps API key**. In **Create real map by area**, select CARTO and paste the key into **CARTO Basemaps key**. Use **How to get** to open CARTO's official request page, provide your email and project use, and use the key sent by email. The key is stored locally in Windows Credential Manager. Until a CARTO key is saved, the interactive picker uses OpenStreetMap as a fallback; place search and vector data continue to use OpenStreetMap/Nominatim/Overpass as applicable.
 
-**Open-Meteo / Copernicus GLO-90:** can be selected as the elevation provider. The API key belongs to the user and is stored in Windows Credential Manager. Map Studio uses the user's commercial endpoint and does not embed a project key. Keep attribution to Open-Meteo and the Copernicus programme according to the provider terms.
+**Terrarium (AWS Terrain Tiles / Mapzen)** works without an API key. The editor downloads one grid covering the map tiles, applies a common height datum and saves the terrain in one batch with backups. Automatic road reconstruction samples the same surface. Grid dimensions scale with the map extent, from 17 to 65 samples per axis. The **Cancel** button interrupts the elevation operation.
+
+**OSM vector reference.** Lakes, reservoirs and riverbanks follow mapped outlines, including islands in multipolygons. Waterways mapped as lines use their tagged width when available or an estimated width by type. The overlay is projected onto the terrain. The editor’s water tool controls the physical water surface of OMSI tiles.
+
+**Open-Meteo / Copernicus GLO-90** uses its public service when the key field is empty. An optional commercial key is stored in Windows Credential Manager.
 
 **Google Maps / Google Elevation:** uses the API key stored by the user in Windows Credential Manager. The interactive selector requires Maps JavaScript API access. Google Elevation can incur charges and is only applied when explicitly selected.
 
-OSM roads are projected into the map georeference and classified by type/width/lanes when those tags are available. Even in automatic mode, Map Studio shows **Preview before write** and only persists splines/junctions after confirmation.
+OSM roads are projected into the map georeference and classified by type/width/lanes when those tags are available. In **Import roads as guides** mode, review the graph before generating splines.
 
 For fully local elevation, use **Map → Import local elevation grid**. CSV/TXT/ASC data is applied to the active tile through the same safe terrain pipeline with backup; local import is per tile and is not presented as a global DEM for the entire area.
 

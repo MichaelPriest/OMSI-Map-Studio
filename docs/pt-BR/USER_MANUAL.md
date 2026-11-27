@@ -536,22 +536,24 @@ Use **Mapa > Criar mapa real por área...** para criar um mapa sem precisar digi
 4. Ajuste **Largura área %** e **Altura área %** para aumentar ou reduzir o retângulo central. O cálculo dos limites geográficos acompanha o retângulo em tempo real.
 5. Confira o tamanho físico estimado e a quantidade de tiles OMSI de 300 m.
 6. Informe pasta/nome.
-7. Em **Vias OpenStreetMap**, escolha:
-   - **Criar apenas terreno / referência**;
-   - **Importar vias como guias** — mostra o grafo no viewport sem gravar splines;
-   - **Gerar ruas automaticamente após preview** — classifica as vias, prepara splines/junctions e exige confirmação depois da prévia antes de gravar.
-8. Opcionalmente ative **Aplicar elevação automaticamente**, escolha **Open-Meteo / Copernicus GLO-90** ou **Google Elevation**, e/ou ative **Referência visual no terreno**.
-9. Clique **Criar área**.
+7. Em **Vias OpenStreetMap**, escolha o modo. **Criar apenas terreno / referência** prepara a área. **Importar vias como guias** abre o grafo para revisão. **Reconstrução automática por camadas** grava as camadas marcadas e reabre o mapa.
+8. Em **Fontes → Fonte de elevação**, escolha **Terrarium · AWS Terrain Tiles / Mapzen**, **Open-Meteo / Copernicus GLO-90** ou **Google Elevation** e marque **Aplicar elevação automaticamente**.
+9. Para enxergar vias, edifícios, rios e lagos sobre o terreno, escolha **OpenStreetMap** como mapa-base e marque **Referência visual no terreno**.
+10. Confira a área e clique no botão de criação.
 
 A janela pode ser movida, redimensionada e minimizada dentro do editor.
 
 **CARTO / OpenStreetMap:** o mapa CARTO usado como base visual agora exige uma **CARTO Basemaps API key**. No painel **Criar mapa real por área**, selecione CARTO e cole a chave em **Chave CARTO Basemaps**. Use **Como obter** para abrir a página oficial da CARTO, informe seu e-mail e o uso do projeto e aguarde a chave enviada por e-mail. A chave é salva localmente no Windows Credential Manager. Enquanto nenhuma chave CARTO estiver salva, o seletor interativo usa OpenStreetMap como fallback; busca de locais e dados vetoriais continuam usando OpenStreetMap/Nominatim/Overpass conforme a função.
 
-**Open-Meteo / Copernicus GLO-90:** pode ser escolhido como provedor de elevação. A chave é do próprio usuário e fica no Windows Credential Manager. O Map Studio usa o endpoint comercial do usuário e não incorpora chave do projeto. Mantenha a atribuição a Open-Meteo e ao programa Copernicus conforme os termos do provedor.
+**Terrarium (AWS Terrain Tiles / Mapzen)** funciona sem chave. O editor baixa uma grade para a extensão dos tiles, usa o mesmo nível de referência para todos eles e aplica o relevo em lote com backup. Na reconstrução automática, as vias usam a mesma superfície. O tamanho da grade se ajusta à área, de 17 a 65 amostras por eixo. O botão **Cancelar** interrompe a operação de relevo.
+
+**Referência vetorial OSM.** Lagos, reservatórios e margens de rios usam os contornos mapeados, inclusive ilhas em multipolígonos. Para um curso d’água representado por uma linha, o desenho usa a largura informada no OSM ou uma largura estimada pelo tipo. A referência é uma imagem projetada no terreno. A ferramenta de água do editor controla a superfície física dos tiles no OMSI.
+
+**Open-Meteo / Copernicus GLO-90** usa o serviço público quando o campo de chave está vazio. A chave comercial opcional fica no Windows Credential Manager.
 
 **Google Maps / Google Elevation:** usa a API key salva pelo próprio usuário no Windows Credential Manager. Para o seletor interativo, a chave precisa ter Maps JavaScript API habilitada. Google Elevation pode gerar cobrança e só é aplicado quando escolhido explicitamente.
 
-As vias OSM são projetadas para a georreferência do mapa e classificadas por tipo/largura/faixas quando os dados estiverem disponíveis. Mesmo no modo automático, o Map Studio mostra **Preview antes de gravar** e só persiste as splines/junctions após confirmação.
+As vias OSM são projetadas para a georreferência do mapa e classificadas por tipo/largura/faixas quando os dados estiverem disponíveis. No modo **Importar vias como guias**, revise o traçado antes de gerar as splines.
 
 Para elevação totalmente local, use **Mapa → Importar grade local de elevação**. CSV/TXT/ASC são aplicados ao tile ativo pelo mesmo pipeline seguro de terreno, com backup; essa importação local é por tile e não é tratada como DEM global da área inteira.
 

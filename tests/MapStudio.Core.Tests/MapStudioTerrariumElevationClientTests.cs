@@ -35,6 +35,21 @@ public sealed class MapStudioTerrariumElevationClientTests
         Assert.All(surface.Grid.Elevations,h=>Assert.Equal(100,h,6));
         Assert.Equal(4,handler.Requests);
     }
+    [Fact]
+    public async Task MapExtentSelectsGridDensityPerAxisAndHonorsExplicitDimensions()
+    {
+        using var http = new HttpClient(new TileHandler());
+        var rgba = Enumerable.Repeat((byte)255, 256 * 256 * 4).ToArray();
+        var dem = new MapStudioTerrariumElevationClient(http, _ => rgba);
+        var bounds = new MapStudioElevationCoverageBounds(0, 0, 0.002, 0.015);
+        var automatic = await dem.DownloadForCoverageAsync(bounds);
+        Assert.Equal(17, automatic.Grid.Rows);
+        Assert.Equal(65, automatic.Grid.Columns);
+        var requested = await dem.DownloadForCoverageAsync(bounds, rows: 3, columns: 4);
+        Assert.Equal(3, requested.Grid.Rows);
+        Assert.Equal(4, requested.Grid.Columns);
+    }
+
     private sealed class TileHandler : HttpMessageHandler
     {
         public int Requests {get;private set;}

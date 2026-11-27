@@ -44,16 +44,16 @@ Cada recurso deve ser classificado como **equivalente**, **parcial**, **ausente*
 
 ### Seleção de camadas do mapa real
 
-Na etapa Reconstrução, o modo automático permite escolher vias/cruzamentos, edificações, vegetação, infraestrutura e mobiliário urbano separadamente. A seleção padrão continua completa. A elevação e a referência visual mantêm controles independentes. As camadas desmarcadas não executam seus geradores; a sessão conserva backup e rollback. A seleção de classes de vias/SLI, água, linhas OSM e DEM Terrarium continuam pendentes de paridade.
+Na etapa Reconstrução, o modo automático permite escolher vias/cruzamentos, edificações, vegetação, infraestrutura e mobiliário urbano separadamente. A seleção padrão continua completa. A elevação e a referência visual mantêm controles independentes. As camadas desmarcadas não executam seus geradores; a sessão conserva backup e rollback. A geração física de água por geometria OSM, as classes de vias/SLI e as linhas de transporte ainda precisam de validação própria.
 
 
 ### Referência gratuita sem chave
 
-OpenStreetMap é o mapa-base padrão. A referência sobre o terreno é gerada localmente em PNG a partir da geometria vetorial OSM, usando a mesma projeção geográfica do gerador de vias, com contornos de edificações e vias por largura. A região é limitada ao tile ativo e vizinhos carregados (até 3 × 3); o cache de dados OSM é reaproveitado. Não são baixados mosaicos de tiles raster públicos para uso offline. Atribuição ODbL visível; Google e CARTO seguem opcionais. Esri World Imagery é uma opção separada para visualização online quando o usuário possui licença/autorização; não é incluída no PNG local nem exportada. Esta referência ainda não desenha rótulos, água ou vegetação.
+OpenStreetMap é o mapa-base padrão. A referência sobre o terreno é gerada localmente em PNG a partir da geometria vetorial OSM, usando a mesma projeção geográfica do gerador de vias, com contornos de edificações e vias por largura. A região é limitada ao tile ativo e vizinhos carregados (até 3 × 3); o cache de dados OSM é reaproveitado. Não são baixados mosaicos de tiles raster públicos para uso offline. Atribuição ODbL visível; Google e CARTO seguem opcionais. Esri World Imagery é uma opção separada para visualização online quando o usuário possui licença/autorização; não é incluída no PNG local nem exportada. A referência inclui lagos com ilhas, reservatórios, rios, canais e córregos. Rótulos e vegetação continuam pendentes.
 
 ### Keyless reference (EN)
 
-OpenStreetMap is the default map picker. The local ground overlay renders OSM vector road and building geometry into georeferenced PNG, without Google or CARTO credentials, within the active tile and loaded neighbors. It uses the existing OSM data cache, not bulk public raster tile downloads. Esri is a separate authorized online imagery preview, not an export/offline source. Labels, water and vegetation in the reference remain pending.
+OpenStreetMap is the default map picker. The local ground overlay renders OSM vector road and building geometry into georeferenced PNG, without Google or CARTO credentials, within the active tile and loaded neighbors. It uses the existing OSM data cache, not bulk public raster tile downloads. Esri is a separate authorized online imagery preview, not an export/offline source. The reference includes lakes with islands, reservoirs, rivers, canals and streams. Labels and vegetation remain pending.
 
 ## Auditoria de paridade — 27/11/2026
 
@@ -64,7 +64,7 @@ Base externa: openMapper main, docs/FEATURES.md (licença AGPL-3.0-only). Compar
 | P0 | Desenho em dois cliques, tangência entre trechos, edição numérica durante desenho | Parcial; motor de splines existente |
 | P0 | Importação GPS GPX/KML/GeoJSON | Importador GPX/KML integrado ao fluxo existente de prévia de grafo; testes adicionados; altitude ignorada, sem download externo |
 | P0 | Importação por classe OSM, água, trilhos, linhas de ônibus | Parcial; validar cada gerador |
-| P0 | DEM Terrarium e provedores ortofoto autorizados | Pendente; Open-Meteo e referência vetorial OSM existentes |
+| P0 | DEM Terrarium e provedores ortofoto autorizados | Terrarium integrado ao terreno e às vias no Geo Studio. Esri disponível para visualização autorizada. Homologação visual no OMSI 2 pendente. |
 | P1 | Perfil longitudinal editável, régua, área, snap angular | Não localizada equivalência completa |
 | P1 | Rotatórias, baias, cruzamentos complexos reutilizáveis | Parcial/ausente |
 | P1 | HOF, calendários, reroteamento TTData ao mudar ruas | Não confirmada paridade |
@@ -87,3 +87,8 @@ Road Studio > Rotatória: selecionar SLI de mão única e marcar centro livre; g
 ### Perfil longitudinal — primeira fase
 
 Road Studio e Inspector exibem o perfil do trecho selecionado com cotas do eixo e terreno amostrados a cada ~2 m (máximo de 1001 amostras), inclinação, desnível, folga e lacunas de terreno. Cursor por slider e foco no ponto ao fechar o diálogo. Não altera alturas, não concatena cadeias e não possui edição de nós no gráfico ainda. Testes do amostrador adicionados.
+
+
+### Relevo e hidrografia no Geo Studio
+
+O terreno e as vias usam o mesmo nível de referência Terrarium em toda a área. Os testes de reconstrução reabrem os arquivos OMSI, conferem a altura e a inclinação da spline e comparam as amostras na borda de dois tiles. A referência OSM reutiliza os blocos de vias e edifícios em cache e busca hidrografia para a área exibida. A geração de superfícies físicas de água a partir dos contornos OSM e a criação de baias de ônibus continuam pendentes.

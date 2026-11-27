@@ -118,7 +118,7 @@ public sealed class MapStudioRealWorldMapPipeline
             openMeteoElevationClient;
     }
 
-    public async Task<MapStudioRealWorldMapPipelineResult>
+    public Task<MapStudioRealWorldMapPipelineResult>
         RunAutoIndexedWithGoogleElevationAsync(
             string omsiRoot,
             string mapDirectory,
@@ -143,96 +143,18 @@ public sealed class MapStudioRealWorldMapPipeline
             CancellationToken cancellationToken = default,
             IMapStudioBuildingVisualEvidenceProvider?
                 buildingVisualEvidenceProvider = null,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
-    {
-        progress?.Report(
-            new MapStudioRealWorldMapPipelineProgress(
-                MapStudioRealWorldMapPipelineStage
-                    .IndexingAssets,
-                "Carregando biblioteca de assets OMSI..."));
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All) =>
+        RunAutoIndexedCoreAsync(
+            omsiRoot, mapDirectory, south, west, north, east, anchor,
+            streetFurnitureEvidence, progress, assetIndexProgress, cancellationToken,
+            buildingVisualEvidenceProvider, layers, elevation: null,
+            "Baixando grade de elevação real para toda a área física dos tiles...",
+            elevationCoverage => _elevationClient.DownloadAsync(
+                googleElevationApiKey, elevationCoverage.South, elevationCoverage.West,
+                elevationCoverage.North, elevationCoverage.East,
+                elevationRows, elevationColumns, elevationProgress, cancellationToken));
 
-        var catalog =
-            await new MapStudioRealWorldAssetCatalogLoader()
-                .LoadAsync(
-                    omsiRoot,
-                    assetIndexProgress,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        progress?.Report(
-            new MapStudioRealWorldMapPipelineProgress(
-                MapStudioRealWorldMapPipelineStage
-                    .IndexingAssets,
-                $"{(catalog.ReusedExistingIndex ? "Índice OMSI em cache reutilizado" : "Índice OMSI atualizado")} · " +
-                $"{catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
-                $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
-                $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
-                $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
-
-        cancellationToken
-            .ThrowIfCancellationRequested();
-
-        var elevationCoverage =
-            await ResolveElevationCoverageAsync(
-                    mapDirectory,
-                    anchor,
-                    south,
-                    west,
-                    north,
-                    east,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        progress?.Report(
-            new MapStudioRealWorldMapPipelineProgress(
-                MapStudioRealWorldMapPipelineStage
-                    .DownloadingElevation,
-                "Baixando grade de elevação real para toda a área física dos tiles..."));
-
-        var elevation =
-            await _elevationClient
-                .DownloadAsync(
-                    googleElevationApiKey,
-                    elevationCoverage.South,
-                    elevationCoverage.West,
-                    elevationCoverage.North,
-                    elevationCoverage.East,
-                    elevationRows,
-                    elevationColumns,
-                    elevationProgress,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        cancellationToken
-            .ThrowIfCancellationRequested();
-
-        return await RunAsync(
-                omsiRoot,
-                mapDirectory,
-                south,
-                west,
-                north,
-                east,
-                anchor,
-                catalog.SceneryObjects,
-                streetFurnitureEvidence,
-                progress,
-                cancellationToken,
-                elevation,
-                buildingVisualEvidenceProvider,
-                catalog.ConstructionAssets
-                    .RoadSplines,
-                catalog.ConstructionAssets
-                    .JunctionObjects,
-                catalog.ConstructionAssets
-                    .TrafficSignalObjects,
-                catalog.ConstructionAssets
-                    .CrosswalkAssets,
-                layers)
-            .ConfigureAwait(false);
-    }
-
-    public async Task<MapStudioRealWorldMapPipelineResult>
+    public Task<MapStudioRealWorldMapPipelineResult>
         RunAutoIndexedWithOpenMeteoElevationAsync(
             string omsiRoot,
             string mapDirectory,
@@ -257,99 +179,54 @@ public sealed class MapStudioRealWorldMapPipeline
             CancellationToken cancellationToken = default,
             IMapStudioBuildingVisualEvidenceProvider?
                 buildingVisualEvidenceProvider = null,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
-    {
-        progress?.Report(
-            new MapStudioRealWorldMapPipelineProgress(
-                MapStudioRealWorldMapPipelineStage
-                    .IndexingAssets,
-                "Carregando biblioteca de assets OMSI..."));
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All) =>
+        RunAutoIndexedCoreAsync(
+            omsiRoot, mapDirectory, south, west, north, east, anchor,
+            streetFurnitureEvidence, progress, assetIndexProgress, cancellationToken,
+            buildingVisualEvidenceProvider, layers, elevation: null,
+            string.IsNullOrWhiteSpace(openMeteoApiKey)
+                ? "Baixando grade Open-Meteo/Copernicus gratuita para todos os tiles..."
+                : "Baixando grade Open-Meteo/Copernicus customer para todos os tiles...",
+            elevationCoverage => _openMeteoElevationClient.DownloadAsync(
+                openMeteoApiKey, elevationCoverage.South, elevationCoverage.West,
+                elevationCoverage.North, elevationCoverage.East,
+                elevationRows, elevationColumns, elevationProgress, cancellationToken));
 
-        var catalog =
-            await new MapStudioRealWorldAssetCatalogLoader()
-                .LoadAsync(
-                    omsiRoot,
-                    assetIndexProgress,
-                    cancellationToken)
-                .ConfigureAwait(false);
+    public Task<MapStudioRealWorldMapPipelineResult>
+        RunAutoIndexedWithTerrariumElevationAsync(
+            string omsiRoot,
+            string mapDirectory,
+            double south,
+            double west,
+            double north,
+            double east,
+            MapStudioGeographicAnchor anchor,
+            MapStudioTerrariumElevationClient terrarium,
+            int? elevationRows = null,
+            int? elevationColumns = null,
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MapStudioSceneEvidence>>?
+                streetFurnitureEvidence = null,
+            IProgress<MapStudioRealWorldMapPipelineProgress>?
+                progress = null,
+            IProgress<OmsiAssetIndexProgress>?
+                assetIndexProgress = null,
+            IProgress<MapStudioElevationDownloadProgress>?
+                elevationProgress = null,
+            CancellationToken cancellationToken = default,
+            IMapStudioBuildingVisualEvidenceProvider?
+                buildingVisualEvidenceProvider = null,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All) =>
+        RunAutoIndexedCoreAsync(
+            omsiRoot, mapDirectory, south, west, north, east, anchor,
+            streetFurnitureEvidence, progress, assetIndexProgress, cancellationToken,
+            buildingVisualEvidenceProvider, layers, elevation: null,
+            "Baixando relevo Terrarium (AWS Terrain Tiles / Mapzen) para todos os tiles...",
+            elevationCoverage => terrarium.DownloadForCoverageAsync(
+                elevationCoverage, elevationRows, elevationColumns, elevationProgress, cancellationToken));
 
-        progress?.Report(
-            new MapStudioRealWorldMapPipelineProgress(
-                MapStudioRealWorldMapPipelineStage
-                    .IndexingAssets,
-                $"{(catalog.ReusedExistingIndex ? "Índice OMSI em cache reutilizado" : "Índice OMSI atualizado")} · " +
-                $"{catalog.ConstructionAssets.RoadSplines.Count} spline(s) de rua · " +
-                $"{catalog.ConstructionAssets.JunctionObjects.Count} cruzamento(s) · " +
-                $"{catalog.ConstructionAssets.TrafficSignalObjects.Count} semáforo(s) · " +
-                $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
-
-        cancellationToken
-            .ThrowIfCancellationRequested();
-
-        var elevationCoverage =
-            await ResolveElevationCoverageAsync(
-                    mapDirectory,
-                    anchor,
-                    south,
-                    west,
-                    north,
-                    east,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        progress?.Report(
-            new MapStudioRealWorldMapPipelineProgress(
-                MapStudioRealWorldMapPipelineStage
-                    .DownloadingElevation,
-                string.IsNullOrWhiteSpace(
-                    openMeteoApiKey)
-                    ? "Baixando grade Open-Meteo/Copernicus gratuita para todos os tiles..."
-                    : "Baixando grade Open-Meteo/Copernicus customer para todos os tiles..."));
-
-        var elevation =
-            await _openMeteoElevationClient
-                .DownloadAsync(
-                    openMeteoApiKey,
-                    elevationCoverage.South,
-                    elevationCoverage.West,
-                    elevationCoverage.North,
-                    elevationCoverage.East,
-                    elevationRows,
-                    elevationColumns,
-                    elevationProgress,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        cancellationToken
-            .ThrowIfCancellationRequested();
-
-        return await RunAsync(
-                omsiRoot,
-                mapDirectory,
-                south,
-                west,
-                north,
-                east,
-                anchor,
-                catalog.SceneryObjects,
-                streetFurnitureEvidence,
-                progress,
-                cancellationToken,
-                elevation,
-                buildingVisualEvidenceProvider,
-                catalog.ConstructionAssets
-                    .RoadSplines,
-                catalog.ConstructionAssets
-                    .JunctionObjects,
-                catalog.ConstructionAssets
-                    .TrafficSignalObjects,
-                catalog.ConstructionAssets
-                    .CrosswalkAssets,
-                layers)
-            .ConfigureAwait(false);
-    }
-
-    public async Task<MapStudioRealWorldMapPipelineResult>
+    public Task<MapStudioRealWorldMapPipelineResult>
         RunAutoIndexedAsync(
             string omsiRoot,
             string mapDirectory,
@@ -370,7 +247,23 @@ public sealed class MapStudioRealWorldMapPipeline
             MapStudioGeoreferencedElevationSurface? elevation = null,
             IMapStudioBuildingVisualEvidenceProvider?
                 buildingVisualEvidenceProvider = null,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All) =>
+        RunAutoIndexedCoreAsync(
+            omsiRoot, mapDirectory, south, west, north, east, anchor,
+            streetFurnitureEvidence, progress, assetIndexProgress, cancellationToken,
+            buildingVisualEvidenceProvider, layers, elevation, string.Empty, null);
+
+    private async Task<MapStudioRealWorldMapPipelineResult> RunAutoIndexedCoreAsync(
+        string omsiRoot, string mapDirectory, double south, double west, double north, double east,
+        MapStudioGeographicAnchor anchor,
+        IReadOnlyDictionary<string, IReadOnlyList<MapStudioSceneEvidence>>? streetFurnitureEvidence,
+        IProgress<MapStudioRealWorldMapPipelineProgress>? progress,
+        IProgress<OmsiAssetIndexProgress>? assetIndexProgress,
+        CancellationToken cancellationToken,
+        IMapStudioBuildingVisualEvidenceProvider? buildingVisualEvidenceProvider,
+        MapStudioRealWorldLayers layers, MapStudioGeoreferencedElevationSurface? elevation,
+        string downloadMessage,
+        Func<MapStudioElevationCoverageBounds, Task<MapStudioGeoreferencedElevationSurface>>? downloadElevation)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -397,6 +290,16 @@ public sealed class MapStudioRealWorldMapPipeline
                 $"{catalog.ConstructionAssets.CrosswalkAssets.Count} faixa(s)/travessia(s) reconhecida(s)."));
 
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (downloadElevation is not null)
+        {
+            var coverage = await ResolveElevationCoverageAsync(
+                mapDirectory, anchor, south, west, north, east, cancellationToken).ConfigureAwait(false);
+            progress?.Report(new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage.DownloadingElevation, downloadMessage));
+            elevation = await downloadElevation(coverage).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
 
         return await RunAsync(
                 omsiRoot,

@@ -484,15 +484,13 @@ public sealed class OmsiNativeSession
         var minZ = OmsiTileGrid.GetOriginZ(minTileY);
         var width = (maxTileX - minTileX + 1) * pixelsPerTile;
         var height = (maxTileY - minTileY + 1) * pixelsPerTile;
-        var anchor = new MapStudioGeographicAnchor(geo.Latitude, geo.Longitude,
-            OmsiTileGrid.GetOriginX(geo.AnchorTileX) + geo.AnchorX,
-            OmsiTileGrid.GetOriginZ(geo.AnchorTileY) + geo.AnchorY);
+        var anchor = geo.ToGeographicAnchor();
         var nw = MapStudioGeographicProjection.Unproject(anchor, new MapStudioRoadPoint(minX, minZ));
         var se = MapStudioGeographicProjection.Unproject(anchor, new MapStudioRoadPoint(
             minX + width * metersPerPixel, minZ + height * metersPerPixel));
         var cache = Path.Combine(OmsiRootPath ?? throw new InvalidOperationException("omsiRootRequired"),
             ".mapstudio", "cache", "osm");
-        var download = await new MapStudioLayeredOsmSceneClient().DownloadAsync(
+        var download = await new MapStudioLayeredOsmSceneClient().DownloadReferenceAsync(
             se.Latitude, nw.Longitude, nw.Latitude, se.Longitude, cache, cancellationToken).ConfigureAwait(false);
         if (download.FailedChunkCount > 0 || download.SuccessfulChunkCount == 0)
             throw new InvalidDataException("Referência OSM incompleta: tente novamente quando o serviço estiver disponível.");

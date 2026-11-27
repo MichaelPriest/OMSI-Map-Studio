@@ -1,5 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
+using System.Xml;
+using System.Xml.Linq;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 
@@ -49,40 +51,88 @@ public static class MapStudioOsmVectorReferenceRaster
         }
         (double X, double Y) Pixel(MapStudioRoadPoint p) =>
             ((p.X - minX) / metersPerPixel, (p.Z - minZ) / metersPerPixel);
-        void Put(int x, int y, byte r, byte g, byte b)
+        void Put(int x, int y, (byte R, byte G, byte B) color)
         {
             var i = (y * width + x) * 3;
-            rgb[i] = r; rgb[i + 1] = g; rgb[i + 2] = b;
+            rgb[i] = color.R;
+            rgb[i + 1] = color.G;
+            rgb[i + 2] = color.B;
         }
 
-        var buildings = new MapStudioOsmBuildingProjector().Project(
-            new MapStudioOsmBuildingImporter().Parse(osmXml).Buildings, anchor);
-        foreach (var building in buildings)
+        void FillArea(IEnumerable<IReadOnlyList<MapStudioRoadPoint>> contours, (byte, byte, byte) color)
         {
-            var p = building.Points.Select(Pixel).ToArray();
-            if (p.Length < 3) continue;
-            var top = Math.Max(0, Math.Min(height, (int)Math.Floor(p.Min(v => v.Y))));
-            var bottom = Math.Max(0, Math.Min(height, (int)Math.Ceiling(p.Max(v => v.Y))));
+            var rings = contours.Where(ring => ring.Count >= 3)
+                .Select(ring => ring.Select(Pixel).ToArray()).ToArray();
+            if (rings.Length == 0) return;
+            var top = (int)Math.Clamp(Math.Floor(rings.Min(ring => ring.Min(p => p.Y))), 0, height);
+            var bottom = (int)Math.Clamp(Math.Ceiling(rings.Max(ring => ring.Max(p => p.Y))), 0, height);
+            var crossings = new List<double>();
             for (var y = top; y < bottom; y++)
             {
-                var crossings = new List<double>();
-                for (var i = 0; i < p.Length; i++)
+                crossings.Clear();
+                var scanY = y + 0.5;
+                foreach (var ring in rings)
                 {
-                    var a = p[i]; var b = p[(i + 1) % p.Length];
-                    if ((a.Y > y + .5) == (b.Y > y + .5)) continue;
-                    crossings.Add(a.X + (y + .5 - a.Y) * (b.X - a.X) / (b.Y - a.Y));
+                    var a = ring[^1];
+                    foreach (var b in ring)
+                    {
+                        if ((a.Y > scanY) != (b.Y > scanY))
+                            crossings.Add(a.X + (scanY - a.Y) * (b.X - a.X) / (b.Y - a.Y));
+                        a = b;
+                    }
                 }
                 crossings.Sort();
                 for (var i = 0; i + 1 < crossings.Count; i += 2)
                 {
-                    var left = Math.Max(0, Math.Min(width, (int)Math.Ceiling(crossings[i] - .5)));
-                    var right = Math.Max(0, Math.Min(width, (int)Math.Ceiling(crossings[i + 1] - .5)));
-                    for (var x = left; x < right; x++) Put(x, y, 186, 177, 168);
+                    var left = (int)Math.Clamp(Math.Ceiling(crossings[i] - 0.5), 0, width);
+                    var right = (int)Math.Clamp(Math.Ceiling(crossings[i + 1] - 0.5), 0, width);
+                    for (var x = left; x < right; x++) Put(x, y, color);
                 }
             }
         }
 
-        var roads = new MapStudioOsmRoadImporter().Parse(osmXml).Traces
+        void DrawLine((double X, double Y)[] points, double radius, (byte, byte, byte) color)
+        {
+            for (var i = 1; i < points.Length; i++)
+            {
+                var a = points[i - 1];
+                var b = points[i];
+                var left = (int)Math.Clamp(Math.Floor(Math.Min(a.X, b.X) - radius), 0, width);
+                var right = (int)Math.Clamp(Math.Ceiling(Math.Max(a.X, b.X) + radius), 0, width);
+                var top = (int)Math.Clamp(Math.Floor(Math.Min(a.Y, b.Y) - radius), 0, height);
+                var bottom = (int)Math.Clamp(Math.Ceiling(Math.Max(a.Y, b.Y) + radius), 0, height);
+                var dx = b.X - a.X;
+                var dy = b.Y - a.Y;
+                var lengthSquared = dx * dx + dy * dy;
+                for (var y = top; y < bottom; y++)
+                for (var x = left; x < right; x++)
+                {
+                    var t = lengthSquared == 0 ? 0 : Math.Clamp(
+                        ((x + 0.5 - a.X) * dx + (y + 0.5 - a.Y) * dy) / lengthSquared, 0, 1);
+                    var ex = x + 0.5 - a.X - t * dx;
+                    var ey = y + 0.5 - a.Y - t * dy;
+                    if (ex * ex + ey * ey <= radius * radius) Put(x, y, color);
+                }
+            }
+        }
+
+        using var text = new StringReader(osmXml);
+        using var reader = XmlReader.Create(text, new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 128L * 1024 * 1024
+        });
+        var document = XDocument.Load(reader);
+        var buildings = new MapStudioOsmBuildingProjector().Project(
+            new MapStudioOsmBuildingImporter().Parse(document).Buildings, anchor);
+        var water = MapStudioOsmHydrography.Read(document.Root!, anchor);
+        (byte, byte, byte) waterColor = (150, 199, 219);
+        foreach (var area in water.Areas) FillArea(area, waterColor);
+        foreach (var waterway in water.Waterways)
+            DrawLine(waterway.Points.Select(Pixel).ToArray(),
+                Math.Max(0.75, waterway.WidthMeters / (2 * metersPerPixel)), waterColor);
+        foreach (var building in buildings) FillArea([building.Points], (186, 177, 168));
+
+        var roads = new MapStudioOsmRoadImporter().Parse(document).Traces
             .Where(t => !t.Tunnel).Select(t => (Road: t, Points: t.Points
                 .Select(p => Pixel(MapStudioGeographicProjection.Project(anchor, p))).ToArray()))
             .ToArray();
@@ -95,28 +145,13 @@ public static class MapStudioOsmVectorReferenceRaster
                 if (!double.IsFinite(roadWidth)) roadWidth = 6.4;
                 var radius = Math.Clamp(roadWidth / metersPerPixel / 2, 1, 100) + (pass == 0 ? 1 : 0);
                 var main = item.Road.Highway is "motorway" or "trunk" or "primary" or "secondary";
-                for (var i = 1; i < item.Points.Length; i++)
+                (byte, byte, byte) color = (pass, main) switch
                 {
-                    var a = item.Points[i - 1]; var b = item.Points[i];
-                    var left = Math.Max(0, Math.Min(width, (int)Math.Floor(Math.Min(a.X, b.X) - radius)));
-                    var right = Math.Max(0, Math.Min(width, (int)Math.Ceiling(Math.Max(a.X, b.X) + radius)));
-                    var top = Math.Max(0, Math.Min(height, (int)Math.Floor(Math.Min(a.Y, b.Y) - radius)));
-                    var bottom = Math.Max(0, Math.Min(height, (int)Math.Ceiling(Math.Max(a.Y, b.Y) + radius)));
-                    var dx = b.X - a.X; var dy = b.Y - a.Y; var d2 = dx * dx + dy * dy;
-                    for (var y = top; y < bottom; y++)
-                    for (var x = left; x < right; x++)
-                    {
-                        var t = d2 > 0 ? Math.Clamp(((x + .5 - a.X) * dx + (y + .5 - a.Y) * dy) / d2, 0, 1) : 0;
-                        var ex = x + .5 - a.X - t * dx;
-                        var ey = y + .5 - a.Y - t * dy;
-                        if (ex * ex + ey * ey <= radius * radius)
-                        {
-                            if (pass == 0) Put(x, y, 143, 137, 126);
-                            else if (main) Put(x, y, 252, 223, 161);
-                            else Put(x, y, 255, 255, 255);
-                        }
-                    }
-                }
+                    (0, _) => (143, 137, 126),
+                    (_, true) => (252, 223, 161),
+                    _ => (255, 255, 255)
+                };
+                DrawLine(item.Points, radius, color);
             }
         }
         return rgb;

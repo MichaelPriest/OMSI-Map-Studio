@@ -14,7 +14,8 @@ public enum MapStudioOsmSceneLayer
     Buildings,
     Infrastructure,
     Vegetation,
-    Furniture
+    Furniture,
+    Hydrography
 }
 
 public sealed class MapStudioLayeredOsmSceneClient
@@ -107,6 +108,12 @@ public sealed class MapStudioLayeredOsmSceneClient
                 "Mobiliário",
                 280.0)
         ];
+
+    private static readonly LayerDefinition[] ReferenceLayers =
+    [
+        .. LayerDefinitions.Where(layer => layer.Layer is MapStudioOsmSceneLayer.Roads or MapStudioOsmSceneLayer.Buildings),
+        new(MapStudioOsmSceneLayer.Hydrography, "hydrography", "Hidrografia", 360.0)
+    ];
 
     private readonly HttpClient _httpClient;
     private readonly IReadOnlyList<Uri> _endpoints;
@@ -201,7 +208,7 @@ public sealed class MapStudioLayeredOsmSceneClient
         }
     }
 
-    public async Task<MapStudioOverpassSceneDownloadResult>
+    public Task<MapStudioOverpassSceneDownloadResult>
         DownloadAsync(
             double south,
             double west,
@@ -210,7 +217,18 @@ public sealed class MapStudioLayeredOsmSceneClient
             string? cacheDirectory = null,
             CancellationToken cancellationToken = default,
             IProgress<MapStudioOverpassSceneDownloadProgress>?
-                progress = null)
+                progress = null) =>
+        DownloadLayersAsync(LayerDefinitions, south, west, north, east, cacheDirectory, cancellationToken, progress);
+
+    public Task<MapStudioOverpassSceneDownloadResult> DownloadReferenceAsync(
+        double south, double west, double north, double east, string? cacheDirectory = null,
+        CancellationToken cancellationToken = default) =>
+        DownloadLayersAsync(ReferenceLayers, south, west, north, east, cacheDirectory, cancellationToken, null);
+
+    private async Task<MapStudioOverpassSceneDownloadResult> DownloadLayersAsync(
+        IReadOnlyList<LayerDefinition> layers, double south, double west, double north, double east,
+        string? cacheDirectory, CancellationToken cancellationToken,
+        IProgress<MapStudioOverpassSceneDownloadProgress>? progress)
     {
         ValidateBounds(
             south,
@@ -255,7 +273,7 @@ public sealed class MapStudioLayeredOsmSceneClient
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
 
-        foreach (var layer in LayerDefinitions)
+        foreach (var layer in layers)
         {
             cancellationToken
                 .ThrowIfCancellationRequested();
@@ -1895,6 +1913,14 @@ public sealed class MapStudioLayeredOsmSceneClient
                     $"relation[\"landuse\"=\"forest\"]({bbox});" +
                     $"relation[\"natural\"~\"^(wood|scrub)$\"]({bbox});",
 
+                MapStudioOsmSceneLayer.Hydrography =>
+                    $"way[\"natural\"=\"water\"]({bbox});" +
+                    $"relation[\"type\"=\"multipolygon\"][\"natural\"=\"water\"]({bbox});" +
+                    $"way[\"waterway\"~\"^(river|stream|canal|riverbank)$\"]({bbox});" +
+                    $"relation[\"type\"=\"multipolygon\"][\"waterway\"=\"riverbank\"]({bbox});" +
+                    $"way[\"landuse\"=\"reservoir\"]({bbox});" +
+                    $"relation[\"type\"=\"multipolygon\"][\"landuse\"=\"reservoir\"]({bbox});",
+
                 MapStudioOsmSceneLayer.Furniture =>
                     $"node[\"highway\"=\"street_lamp\"]({bbox});" +
                     $"node[\"highway\"=\"traffic_signals\"]({bbox});" +
@@ -2461,29 +2487,22 @@ public sealed class MapStudioLayeredOsmSceneClient
                     continue;
                 }
 
-                var clone =
-                    new XElement(
-                        element);
-
-                switch (
-                    element.Name
-                        .LocalName)
+                var collection = element.Name.LocalName switch
                 {
-                    case "node":
-                        _nodes[id] =
-                            clone;
-                        break;
+                    "node" => _nodes,
+                    "way" => _ways,
+                    "relation" => _relations,
+                    _ => null
+                };
+                if (collection is null) continue;
 
-                    case "way":
-                        _ways[id] =
-                            clone;
-                        break;
-
-                    case "relation":
-                        _relations[id] =
-                            clone;
-                        break;
+                // Overpass repeats dependencies as untagged skeletons after complete features.
+                if (collection.TryGetValue(id, out var previous) &&
+                    previous.Elements("tag").Any() && !element.Elements("tag").Any())
+                {
+                    continue;
                 }
+                collection[id] = new XElement(element);
             }
         }
 
