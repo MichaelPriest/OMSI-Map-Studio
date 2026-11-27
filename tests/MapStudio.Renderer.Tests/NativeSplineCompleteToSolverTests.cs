@@ -217,6 +217,30 @@ public sealed class NativeSplineCompleteToSolverTests
                     out _));
     }
 
+    [Theory]
+    [InlineData(12, 40)]
+    [InlineData(-12, 40)]
+    public void CreatesSmoothTwoArcConnectorBetweenOffsetParallelRoads(double x, double z)
+    {
+        var source = CreateSpline(10, 0, -10, 0, 10, 0);
+        var target = CreateSpline(20, x, z, 0, 10, 0);
+        Assert.True(NativeSplineCompleteToSolver.TryCreateRequest(
+            CreateScene(source, target), 10, 20, 200, out var request, out var status), status);
+        Assert.NotNull(request);
+        var second = Assert.IsType<NativeSplinePlacementRequest>(request!.Continuation);
+        Assert.Equal(10, request.PreviousSplineId);
+        Assert.Equal(20, request.NextSplineId);
+        Assert.Equal(request.EndWorld, second.StartWorld);
+        Assert.Equal(0, request.Rotation, 5);
+        Assert.True(request.Radius * second.Radius < 0);
+        var firstEndHeading = request.Rotation + request.Length / request.Radius * 180 / Math.PI;
+        var secondEndHeading = second.Rotation + second.Length / second.Radius * 180 / Math.PI;
+        Assert.InRange(Math.Abs(Math.IEEERemainder(firstEndHeading - second.Rotation, 360)), 0, 0.01);
+        Assert.InRange(Math.Abs(Math.IEEERemainder(secondEndHeading, 360)), 0, 0.01);
+        Assert.Equal((float)x, second.EndWorld.X, 4);
+        Assert.Equal((float)z, second.EndWorld.Z, 4);
+    }
+
     private static NativeSceneSnapshot
         CreateScene(
             params NativeSplineEntity[] splines) =>

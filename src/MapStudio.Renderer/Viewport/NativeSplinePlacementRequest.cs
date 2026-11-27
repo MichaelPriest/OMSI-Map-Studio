@@ -22,4 +22,9 @@ public sealed record NativeSplinePlacementRequest(
     bool IsHeightSpline = false,
     bool SourceBridge = false,
     bool SourceTunnel = false,
-    int? SourceLayer = null);
+    int? SourceLayer = null)
+{
+    // Second physical spline for a two-arc Complete To connection.
+    // Previous/Next on the outer request refer to the existing road ends.
+    public NativeSplinePlacementRequest? Continuation { get; init; }
+}

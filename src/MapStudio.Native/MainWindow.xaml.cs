@@ -3741,7 +3741,9 @@ public sealed partial class MainWindow : Window
                     : string.Empty;
 
             StatusText.Text =
-                request.PreviousSplineId >= 0 &&
+                request.Continuation is { } second
+                    ? $"Trechos unidos por dois arcos: #{request.PreviousSplineId} → #{insertion.SplineId} → #{insertion.SplineId + 1} → #{request.NextSplineId} · comprimento {request.Length + second.Length:F1} m."
+                    : request.PreviousSplineId >= 0 &&
                 request.NextSplineId >= 0
                     ? $"Trechos unidos: #{request.PreviousSplineId} → #{insertion.SplineId} → #{request.NextSplineId} · comprimento {request.Length:F1} m · raio {request.Radius:F1}."
                     : $"Spline inserida: {request.Length:F1} m · raio {request.Radius:F1} · tile {request.Tile.X},{request.Tile.Y}{linkStatus}.";
