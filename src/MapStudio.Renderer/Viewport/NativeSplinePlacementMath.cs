@@ -71,6 +71,24 @@ public static class NativeSplinePlacementMath
             float.MaxValue);
     }
 
+    /// <summary>Exact horizontal arc length and signed OMSI radius, with an even grade.</summary>
+    public static bool TryCreateNumeric(Vector3 start, double length, double radius, double headingDegrees,
+        double endHeight, out NativeSplinePlacementShape? shape)
+    {
+        shape = null;
+        if (!IsFinite(start) || !double.IsFinite(length) || !double.IsFinite(radius) ||
+            !double.IsFinite(headingDegrees) || !double.IsFinite(endHeight) || length < 0.5 || length > 3000 ||
+            Math.Abs(radius) > 100000 || (radius != 0 && (Math.Abs(radius) < 6 || Math.Abs(length / radius) > Math.PI))) return false;
+        var heading = headingDegrees * Math.PI / 180;
+        var dx = radius == 0 ? length * Math.Sin(heading) : radius * (Math.Cos(heading) - Math.Cos(heading + length / radius));
+        var dz = radius == 0 ? length * Math.Cos(heading) : radius * (Math.Sin(heading + length / radius) - Math.Sin(heading));
+        var end = new Vector3((float)(start.X + dx), (float)endHeight, (float)(start.Z + dz));
+        var grade = (endHeight - start.Y) / length * 100;
+        shape = new NativeSplinePlacementShape(start, end, NormalizeDegrees(headingDegrees), length, radius, grade, grade, radius != 0);
+        if (!IsFiniteShape(shape)) { shape = null; return false; }
+        return true;
+    }
+
     public static bool TryCreateStraight(
         Vector3 start,
         Vector3 end,

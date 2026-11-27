@@ -767,6 +767,15 @@ public sealed partial class NativeViewport : UserControl
         return true;
     }
 
+    public bool TryBuildNumericRoad(double length, double radius, double heading, out NativeSplinePlacementRequest? request, out string status)
+    {
+        request = null;
+        status = "Viewport indisponível.";
+        if (_runtime is null || !_runtime.TryBuildNumericRoad(length, radius, heading, out request, out status)) return false;
+        SplinePlacementControlStateChanged?.Invoke(null);
+        return true;
+    }
+
     public bool ReviewEasyRoadBeforeInsertion { get; set; }
 
     private void ConfirmEasyRoadIfDirect(ref NativeSplinePlacementRequest? placement, ref string status)

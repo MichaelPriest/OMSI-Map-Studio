@@ -4136,6 +4136,20 @@
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Cruzamentos" Click="OnToolCrossingsClick"
                                         ToolTipService.ToolTip="Abrir ferramentas nativas de cruzamento" />
+                                <Button Content="Precisão…" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Construir por comprimento, raio e direção" >
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Width="260" Spacing="8">
+                                                <TextBlock Text="Desenho numérico" FontWeight="SemiBold" />
+                                                <TextBlock Text="Defina primeiro o ponto inicial no mapa. A direção da via anterior é preservada quando conectada." TextWrapping="Wrap" FontSize="11" />
+                                                <NumberBox x:Name="RoadNumericLengthBox" Header="Comprimento (m)" Value="50" Minimum="0.5" Maximum="3000" SpinButtonPlacementMode="Compact" />
+                                                <NumberBox x:Name="RoadNumericRadiusBox" Header="Raio (m): 0 reta, ± curva" Value="0" Minimum="-100000" Maximum="100000" SpinButtonPlacementMode="Compact" />
+                                                <NumberBox x:Name="RoadNumericHeadingBox" Header="Direção inicial (°)" Value="0" Minimum="-360" Maximum="360" SpinButtonPlacementMode="Compact" />
+                                                <Button Content="Construir trecho" HorizontalAlignment="Stretch" Click="OnRoadNumericBuildClick" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
                                 <Button x:Name="RoadReviewButton" Content="Revisão: off" Style="{StaticResource EditorToolbarButtonStyle}"
                                         ToolTipService.ToolTip="Ative para ajustar as coordenadas e curvatura antes de confirmar cada trecho"
                                         Click="OnRoadReviewClick" />

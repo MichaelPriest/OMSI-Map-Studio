@@ -11308,6 +11308,13 @@ public sealed partial class MainWindow : Window
                 : "Ruas: cada segmento será criado separadamente.";
     }
 
+    private async void OnRoadNumericBuildClick(object sender, RoutedEventArgs e)
+    {
+        if (!Viewport.TryBuildNumericRoad(RoadNumericLengthBox.Value, RoadNumericRadiusBox.Value, RoadNumericHeadingBox.Value, out var request, out var status) || request is null)
+        { StatusText.Text = status; return; }
+        await HandleSplinePlacementAsync(request);
+    }
+
     private void OnRoadReviewClick(object sender, RoutedEventArgs e)
     {
         Viewport.ReviewEasyRoadBeforeInsertion = !Viewport.ReviewEasyRoadBeforeInsertion;

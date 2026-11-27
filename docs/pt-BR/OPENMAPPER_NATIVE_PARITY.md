@@ -75,3 +75,7 @@ Não copiar código AGPL; implementação GPS independente baseada nos formatos 
 ### Desenho direto — paridade de interação
 
 Estrada fácil confirma por padrão tanto no segundo clique quanto ao soltar um arrasto. O botão Revisão alterna para a confirmação manual original, inclusive nos trechos contínuos. O modo usa a solução geométrica existente e a mesma inserção com backup; não muda os formatos OMSI. Homologar primeiro trecho, continuação, cancelamento, revisão, encaixe em via existente e falha de geometria. A confirmação de curvas manuais continua independente.
+
+### Desenho numérico de vias
+
+Road Studio > Precisão: definir início no mapa e informar comprimento de arco, raio assinado e direção inicial. Com conexão anterior, a tangente real substitui a direção digitada. Cota final segue modo de elevação; raio zero representa reta. Limites conservadores: 0,5–3000 m, raio mínimo 6 m, arco até 180°. Não encaixa automaticamente o fim para não alterar a geometria exata; conexão final permanece manual. Reutiliza inserção, backup e continuidade existentes. Testes de geometria adicionados; homologação de UI pendente.

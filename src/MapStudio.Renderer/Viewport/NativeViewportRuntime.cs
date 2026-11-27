@@ -2592,6 +2592,33 @@ public sealed class NativeViewportRuntime : IDisposable
         return state is not null;
     }
 
+    public bool TryBuildNumericRoad(double length, double radius, double heading, out NativeSplinePlacementRequest? request, out string status)
+    {
+        request = null;
+        status = "Precisão: inicie uma via no mapa antes de construir por números.";
+        if (!_splinePlacementActive || _splinePlacementStage != NativeSplinePlacementStage.AwaitingEnd ||
+            _splineStartWorld is not { } start || Scene is not { } scene || _splinePlacementIsHeight) return false;
+        if (_splinePreviousId >= 0)
+        {
+            var previous = scene.Splines.FirstOrDefault(s => s.Spline.SplineId == _splinePreviousId);
+            if (previous is null) { status = "Via anterior indisponível."; return false; }
+            var frame = NativeSplinePathMath.GetFrame(previous, previous.Spline.Length);
+            heading = Math.Atan2(frame.Forward.X, frame.Forward.Z) * 180 / Math.PI;
+        }
+        if (!NativeSplinePlacementMath.TryCreateNumeric(start, length, radius, heading, start.Y, out var flat) || flat is null)
+        { status = "Geometria inválida: comprimento 0,5–3000 m; raio zero ou ≥ 6 m em módulo; arco até 180°."; return false; }
+        if (!NativeTerrainSampler.TryGetHeightAtWorldPoint(scene, flat.End.X, flat.End.Z, out var terrainHeight))
+        { status = "Ponto final fora do terreno carregado."; return false; }
+        var height = NativeSplinePlacementMath.ResolveRoadEndpointHeight((float)terrainHeight, start.Y, _splineElevationMode, _splineElevationOffset);
+        if (!NativeSplinePlacementMath.TryCreateNumeric(start, length, radius, heading, height, out var shape) || shape is null) return false;
+        _splineNextId = -1; // Exact geometry does not silently snap to a different endpoint.
+        request = CreateSplinePlacementRequest(shape);
+        if (request is null) { status = "Tile inicial indisponível."; return false; }
+        CancelSplinePlacement();
+        status = $"Trecho numérico: {length:F2} m, raio {radius:F2} m, direção {heading:F1}°.";
+        return true;
+    }
+
     public bool TryConfirmEasyRoad(
         out NativeSplinePlacementRequest?
             request,
