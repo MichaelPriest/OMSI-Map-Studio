@@ -64,3 +64,7 @@ Tela inicial ocupa o workspace sem expor painéis vazios; quatro ações reais d
 ## Etapa 13 — menos barras e biblioteca sob demanda
 
 Faixa horizontal de módulos recolhida por padrão, reativável em Visualizar. Trilho compacto concentra as ferramentas, incluindo Geo Studio e validação. Biblioteca mostra primeiro pesquisa, filtros e resultados; ações do asset aparecem após seleção, abaixo da lista no painel lateral ou ao lado no modo acoplado. Captura automática sai da tela inicial e seleciona os controles visíveis por UI Automation. Cores e motor preservados; compilação e capturas da etapa 13 pendentes.
+
+## Etapa 14 — comandos contextuais compactos
+
+Road Studio mantém desenho, reta e curva acessíveis e reúne opções de desenho, construção numérica/rotatória, geometria/conexões/elevação em três grupos. Controles de terreno e tráfego secundários passam para menus. Acesso aos painéis por ícones com nomes de automação e tooltips; instrução de seleção transferida para tooltip. Nenhum nome de controle ou evento existente removido. Validar seleção de SLI, continuidade/snap, abertura dos grupos e retorno ao viewport; validar menus de terreno e tráfego em mapa real. CI e captura pendentes.

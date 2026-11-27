@@ -3919,7 +3919,7 @@
                             CornerRadius="3" />
 
                     <StackPanel Grid.Column="1"
-                                MinWidth="92"
+                                MinWidth="64"
                                 VerticalAlignment="Center"
                                 Spacing="1">
                         <TextBlock x:Name="ContextToolTitleText"
@@ -3932,7 +3932,7 @@
 
                     <ScrollViewer Grid.Column="2"
                                   HorizontalScrollMode="Auto"
-                                  HorizontalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled">
                         <Grid>
@@ -3942,7 +3942,7 @@
                                 <ComboBox x:Name="SelectionFilterComboBox"
                                           Width="132"
                                           SelectedIndex="0"
-                                          ToolTipService.ToolTip="Escolha o tipo de item que pode ser selecionado">
+                                          ToolTipService.ToolTip="Filtrar seleção. Clique novamente no mesmo ponto para alternar itens sobrepostos.">
                                     <ComboBoxItem Content="Todos" />
                                     <ComboBoxItem Content="Objetos" />
                                     <ComboBoxItem Content="Ruas / splines" />
@@ -3981,8 +3981,7 @@
                                         Content="Validar mapa"
                                         ToolTipService.ToolTip="Analisar dependências, TTData, links e estrutura do mapa"
                                         Click="OnToolValidationClick" />
-                                <TextBlock Text="Clique novamente para alternar a seleção" FontSize="10" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                
                             </StackPanel>
 
                             <StackPanel x:Name="ObjectContextPanel"
@@ -4031,20 +4030,45 @@
                                         <TextBlock Text="Curva" />
                                     </StackPanel>
                                 </Button>
-                                <Button x:Name="RoadSnapButton"
+                                
+                                
+                                
+                                
+
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+
+                                
+                                <Button Content="Opções de desenho ▾" Style="{StaticResource EditorToolbarButtonStyle}"><Button.Flyout><Flyout Placement="Bottom"><ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Width="280" Spacing="7"><Button HorizontalAlignment="Stretch" x:Name="RoadSnapButton"
                                         Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Snap: on"
                                         Click="OnRoadSnapToggleClick" />
-                                <Button x:Name="RoadContinuousButton"
+<Button HorizontalAlignment="Stretch" x:Name="RoadContinuousButton"
                                         Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Contínuo: on"
                                         Click="OnRoadContinuousToggleClick" />
-                                <Button Content="Editar ▾" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Curva e pontos de controle">
-    <Button.Flyout>
-        <Flyout Placement="Bottom">
-            <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Width="245" Spacing="6">
-                    <TextBlock Text="Curva e pontos de controle" FontWeight="SemiBold" TextWrapping="Wrap" />
+<Button HorizontalAlignment="Stretch" x:Name="RoadReviewButton" Content="Revisão: off" Style="{StaticResource EditorToolbarButtonStyle}"
+                                        ToolTipService.ToolTip="Ative para ajustar as coordenadas e curvatura antes de confirmar cada trecho"
+                                        Click="OnRoadReviewClick" /></StackPanel></ScrollViewer></Flyout></Button.Flyout></Button>
+<Button Content="Construção ▾" Style="{StaticResource EditorToolbarButtonStyle}"><Button.Flyout><Flyout Placement="Bottom"><ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Width="280" Spacing="7"><Expander Header="Desenho numérico" IsExpanded="True" HorizontalAlignment="Stretch"><StackPanel Spacing="6">
+                                                <TextBlock Text="Defina primeiro o ponto inicial no mapa. A direção da via anterior é preservada quando conectada." TextWrapping="Wrap" FontSize="11" />
+                                                <NumberBox x:Name="RoadNumericLengthBox" Header="Comprimento (m)" Value="50" Minimum="0.5" Maximum="3000" SpinButtonPlacementMode="Compact" />
+                                                <NumberBox x:Name="RoadNumericRadiusBox" Header="Raio (m): 0 reta, ± curva" Value="0" Minimum="-100000" Maximum="100000" SpinButtonPlacementMode="Compact" />
+                                                <NumberBox x:Name="RoadNumericHeadingBox" Header="Direção inicial (°)" Value="0" Minimum="-360" Maximum="360" SpinButtonPlacementMode="Compact" />
+                                                <Button Content="Construir trecho" HorizontalAlignment="Stretch" Click="OnRoadNumericBuildClick" /></StackPanel></Expander><Expander Header="Rotatória" IsExpanded="False" HorizontalAlignment="Stretch"><StackPanel Spacing="6">
+                                                <TextBlock Text="Selecione uma SLI de mão única e marque um ponto inicial livre como centro. O anel não recorta nem conecta ruas existentes." TextWrapping="Wrap" FontSize="11" />
+                                                <NumberBox x:Name="RoadRoundaboutRadiusBox" Header="Raio do eixo (m)" Value="15" Minimum="6" Maximum="200" SpinButtonPlacementMode="Compact" />
+                                                <CheckBox x:Name="RoadRoundaboutClockwiseBox" Content="Sentido horário" IsChecked="False" />
+                                                <Button Content="Criar anel" HorizontalAlignment="Stretch" Click="OnRoadRoundaboutBuildClick" /></StackPanel></Expander><Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Cruzamentos" Click="OnToolCrossingsClick"
+                                        ToolTipService.ToolTip="Abrir ferramentas nativas de cruzamento" /></StackPanel></ScrollViewer></Flyout></Button.Flyout></Button>
+<Button Content="Ajustes da via ▾" Style="{StaticResource EditorToolbarButtonStyle}"><Button.Flyout><Flyout Placement="Bottom"><ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Width="280" Spacing="7"><Expander Header="Geometria" IsExpanded="True" HorizontalAlignment="Stretch"><StackPanel Spacing="6">
                     <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
                                         ToolTipService.ToolTip="Curvar ou endireitar a spline selecionada usando uma alça no mapa"
                                         Click="OnRoadEditCurveClick">
@@ -4060,59 +4084,7 @@
                                         <SymbolIcon Symbol="Edit" />
                                         <TextBlock Text="Pontos de controle" />
                                     </StackPanel>
-                                </Button>
-                </StackPanel>
-            </ScrollViewer>
-        </Flyout>
-    </Button.Flyout>
-</Button>
-                                <Border Width="1"
-                                        Height="24"
-                                        Margin="2,0"
-                                        Background="{ThemeResource MapStudioBorderBrush}" />
-
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Cruzamentos" Click="OnToolCrossingsClick"
-                                        ToolTipService.ToolTip="Abrir ferramentas nativas de cruzamento" />
-                                <Button Content="Precisão…" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Construir por comprimento, raio e direção" >
-                                    <Button.Flyout>
-                                        <Flyout Placement="Bottom">
-                                            <StackPanel Width="260" Spacing="8">
-                                                <TextBlock Text="Desenho numérico" FontWeight="SemiBold" />
-                                                <TextBlock Text="Defina primeiro o ponto inicial no mapa. A direção da via anterior é preservada quando conectada." TextWrapping="Wrap" FontSize="11" />
-                                                <NumberBox x:Name="RoadNumericLengthBox" Header="Comprimento (m)" Value="50" Minimum="0.5" Maximum="3000" SpinButtonPlacementMode="Compact" />
-                                                <NumberBox x:Name="RoadNumericRadiusBox" Header="Raio (m): 0 reta, ± curva" Value="0" Minimum="-100000" Maximum="100000" SpinButtonPlacementMode="Compact" />
-                                                <NumberBox x:Name="RoadNumericHeadingBox" Header="Direção inicial (°)" Value="0" Minimum="-360" Maximum="360" SpinButtonPlacementMode="Compact" />
-                                                <Button Content="Construir trecho" HorizontalAlignment="Stretch" Click="OnRoadNumericBuildClick" />
-                                            </StackPanel>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                </Button>
-                                <Button Content="Rotatória…" Style="{StaticResource EditorToolbarButtonStyle}">
-                                    <Button.Flyout>
-                                        <Flyout Placement="Bottom">
-                                            <StackPanel Width="280" Spacing="8">
-                                                <TextBlock Text="Anel circular de splines" FontWeight="SemiBold" />
-                                                <TextBlock Text="Selecione uma SLI de mão única e marque um ponto inicial livre como centro. O anel não recorta nem conecta ruas existentes." TextWrapping="Wrap" FontSize="11" />
-                                                <NumberBox x:Name="RoadRoundaboutRadiusBox" Header="Raio do eixo (m)" Value="15" Minimum="6" Maximum="200" SpinButtonPlacementMode="Compact" />
-                                                <CheckBox x:Name="RoadRoundaboutClockwiseBox" Content="Sentido horário" IsChecked="False" />
-                                                <Button Content="Criar anel" HorizontalAlignment="Stretch" Click="OnRoadRoundaboutBuildClick" />
-                                            </StackPanel>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                </Button>
-                                <Button Content="Perfil longitudinal" Style="{StaticResource EditorToolbarButtonStyle}"
-                                        ToolTipService.ToolTip="Comparar cotas da spline selecionada e terreno" Click="OnRoadProfileClick" />
-                                <Button x:Name="RoadReviewButton" Content="Revisão: off" Style="{StaticResource EditorToolbarButtonStyle}"
-                                        ToolTipService.ToolTip="Ative para ajustar as coordenadas e curvatura antes de confirmar cada trecho"
-                                        Click="OnRoadReviewClick" />
-                                
-                                <Button Content="Conexões ▾" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Conectar, dividir e criar paralelas">
-    <Button.Flyout>
-        <Flyout Placement="Bottom">
-            <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Width="245" Spacing="6">
-                    <TextBlock Text="Conectar, dividir e criar paralelas" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                </Button></StackPanel></Expander><Expander Header="Conexões e paralelas" IsExpanded="False" HorizontalAlignment="Stretch"><StackPanel Spacing="6">
                     <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
                                         ToolTipService.ToolTip="Corrigir automaticamente Previous/Next da spline selecionada usando endpoints próximos"
                                         Click="OnRoadAutoConnectClick">
@@ -4162,23 +4134,7 @@
                                 <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Paralela →"
                                         ToolTipService.ToolTip="Criar uma cópia paralela para o outro lado"
-                                        Click="OnRoadParallelRightClick" />
-                </StackPanel>
-            </ScrollViewer>
-        </Flyout>
-    </Button.Flyout>
-</Button>
-                                <Border Width="1"
-                                        Height="24"
-                                        Margin="2,0"
-                                        Background="{ThemeResource MapStudioBorderBrush}" />
-
-                                <Button Content="Elevação ▾" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Cotas, rampas e terreno">
-    <Button.Flyout>
-        <Flyout Placement="Bottom">
-            <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Width="245" Spacing="6">
-                    <TextBlock Text="Cotas, rampas e terreno" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        Click="OnRoadParallelRightClick" /></StackPanel></Expander><Expander Header="Elevação e terreno" IsExpanded="False" HorizontalAlignment="Stretch"><StackPanel Spacing="6">
                     <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="↓ Baixar"
                                         ToolTipService.ToolTip="Reduzir a cota final pelo passo selecionado; permite rampas e entradas de túnel"
@@ -4221,13 +4177,9 @@
                                            Maximum="40"
                                            SmallChange="1"
                                            SpinButtonPlacementMode="Compact"
-                                           ToolTipService.ToolTip="Inclinação máxima recomendada em porcentagem; acima disso o editor mostra alerta" />
-                </StackPanel>
-            </ScrollViewer>
-        </Flyout>
-    </Button.Flyout>
-</Button>
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                           ToolTipService.ToolTip="Inclinação máxima recomendada em porcentagem; acima disso o editor mostra alerta" /></StackPanel></Expander><Button HorizontalAlignment="Stretch" Content="Perfil longitudinal" Style="{StaticResource EditorToolbarButtonStyle}"
+                                        ToolTipService.ToolTip="Comparar cotas da spline selecionada e terreno" Click="OnRoadProfileClick" /></StackPanel></ScrollViewer></Flyout></Button.Flyout></Button>
+<Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Mais ▾">
                                     <Button.Flyout>
                                         <MenuFlyout Placement="Bottom">
@@ -4392,27 +4344,16 @@
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Nivelar"
                                         Click="OnApplyTerrainLevelClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Pintar"
-                                        Click="OnApplyTerrainPaintClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Forma textura"
-                                        ToolTipService.ToolTip="Desenhar um polígono no terreno para pintar groundtex"
-                                        Click="OnTerrainShapeStartClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Aplicar forma"
-                                        ToolTipService.ToolTip="Aplicar a textura dentro do polígono capturado"
-                                        Click="OnTerrainShapeFillClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Água"
-                                        Click="OnToolWaterClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Mapa real"
-                                        Click="OnCreateCoordinateMapClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Referência"
-                                        ToolTipService.ToolTip="Abrir/configurar a referência geográfica sobre o terreno"
-                                        Click="OnMapReferenceClick" />
+                                <Button Content="Texturas ▾" Style="{StaticResource EditorToolbarButtonStyle}"><Button.Flyout><MenuFlyout Placement="Bottom"><MenuFlyoutItem Text="Pintar" Click="OnApplyTerrainPaintClick" />
+<MenuFlyoutItem Text="Forma textura" Click="OnTerrainShapeStartClick" />
+<MenuFlyoutItem Text="Aplicar forma" Click="OnTerrainShapeFillClick" /></MenuFlyout></Button.Flyout></Button>
+                                
+                                
+                                <Button Content="Geografia ▾" Style="{StaticResource EditorToolbarButtonStyle}"><Button.Flyout><MenuFlyout Placement="Bottom"><MenuFlyoutItem Text="Água" Click="OnToolWaterClick" />
+<MenuFlyoutItem Text="Mapa real" Click="OnCreateCoordinateMapClick" />
+<MenuFlyoutItem Text="Referência" Click="OnMapReferenceClick" /></MenuFlyout></Button.Flyout></Button>
+                                
+                                
                             </StackPanel>
 
                             <StackPanel x:Name="WaterContextPanel"
@@ -4443,29 +4384,16 @@
                                         Content="Path →"
                                         ToolTipService.ToolTip="Focar o próximo path do objeto/spline selecionado"
                                         Click="OnNextTrafficPathClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Isolar"
-                                        ToolTipService.ToolTip="Alternar visualização apenas do path/asset selecionado"
-                                        Click="OnToggleFocusedTrafficPathIsolationClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Editar path"
-                                        ToolTipService.ToolTip="Editar o [path] focado do SCO/SLI selecionado"
-                                        Click="OnEditSceneryPathClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="+ Path"
-                                        ToolTipService.ToolTip="Adicionar um novo path ao SCO/SLI selecionado"
-                                        Click="OnAddAssetPathClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Localizar"
-                                        ToolTipService.ToolTip="Selecionar e enquadrar no viewport o objeto do programa de semáforo atual"
-                                        Click="OnLocateTrafficProgramClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Semáforo"
-                                        ToolTipService.ToolTip="Editar o programa de semáforo selecionado"
-                                        Click="OnEditFocusedTrafficProgramClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Sinalização"
-                                        Click="OnToolStreetFurnitureClick" />
+                                <Button Content="Edição ▾" Style="{StaticResource EditorToolbarButtonStyle}"><Button.Flyout><MenuFlyout Placement="Bottom"><MenuFlyoutItem Text="Isolar" Click="OnToggleFocusedTrafficPathIsolationClick" />
+<MenuFlyoutItem Text="Editar path" Click="OnEditSceneryPathClick" />
+<MenuFlyoutItem Text="+ Path" Click="OnAddAssetPathClick" /></MenuFlyout></Button.Flyout></Button>
+                                
+                                
+                                <Button Content="Semáforos ▾" Style="{StaticResource EditorToolbarButtonStyle}"><Button.Flyout><MenuFlyout Placement="Bottom"><MenuFlyoutItem Text="Localizar" Click="OnLocateTrafficProgramClick" />
+<MenuFlyoutItem Text="Semáforo" Click="OnEditFocusedTrafficProgramClick" />
+<MenuFlyoutItem Text="Sinalização" Click="OnToolStreetFurnitureClick" /></MenuFlyout></Button.Flyout></Button>
+                                
+                                
                             </StackPanel>
 
                             <StackPanel x:Name="TransportContextPanel"
@@ -4531,8 +4459,8 @@
     </Button>
 </Border>
                     <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3">
-                        <Button Content="Projeto" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Mostrar ou recolher Explorer" Click="OnToggleExplorerClick"/>
-                        <Button Content="Propriedades" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Mostrar ou recolher Inspector" Click="OnToggleInspectorClick"/>
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}" AutomationProperties.Name="Projeto" ToolTipService.ToolTip="Mostrar ou recolher Explorer" Click="OnToggleExplorerClick"><SymbolIcon Symbol="OpenPane" /></Button>
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}" AutomationProperties.Name="Propriedades" ToolTipService.ToolTip="Mostrar ou recolher Inspector" Click="OnToggleInspectorClick"><SymbolIcon Symbol="Edit" /></Button>
                     </StackPanel>
                 </Grid>
             </Border>

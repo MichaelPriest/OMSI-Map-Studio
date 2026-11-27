@@ -37,3 +37,7 @@ Welcome view occupies the workspace without exposing empty panels; four actual p
 ## Stage 13 — fewer toolbars and contextual assets
 
 Horizontal module ribbon hidden by default, available in View. Compact rail includes Geo Studio and validation. Library prioritizes search, filters and results; asset actions appear on selection below the list in sidebar or beside it when docked. Capture automation dismisses welcome and invokes visible module controls through UI Automation. Palette and engine unchanged; stage 13 build and screenshots pending.
+
+## Stage 14 — compact contextual commands
+
+Road Studio keeps draw, straight and curve accessible and groups drawing options, numerical/roundabout construction and geometry/connections/elevation. Secondary terrain and traffic commands use menus. Panel toggles use icons with automation names and tooltips; selection instruction moved to tooltip. Existing control names and handlers preserved. Validate SLI selection, continuous/snap mode, group interaction and return to viewport; validate terrain and traffic menus with a loaded map. CI and screenshots pending.
