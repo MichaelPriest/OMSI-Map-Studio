@@ -1,0 +1,32 @@
+﻿[
+    {
+        "file":  "00-startup.png",
+        "width":  1024,
+        "height":  720,
+        "capturedAtUtc":  "2026-11-27T20:08:05.0483343Z",
+        "commit":  "ba92f02d1366403a8756b1d57e01b851ee3419ff",
+        "sha256":  "2d82cc03e4f4d32a26e691004c66baeff92c11860d682c494b995645e04c0ab8",
+        "source":  "actual foreground WinUI window",
+        "workspace":  "not verified by capture script"
+    },
+    {
+        "file":  "01-road-studio-shell.png",
+        "width":  1024,
+        "height":  720,
+        "capturedAtUtc":  "2026-11-27T20:08:11.5458370Z",
+        "commit":  "ba92f02d1366403a8756b1d57e01b851ee3419ff",
+        "sha256":  "06e51468514435833e5a9a71c0b22b323571e7b78f0a50c127ffaf92a6ff09ac",
+        "source":  "actual foreground WinUI window",
+        "workspace":  "not verified by capture script"
+    },
+    {
+        "file":  "02-geo-studio-shell.png",
+        "width":  1024,
+        "height":  720,
+        "capturedAtUtc":  "2026-11-27T20:08:18.9463231Z",
+        "commit":  "ba92f02d1366403a8756b1d57e01b851ee3419ff",
+        "sha256":  "7bd17f8489e83b923bfb7ee8ac101c9522112063acfedf060316248bdf129c2c",
+        "source":  "actual foreground WinUI window",
+        "workspace":  "not verified by capture script"
+    }
+]

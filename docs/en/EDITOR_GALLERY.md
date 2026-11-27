@@ -2,7 +2,7 @@
 
 [Português (Brasil)](../pt-BR/EDITOR_GALLERY.md)
 
-Images must be PNG screenshots of the actual executable, not mockups. No new verified screenshots are available in this update. Use the [validated Windows x64 build](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393), open an authorized OMSI 2 installation in a separate workspace and capture the real window (Alt+Print Screen or Win+Shift+S). Avoid personal data, credentials and unauthorized content.
+Images must be PNG screenshots of the actual executable, not mockups. The three initial captures below have been visually reviewed. Use the [validated Windows x64 build](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393), open an authorized OMSI 2 installation in a separate workspace and capture the real window (Alt+Print Screen or Win+Shift+S). Avoid personal data, credentials and unauthorized content.
 
 | Screenshot to capture | Planned file |
 | --- | --- |
@@ -28,3 +28,22 @@ powershell -NoProfile -File tools/capture_native_editor.ps1 -ProcessId (Get-Proc
 ```
 
 Keep only one editor instance open. Review PNGs for the intended panel and absence of credentials. The script neither creates artificial maps nor saves changes to the map.
+
+
+## Reviewed real screenshots
+
+Actual WinUI captures from November 27, 2026, commit ba92f02, 1024 × 720, without a loaded map. Text clipping and library overlap in Geo Studio are visible at this resolution; these do not establish map acceptance.
+
+### Main interface
+
+![Main interface](../images/editor/00-startup.png)
+
+### Road Studio
+
+![Road Studio](../images/editor/01-road-studio-shell.png)
+
+### Geo Studio
+
+![Geo Studio](../images/editor/02-geo-studio-shell.png)
+
+[Manifest](../images/editor/capture-manifest.json)

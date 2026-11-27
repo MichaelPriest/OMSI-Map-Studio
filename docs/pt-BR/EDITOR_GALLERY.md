@@ -2,7 +2,7 @@
 
 [English](../en/EDITOR_GALLERY.md)
 
-As imagens devem ser capturas PNG do executável real, não mockups. Nesta atualização não há novas capturas verificadas. Para atualizar a galeria, use a [build Windows x64 validada](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393), abra uma instalação autorizada do OMSI 2 em workspace separado e capture a janela real (Alt+Print Screen ou Win+Shift+S). Evite dados pessoais, credenciais e conteúdo sem autorização.
+As imagens devem ser capturas PNG do executável real, não mockups. As três capturas iniciais abaixo foram revisadas visualmente. Para atualizar a galeria, use a [build Windows x64 validada](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393), abra uma instalação autorizada do OMSI 2 em workspace separado e capture a janela real (Alt+Print Screen ou Win+Shift+S). Evite dados pessoais, credenciais e conteúdo sem autorização.
 
 | Captura a produzir | Arquivo previsto |
 | --- | --- |
@@ -28,3 +28,22 @@ powershell -NoProfile -File tools/capture_native_editor.ps1 -ProcessId (Get-Proc
 ```
 
 Mantenha somente uma instância do editor aberta. Revise os PNGs para confirmar que o painel desejado está visível e não contém credenciais. O script não cria mapas artificiais nem salva modificações no mapa.
+
+
+## Capturas reais revisadas
+
+Capturas reais WinUI de 27/11/2026, commit ba92f02, 1024 × 720, sem mapa carregado. Há recortes de texto e sobreposição de biblioteca no Geo Studio nesta resolução; não são evidência de homologação de mapa.
+
+### Interface principal
+
+![Interface principal](../images/editor/00-startup.png)
+
+### Road Studio
+
+![Road Studio](../images/editor/01-road-studio-shell.png)
+
+### Geo Studio
+
+![Geo Studio](../images/editor/02-geo-studio-shell.png)
+
+[Manifest](../images/editor/capture-manifest.json)
