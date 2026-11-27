@@ -36,29 +36,29 @@
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Dark">
-                    <Color x:Key="MapStudioSurfaceRaisedColor">#2B3036</Color>
-                    <Color x:Key="MapStudioBorderColor">#343B44</Color>
-                    <Color x:Key="MapStudioBorderStrongColor">#46505B</Color>
-                    <Color x:Key="MapStudioAccentColor">#4FA3FF</Color>
-                    <Color x:Key="MapStudioAccentSurfaceColor">#263E57</Color>
+                    <Color x:Key="MapStudioSurfaceRaisedColor">#273543</Color>
+                    <Color x:Key="MapStudioBorderColor">#344454</Color>
+                    <Color x:Key="MapStudioBorderStrongColor">#45596E</Color>
+                    <Color x:Key="MapStudioAccentColor">#2997FF</Color>
+                    <Color x:Key="MapStudioAccentSurfaceColor">#155EA8</Color>
 
-                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#15181C" />
-                    <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#181B20" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#1D2126" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#23282E" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#2B3036" />
-                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#343B44" />
-                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#46505B" />
-                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#EDF1F5" />
-                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#BBC3CC" />
-                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#88939F" />
-                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#4FA3FF" />
-                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#263E57" />
-                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#8CC8FF" />
-                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#64D98A" />
-                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F21D2126" />
-                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#E023282E" />
-                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#F21D2126" />
+                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#111820" />
+                    <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#151E28" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#1A2530" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#202C38" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#273543" />
+                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#344454" />
+                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#45596E" />
+                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#EEF4FC" />
+                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#BCC9D8" />
+                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#92A5B9" />
+                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#2997FF" />
+                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#155EA8" />
+                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#D6EBFF" />
+                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#62DC92" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F21A2530" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#E0202C38" />
+                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#F21A2530" />
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="HighContrast">

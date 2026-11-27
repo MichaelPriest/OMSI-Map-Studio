@@ -14,7 +14,7 @@ public sealed partial class MainWindow
 
     private void OnThemeSettingsLoaded(object sender, RoutedEventArgs e)
     {
-        var theme = ElementTheme.Default;
+        var theme = ElementTheme.Dark;
 
         try
         {
@@ -30,11 +30,11 @@ public sealed partial class MainWindow
         }
         catch (IOException)
         {
-            // Keep the system theme if the preference cannot be read.
+            // Keep Professional Dark if the preference cannot be read.
         }
         catch (UnauthorizedAccessException)
         {
-            // Keep the system theme if the preference cannot be read.
+            // Keep Professional Dark if the preference cannot be read.
         }
 
         MainRoot.RequestedTheme = theme;
