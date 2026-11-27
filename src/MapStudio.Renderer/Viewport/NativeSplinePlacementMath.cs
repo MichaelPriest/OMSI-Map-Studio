@@ -10,7 +10,11 @@ public sealed record NativeSplinePlacementShape(
     double Radius,
     double GradientStart,
     double GradientEnd,
-    bool IsCurved);
+    bool IsCurved)
+{
+    public NativeSplinePlacementShape? Continuation { get; init; }
+    public double TotalLength => Length + (Continuation?.Length ?? 0);
+}
 
 public static class NativeSplinePlacementMath
 {
@@ -131,6 +135,71 @@ public static class NativeSplinePlacementMath
                 gradient,
                 false);
 
+        if (!IsFiniteShape(shape))
+        {
+            shape = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    // Solve a circular arc from a prescribed departure tangent and an endpoint.
+    // The chord decomposes into forward and lateral components; the circle
+    // centre lies on the start normal. The height follows an even grade.
+    public static bool TryCreateTangentArc(
+        Vector3 start, Vector3 end, Vector3 forward,
+        out NativeSplinePlacementShape? shape)
+    {
+        shape = null;
+        if (!IsFinite(start) || !IsFinite(end) || !IsFinite(forward))
+        {
+            return false;
+        }
+
+        var heading = Math.Atan2(forward.X, forward.Z);
+        var directionLength = Math.Sqrt((double)forward.X * forward.X +
+            (double)forward.Z * forward.Z);
+        if (directionLength < Epsilon)
+        {
+            return false;
+        }
+
+        var dx = (double)end.X - start.X;
+        var dz = (double)end.Z - start.Z;
+        var ahead = dx * Math.Sin(heading) + dz * Math.Cos(heading);
+        var lateral = dx * Math.Cos(heading) - dz * Math.Sin(heading);
+        var chord = Math.Sqrt(dx * dx + dz * dz);
+        if (chord < Epsilon || !double.IsFinite(chord))
+        {
+            return false;
+        }
+
+        if (Math.Abs(lateral) <= Epsilon)
+        {
+            return ahead > Epsilon && TryCreateStraight(start, end, out shape);
+        }
+
+        var radius = chord * chord / (2 * lateral);
+        var sweep = 2 * Math.Atan2(lateral, ahead);
+        // A short departure that turns back into itself is not a useful road.
+        // These conservative bounds apply only to automatic continuation.
+        if (!double.IsFinite(radius) || Math.Abs(radius) < 6 ||
+            Math.Abs(sweep) > Math.PI)
+        {
+            return false;
+        }
+
+        var length = radius * sweep;
+        if (!double.IsFinite(length) || length < Epsilon)
+        {
+            return false;
+        }
+
+        var grade = ((double)end.Y - start.Y) / length * 100;
+        shape = new NativeSplinePlacementShape(start, end,
+            NormalizeDegrees(RadiansToDegrees(heading)), length, radius,
+            grade, grade, true);
         if (!IsFiniteShape(shape))
         {
             shape = null;
@@ -514,10 +583,10 @@ public static class NativeSplinePlacementMath
             return false;
         }
 
+        // Sagitta is the side of the arc midpoint, opposite the
+        // side of its circle centre (OMSI signed curvature).
         var signedRadius =
-            Math.Sign(
-                sagitta) *
-            radiusMagnitude;
+            -Math.Sign(sagitta) * radiusMagnitude;
 
         var halfAngle =
             Math.Asin(
@@ -530,10 +599,7 @@ public static class NativeSplinePlacementMath
                     )));
 
         var signedAngle =
-            Math.Sign(
-                sagitta) *
-            halfAngle *
-            2.0;
+            Math.Sign(signedRadius) * halfAngle * 2.0;
 
         var chordBearing =
             Math.Atan2(

@@ -65,6 +65,8 @@ public sealed partial class NativeViewport : UserControl
     private double _rightPressX;
     private double _rightPressY;
     private bool _isSplineDragCreating;
+    private double _splinePressX;
+    private double _splinePressY;
     private bool _splineSplitPickActive;
     private bool _splineJoinPickActive;
     private int _splineJoinSourceId = -1;
@@ -2374,7 +2376,7 @@ public sealed partial class NativeViewport : UserControl
         SetReferenceOverlays(
             overlay is null
                 ? null
-                : [
+                : (global::MapStudio.Renderer.Viewport.NativeReferenceOverlayDefinition[])[
                     overlay
                 ]);
     }
@@ -3226,12 +3228,14 @@ public sealed partial class NativeViewport : UserControl
             {
                 if (dragCreation)
                 {
-                    _isSplineDragCreating =
-                        true;
+                    _isSplineDragCreating = true;
+                    _splinePressX = point.Position.X;
+                    _splinePressY = point.Position.Y;
+                    InputSurface.CapturePointer(e.Pointer);
 
                     PointerStatusChanged?.Invoke(
                         this,
-                        "Rua: arraste até o ponto final e solte para criar.");
+                        "Início fixado. Clique no fim ou arraste e solte para criar.");
                 }
                 else
                 {
@@ -3252,6 +3256,10 @@ public sealed partial class NativeViewport : UserControl
                     ?.Invoke(
                         _runtime
                             .GetSplinePlacementControlState());
+            }
+            else if (!string.IsNullOrWhiteSpace(splineStatus))
+            {
+                PointerStatusChanged?.Invoke(this, splineStatus);
             }
 
             e.Handled = true;
@@ -3667,85 +3675,6 @@ public sealed partial class NativeViewport : UserControl
         }
 
         if (
-            _isSplineDragCreating &&
-            _runtime is not null)
-        {
-            var scaleX =
-                Math.Max(
-                    0.01,
-                    SwapChainSurface
-                        .CompositionScaleX);
-
-            var scaleY =
-                Math.Max(
-                    0.01,
-                    SwapChainSurface
-                        .CompositionScaleY);
-
-            var pixelX =
-                (uint)Math.Max(
-                    0,
-                    Math.Round(
-                        point.Position.X *
-                        scaleX));
-
-            var pixelY =
-                (uint)Math.Max(
-                    0,
-                    Math.Round(
-                        point.Position.Y *
-                        scaleY));
-
-            NativeSplinePlacementRequest?
-                request =
-                    null;
-
-            var completed =
-                _runtime.TryAdvanceSplinePlacement(
-                    pixelX,
-                    pixelY,
-                    out request,
-                    out var status);
-
-            if (
-                completed &&
-                request is null &&
-                _runtime.SplineEasyRoadEnabled &&
-                _runtime.SplinePlacementStage ==
-                    NativeSplinePlacementStage
-                        .AwaitingEasyRoadConfirm)
-            {
-                completed =
-                    _runtime.TryConfirmEasyRoad(
-                        out request,
-                        out status);
-            }
-
-            if (
-                completed &&
-                request is not null)
-            {
-                SplinePlacementRequested
-                    ?.Invoke(
-                        request);
-            }
-
-            PointerStatusChanged?.Invoke(
-                this,
-                completed
-                    ? status
-                    : "Rua: não foi possível concluir neste ponto.");
-
-            SplinePlacementControlStateChanged
-                ?.Invoke(
-                    _runtime
-                        .GetSplinePlacementControlState());
-
-            _isSplineDragCreating =
-                false;
-        }
-
-        if (
             _isManipulatingGizmo &&
             _runtime is not null)
         {
@@ -3985,7 +3914,7 @@ public sealed partial class NativeViewport : UserControl
                             : _runtime.SplinePlacementStage switch
                             {
                                 NativeSplinePlacementStage.AwaitingStart =>
-                                    "Rua: clique e arraste a partir do ponto inicial.",
+                                    "Rua: clique no início ou arraste a partir dele.",
                                 NativeSplinePlacementStage.AwaitingEnd =>
                                     "Rua: mova até o ponto final.",
                                 NativeSplinePlacementStage.AwaitingCurve =>
@@ -4374,7 +4303,10 @@ public sealed partial class NativeViewport : UserControl
         if (
             _isSplineDragCreating &&
             _runtime is not null &&
-            _runtime.IsSplinePlacementActive)
+            _runtime.IsSplinePlacementActive &&
+            _runtime.SplinePlacementStage == NativeSplinePlacementStage.AwaitingEnd &&
+            (Math.Pow(point.Position.X - _splinePressX, 2) +
+             Math.Pow(point.Position.Y - _splinePressY, 2)) >= 16)
         {
             var scaleX =
                 Math.Max(

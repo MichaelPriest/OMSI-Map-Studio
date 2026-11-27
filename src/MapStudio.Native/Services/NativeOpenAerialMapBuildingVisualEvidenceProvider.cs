@@ -379,7 +379,7 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                 new MapStudioBuildingVisualEvidence(
                     target.Building.Id,
                     normalized,
-                    [
+                    (global::MapStudio.Core.Generation.Scene.MapStudioSceneEvidence[])[
                         new MapStudioSceneEvidence(
                             MapStudioSceneEvidenceSource
                                 .AerialImagery,

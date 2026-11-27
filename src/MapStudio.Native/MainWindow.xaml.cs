@@ -382,7 +382,7 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<
         LibraryGroupOption>
         _libraryGroupOptions =
-            [
+            (LibraryGroupOption[])[
                 new(
                     OmsiAssetLibraryGroup.All,
                     "Todos")
@@ -3633,6 +3633,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var originalAsset = GetSelectedAssetLibraryEntry();
         try
         {
             PlaceAssetButton.Content =
@@ -3688,8 +3689,8 @@ public sealed partial class MainWindow : Window
             RedoButton.IsEnabled =
                 false;
 
-            var selectedAsset =
-                GetSelectedAssetLibraryEntry();
+            var selectedAsset = originalAsset;
+
 
             var canContinue =
                 !request.IsHeightSpline &&
@@ -3697,8 +3698,8 @@ public sealed partial class MainWindow : Window
                     0 &&
                 SplineContinuousCheckBox.IsChecked ==
                     true &&
-                selectedAsset?.Kind ==
-                    OmsiAssetKind.Spline;
+                selectedAsset?.Kind == OmsiAssetKind.Spline &&
+                string.Equals(selectedAsset.RelativePath, request.SplinePath, StringComparison.OrdinalIgnoreCase);
 
             if (canContinue)
             {
@@ -3727,6 +3728,11 @@ public sealed partial class MainWindow : Window
 
                     return;
                 }
+
+                Viewport.CancelSplinePlacement();
+                PlaceAssetButton.IsEnabled = true;
+                StatusText.Text = "Rua salva, mas a extremidade não está disponível no tile carregado para continuar. Reabra o trecho e selecione o endpoint.";
+                return;
             }
 
             PlaceAssetButton.IsEnabled =
@@ -3741,7 +3747,9 @@ public sealed partial class MainWindow : Window
                     : string.Empty;
 
             StatusText.Text =
-                request.PreviousSplineId >= 0 &&
+                request.Continuation is { } second
+                    ? $"Trechos unidos por dois arcos: #{request.PreviousSplineId} → #{insertion.SplineId} → #{insertion.SplineId + 1} → #{request.NextSplineId} · comprimento {request.Length + second.Length:F1} m."
+                    : request.PreviousSplineId >= 0 &&
                 request.NextSplineId >= 0
                     ? $"Trechos unidos: #{request.PreviousSplineId} → #{insertion.SplineId} → #{request.NextSplineId} · comprimento {request.Length:F1} m · raio {request.Radius:F1}."
                     : $"Spline inserida: {request.Length:F1} m · raio {request.Radius:F1} · tile {request.Tile.X},{request.Tile.Y}{linkStatus}.";
@@ -4001,7 +4009,7 @@ public sealed partial class MainWindow : Window
                                     true),
 
                         _ =>
-                            [
+                            (global::MapStudio.Renderer.Viewport.NativeSceneryPatternPlacement[])[
                                 new NativeSceneryPatternPlacement(
                                     request.WorldPoint.X,
                                     request.WorldPoint.Z,
@@ -6310,7 +6318,7 @@ public sealed partial class MainWindow : Window
             var graph =
                 new MapStudioRoadGraphBuilder()
                     .Build(
-                        [
+                        (global::MapStudio.Core.Generation.Roads.MapStudioRoadTrace[])[
                             new MapStudioRoadTrace(
                                 "terrain-shape-preview",
                                 points,
@@ -11557,7 +11565,7 @@ public sealed partial class MainWindow : Window
             var graph =
                 new MapStudioRoadGraphBuilder()
                     .Build(
-                        [
+                        (global::MapStudio.Core.Generation.Roads.MapStudioRoadTrace[])[
                             new MapStudioRoadTrace(
                                 "custom-shape-preview",
                                 points,
@@ -16379,7 +16387,7 @@ public sealed partial class MainWindow : Window
             await _session
                 .CreateTimetableTrackAsync(
                     nameBox.Text,
-                    [entry]);
+                    (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableTrackEntry[])[entry]);
 
         await ReloadTransportCatalogAsync(
             "Track",
@@ -17375,7 +17383,7 @@ public sealed partial class MainWindow : Window
                 tourBox.Text.Trim(),
                 aiGroupBox.Text.Trim(),
                 "0",
-                [
+                (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableAddTrip[])[
                     new OmsiTimetableAddTrip(
                         "Created with OMSI Map Studio",
                         tripName,
@@ -17392,7 +17400,7 @@ public sealed partial class MainWindow : Window
                     priorityBox.Text,
                     userAllowed.IsChecked ==
                         true,
-                    [tour]);
+                    (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableTour[])[tour]);
 
         await ReloadTransportCatalogAsync(
             "Line",
@@ -19743,7 +19751,7 @@ public sealed partial class MainWindow : Window
 
         return Viewport
             .PreviewTimetableTrack(
-                [entry]);
+                (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableTrackEntry[])[entry]);
     }
 
     private void OnTransportValidateClick(
@@ -30655,7 +30663,7 @@ setTimeout(postBounds, 250);
         if (!reference.IsTiledMosaic)
         {
             return
-                [
+                (global::MapStudio.Renderer.Viewport.NativeReferenceOverlayDefinition[])[
                     new NativeReferenceOverlayDefinition(
                         reference.ImagePath,
                         reference.Width,
@@ -33088,7 +33096,7 @@ setTimeout(postBounds, 250);
                 await provider
                     .AnalyzeRoadReferenceAsync(
                         new MapStudioRoadReferenceRequest(
-                            [
+                            (global::MapStudio.Core.AI.MapStudioAiImageReference[])[
                                 new MapStudioAiImageReference(
                                     bytes,
                                     mimeType,
@@ -37671,7 +37679,7 @@ setTimeout(postBounds, 250);
                 groups.Add(
                     new NativeSceneryPlacementBatchGroup(
                         relativePath,
-                        [request]));
+                        (global::MapStudio.Renderer.Viewport.NativeSceneryPlacementRequest[])[request]));
 
                 generated++;
             }

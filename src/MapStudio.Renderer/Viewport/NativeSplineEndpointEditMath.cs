@@ -82,9 +82,7 @@ public static class NativeSplineEndpointEditMath
         }
 
         return
-            Math.Sign(
-                shape.Radius) *
-            sagitta;
+            -Math.Sign(shape.Radius) * sagitta;
     }
 
     public static bool TryCreateShape(

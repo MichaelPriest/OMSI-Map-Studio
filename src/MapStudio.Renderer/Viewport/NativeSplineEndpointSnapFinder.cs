@@ -5,6 +5,32 @@ namespace MapStudio.Renderer.Viewport;
 
 public static class NativeSplineEndpointSnapFinder
 {
+    // The next road starts from the persisted geometry, never a cached
+    // mouse position or the requested (pre-serialization) endpoint.
+    public static bool TryResolveContinuationStart(
+        NativeSceneSnapshot scene, int previousSplineId, out Vector3 start)
+    {
+        ArgumentNullException.ThrowIfNull(scene);
+        start = default;
+        var matches = scene.Splines.Where(s => s.Spline.SplineId == previousSplineId).ToArray();
+        if (matches.Length != 1 || matches[0].Spline.IsHeightSpline ||
+            matches[0].Spline.NextSplineId != -1 ||
+            !double.IsFinite(matches[0].Spline.Length) || matches[0].Spline.Length <= 0)
+        {
+            return false;
+        }
+        var spline = matches[0];
+        if (!float.IsFinite(spline.WorldX) || !float.IsFinite(spline.WorldY) ||
+            !float.IsFinite(spline.WorldZ) || !double.IsFinite(spline.Spline.Rotation) ||
+            !double.IsFinite(spline.Spline.Radius) ||
+            !double.IsFinite(spline.Spline.GradientStart) || !double.IsFinite(spline.Spline.GradientEnd))
+        {
+            return false;
+        }
+        start = NativeSplinePathMath.GetFrame(spline, spline.Spline.Length).Center;
+        return float.IsFinite(start.X) && float.IsFinite(start.Y) && float.IsFinite(start.Z);
+    }
+
     public static NativeSplineEndpointSnap?
         FindFreeEndpoint(
             NativeSceneSnapshot scene,
@@ -17,6 +43,7 @@ public static class NativeSplineEndpointSnapFinder
             scene);
 
         if (
+            !float.IsFinite(point.X) || !float.IsFinite(point.Y) || !float.IsFinite(point.Z) ||
             !double.IsFinite(
                 maximumDistance) ||
             maximumDistance <= 0)
@@ -81,6 +108,11 @@ public static class NativeSplineEndpointSnapFinder
                             spline,
                             placed.Length)
                         .Center;
+
+            if (!float.IsFinite(candidate.X) || !float.IsFinite(candidate.Y) || !float.IsFinite(candidate.Z))
+            {
+                continue;
+            }
 
             var dx =
                 candidate.X -

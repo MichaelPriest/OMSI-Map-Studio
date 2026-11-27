@@ -104,69 +104,136 @@ public static class NativeSplineCompleteToSolver
                 target,
                 0);
 
-        if (
-            !TrySolveShape(
-                start,
-                end,
-                maximumRadius,
-                out var shape,
-                out status) ||
-            shape is null)
+        NativeSplinePlacementShape? second = null;
+        if (!TrySolveShape(start, end, maximumRadius, out var shape, out status))
+        {
+            var originalStatus = status;
+            if (!TrySolveBiarc(start, end, maximumRadius, out shape, out second))
+            {
+                status = originalStatus + " Não foi possível ajustar dois arcos tangentes.";
+                return false;
+            }
+        }
+
+        if (shape is null)
         {
             return false;
         }
 
-        var tileX =
-            (int)Math.Floor(
-                shape.Start.X /
-                300.0f);
-
-        var tileY =
-            (int)Math.Floor(
-                shape.Start.Z /
-                300.0f);
-
-        var tile =
-            scene.Tiles
-                .FirstOrDefault(item =>
-                    item.Reference.X == tileX &&
-                    item.Reference.Y == tileY);
-
-        if (tile is null)
+        NativeSplinePlacementRequest? ToRequest(NativeSplinePlacementShape part)
         {
-            status =
-                "Complete to: o ponto inicial da conexão está fora dos tiles carregados.";
+            var tileX = (int)Math.Floor(part.Start.X / 300.0);
+            var tileY = (int)Math.Floor(part.Start.Z / 300.0);
+            var tile = scene.Tiles.FirstOrDefault(t =>
+                t.Reference.X == tileX && t.Reference.Y == tileY);
+            if (tile is null)
+            {
+                return null;
+            }
+
+            return new NativeSplinePlacementRequest(tile.Reference,
+                source.Spline.SplinePath, -1, part.Start.X - tileX * 300.0,
+                part.Start.Z - tileY * 300.0, part.Start.Y,
+                part.Rotation, part.Length, part.Radius,
+                part.GradientStart, part.GradientEnd, part.IsCurved,
+                part.Start, part.End);
+        }
+
+        var firstRequest = ToRequest(shape);
+        var secondRequest = second is null ? null : ToRequest(second);
+        if (firstRequest is null || (second is not null && secondRequest is null))
+        {
+            status = "Complete to: início de um segmento fora dos tiles carregados.";
             return false;
         }
 
-        request =
-            new NativeSplinePlacementRequest(
-                tile.Reference,
-                source.Spline.SplinePath,
-                sourceSplineId,
-                shape.Start.X -
-                    tileX *
-                    300.0,
-                shape.Start.Z -
-                    tileY *
-                    300.0,
-                shape.Start.Y,
-                shape.Rotation,
-                shape.Length,
-                shape.Radius,
-                shape.GradientStart,
-                shape.GradientEnd,
-                shape.IsCurved,
-                shape.Start,
-                shape.End,
-                targetSplineId,
-                IsHeightSpline: false);
+        request = firstRequest with
+        {
+            PreviousSplineId = sourceSplineId,
+            NextSplineId = targetSplineId,
+            Continuation = secondRequest
+        };
+        status = second is not null
+            ? $"Complete to: dois arcos tangentes · comprimento {shape.Length + second.Length:F2} m."
+            : $"Complete to: conexão pronta · comprimento {shape.Length:F2} m · raio {shape.Radius:F2} m.";
+        return true;
+    }
 
-        status =
-            shape.IsCurved
-                ? $"Complete to: conexão curva pronta · raio {shape.Radius:F2} m · comprimento {shape.Length:F2} m."
-                : $"Complete to: conexão reta pronta · comprimento {shape.Length:F2} m.";
+    // Equal tangent-distance biarc construction. The meeting point is
+    // obtained from the intersection of the two tangent-circle constraints.
+    // Only forward, non-degenerate arcs within the automatic radius bounds
+    // are accepted. Both pieces share the same longitudinal grade.
+    public static bool TrySolveBiarc(
+        NativeSplineFrame start, NativeSplineFrame end, double maximumRadius,
+        out NativeSplinePlacementShape? first, out NativeSplinePlacementShape? second)
+    {
+        first = null;
+        second = null;
+        if (!double.IsFinite(maximumRadius) || maximumRadius <= 0)
+        {
+            return false;
+        }
+        var a0 = Math.Atan2(start.Forward.X, start.Forward.Z);
+        var a1 = Math.Atan2(end.Forward.X, end.Forward.Z);
+        var tx = Math.Sin(a0);
+        var tz = Math.Cos(a0);
+        var ux = Math.Sin(a1);
+        var uz = Math.Cos(a1);
+        var dx = (double)end.Center.X - start.Center.X;
+        var dz = (double)end.Center.Z - start.Center.Z;
+        var squared = dx * dx + dz * dz;
+        var a = 2 * (1 - tx * ux - tz * uz);
+        var b = 2 * (dx * (tx + ux) + dz * (tz + uz));
+        if (!double.IsFinite(squared) || squared < Epsilon ||
+            !double.IsFinite(a) || !double.IsFinite(b) ||
+            start.Forward.LengthSquared() < Epsilon || end.Forward.LengthSquared() < Epsilon)
+        {
+            return false;
+        }
 
+        var d = a < Epsilon
+            ? (b > Epsilon ? squared / b : double.NaN)
+            : (Math.Sqrt(b * b + 4 * a * squared) - b) / (2 * a);
+        if (!double.IsFinite(d) || d <= 0)
+        {
+            return false;
+        }
+
+        var joint = new Vector3(
+            (float)(start.Center.X + (dx + d * (tx - ux)) / 2),
+            start.Center.Y,
+            (float)(start.Center.Z + (dz + d * (tz - uz)) / 2));
+        if (!NativeSplinePlacementMath.TryCreateTangentArc(
+                start.Center, joint, start.Forward, out var left) || left is null ||
+            !NativeSplinePlacementMath.TryCreateTangentArc(
+                end.Center, joint, -end.Forward, out var backwards) || backwards is null)
+        {
+            return false;
+        }
+
+        var leftHeading = left.Rotation + (left.IsCurved
+            ? left.Length / left.Radius * 180 / Math.PI : 0);
+        var rightHeading = NormalizeDegrees(backwards.Rotation + 180 +
+            (backwards.IsCurved ? backwards.Length / backwards.Radius * 180 / Math.PI : 0));
+        if (Math.Abs(NormalizeSignedRadians((rightHeading - leftHeading) * Math.PI / 180)) > 0.008 ||
+            left.Length < 1 || backwards.Length < 1 ||
+            Math.Abs(left.Radius) > maximumRadius || Math.Abs(backwards.Radius) > maximumRadius)
+        {
+            return false;
+        }
+
+        var grade = ((double)end.Center.Y - start.Center.Y) /
+            (left.Length + backwards.Length) * 100;
+        joint.Y = (float)(start.Center.Y + left.Length * grade / 100);
+        if (!double.IsFinite(grade) || !float.IsFinite(joint.Y))
+        {
+            return false;
+        }
+
+        first = left with { End = joint, GradientStart = grade, GradientEnd = grade };
+        second = new NativeSplinePlacementShape(joint, end.Center,
+            rightHeading, backwards.Length, -backwards.Radius,
+            grade, grade, backwards.IsCurved);
         return true;
     }
 

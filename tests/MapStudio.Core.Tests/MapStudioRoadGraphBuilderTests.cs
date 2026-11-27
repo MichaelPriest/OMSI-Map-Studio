@@ -407,4 +407,46 @@ public sealed class MapStudioRoadGraphBuilderTests
             join.TraceIds.Count);
     }
 
+
+    [Fact]
+    public void NearEndpointAtDifferentLevelDoesNotSplitGroundRoad()
+    {
+        var graph = new MapStudioRoadGraphBuilder().Build([
+            new MapStudioRoadTrace("ground", [new(-10, 0), new(10, 0)], "road"),
+            new MapStudioRoadTrace("bridge", [new(0, 0.08), new(0, 10)],
+                "road", Layer: 1, Bridge: true)
+        ]);
+        Assert.Empty(graph.Junctions);
+        Assert.Equal(2, graph.Segments.Count);
+        Assert.Equal(4, graph.Nodes.Count);
+    }
+
+    [Fact]
+    public void NearbyEndpointsOnDifferentLevelsRemainSeparate()
+    {
+        var graph = new MapStudioRoadGraphBuilder().Build([
+            new MapStudioRoadTrace("ground", [new(0, 0), new(10, 0)], "road"),
+            new MapStudioRoadTrace("bridge", [new(10.08, 0), new(20, 0)],
+                "road", Layer: 1, Bridge: true)
+        ]);
+        Assert.Equal(4, graph.Nodes.Count);
+        Assert.All(graph.Nodes, node => Assert.Equal(1, node.Degree));
+    }
+
+    [Fact]
+    public void SnappedSegmentsUseCanonicalNodeCoordinatesAndLength()
+    {
+        var graph = new MapStudioRoadGraphBuilder().Build([
+            new MapStudioRoadTrace("main", [new(-20, 0), new(20, 0)], "road"),
+            new MapStudioRoadTrace("branch", [new(0, 0.08), new(0, 12)], "road")
+        ]);
+        Assert.Single(graph.Junctions);
+        var nodes = graph.Nodes.ToDictionary(node => node.Id);
+        Assert.All(graph.Segments, segment =>
+        {
+            Assert.Equal(nodes[segment.FromNodeId].Position, segment.Start);
+            Assert.Equal(nodes[segment.ToNodeId].Position, segment.End);
+            Assert.Equal(segment.Start.DistanceTo(segment.End), segment.LengthMeters, 9);
+        });
+    }
 }

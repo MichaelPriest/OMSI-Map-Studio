@@ -24,6 +24,21 @@ public sealed class
         ArgumentNullException.ThrowIfNull(
             shape);
 
+        if (shape.Continuation is { } next)
+        {
+            var firstGeometry = Build(asset, shape with { Continuation = null });
+            var nextGeometry = Build(asset, next);
+            if (!firstGeometry.IsRenderable || !nextGeometry.IsRenderable)
+            {
+                return NativeAssetPreviewGeometry.Error("biarcPlacementNotRenderable");
+            }
+            return new NativeAssetPreviewGeometry(
+                firstGeometry.Vertices.Concat(nextGeometry.Vertices).ToArray(),
+                Vector3.Min(firstGeometry.Minimum, nextGeometry.Minimum),
+                Vector3.Max(firstGeometry.Maximum, nextGeometry.Maximum),
+                firstGeometry.SourceMeshCount + nextGeometry.SourceMeshCount, null);
+        }
+
         if (
             !asset.CanPlace ||
             shape.Length <

@@ -223,17 +223,27 @@ public sealed class MapStudioRoadGraphBuilder
                     nodeRegistry
                         .GetOrCreate(
                             start.Point,
-                            raw.Trace.Id);
+                            raw.Trace);
 
                 var toNode =
                     nodeRegistry
                         .GetOrCreate(
                             end.Point,
-                            raw.Trace.Id);
+                            raw.Trace);
 
                 if (
                     fromNode ==
                     toNode)
+                {
+                    continue;
+                }
+
+                // Geometry must use the very same coordinates as the graph
+                // nodes. Otherwise linked splines can retain visible gaps.
+                var canonicalStart = nodeRegistry.Nodes[fromNode - 1].Position;
+                var canonicalEnd = nodeRegistry.Nodes[toNode - 1].Position;
+                var canonicalLength = canonicalStart.DistanceTo(canonicalEnd);
+                if (canonicalLength < minimumSegmentLengthMeters)
                 {
                     continue;
                 }
@@ -243,9 +253,9 @@ public sealed class MapStudioRoadGraphBuilder
                         fromNode,
                         toNode,
                         raw.Trace,
-                        start.Point,
-                        end.Point,
-                        length));
+                        canonicalStart,
+                        canonicalEnd,
+                        canonicalLength));
             }
         }
 
@@ -498,6 +508,13 @@ public sealed class MapStudioRoadGraphBuilder
                 new SplitPoint(
                     Clamp01(rightT),
                     intersection));
+        }
+
+        // Endpoint-to-interior projection must obey the same grade
+        // separation constraints as a synthetic crossing.
+        if (!CanCreateInteriorIntersection(left, right))
+        {
+            return;
         }
 
         AddEndpointProjection(
@@ -918,20 +935,25 @@ public sealed class MapStudioRoadGraphBuilder
 
         public int GetOrCreate(
             MapStudioRoadPoint point,
-            string traceId)
+            MapStudioRoadTrace trace)
         {
             foreach (
                 var node in
                     _nodes)
             {
-                if (
-                    node.Position
-                        .DistanceTo(
-                            point) <=
-                    tolerance)
+                var distance = node.Position.DistanceTo(point);
+                // Preserve explicit coincident endpoints (e.g. a bridge
+                // approach), but do not invent a near join across levels.
+                if (distance <= tolerance &&
+                    (distance <= Epsilon || node.Traces.All(existing =>
+                        string.Equals(existing.Id, trace.Id, StringComparison.OrdinalIgnoreCase) ||
+                        ((existing.Layer ?? 0) == (trace.Layer ?? 0) &&
+                         existing.Bridge == trace.Bridge && existing.Tunnel == trace.Tunnel))))
                 {
-                    node.TraceIds.Add(
-                        traceId);
+                    if (node.TraceIds.Add(trace.Id))
+                    {
+                        node.Traces.Add(trace);
+                    }
 
                     return node.Id;
                 }
@@ -945,8 +967,9 @@ public sealed class MapStudioRoadGraphBuilder
                         StringComparer
                             .OrdinalIgnoreCase)
                     {
-                        traceId
-                    });
+                        trace.Id
+                    },
+                    [trace]);
 
             _nodes.Add(
                 created);
@@ -958,5 +981,6 @@ public sealed class MapStudioRoadGraphBuilder
     private sealed record MutableNode(
         int Id,
         MapStudioRoadPoint Position,
-        HashSet<string> TraceIds);
+        HashSet<string> TraceIds,
+        List<MapStudioRoadTrace> Traces);
 }

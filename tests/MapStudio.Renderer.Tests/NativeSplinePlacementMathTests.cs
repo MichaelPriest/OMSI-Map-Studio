@@ -560,7 +560,7 @@ public sealed class
             shape!.IsCurved);
 
         Assert.True(
-            shape.Radius >
+            shape.Radius <
             0);
 
         Assert.True(
@@ -629,5 +629,78 @@ public sealed class
             0,
             shape.Radius,
             6);
+    }
+
+    [Theory]
+    [InlineData(40, 0, 8)]
+    [InlineData(40, 0, -8)]
+    [InlineData(0, 40, 8)]
+    [InlineData(-30, 40, -8)]
+    public void CurveHandleMatchesRenderedArcAndEndpoint(
+        float dx, float dz, double offset)
+    {
+        var start = new Vector3(315, 12, -280);
+        var end = start + new Vector3(dx, 4, dz);
+        var handle = NativeSplineCurveHandleMath.CreateHandlePoint(start, end, offset);
+        Assert.True(NativeSplinePlacementMath.TryGetCurveOffsetFromControlPoint(
+            start, end, handle, out var measuredOffset));
+        Assert.True(NativeSplinePlacementMath.TryCreateArcFromOffset(
+            start, end, measuredOffset, out var shape));
+        Assert.NotNull(shape);
+        var spline = new OmsiPlacedSpline(
+            "0", "road.sli", 1, -1, -1, start.X, start.Z, start.Y,
+            shape!.Rotation, shape.Length, shape.Radius,
+            shape.GradientStart, shape.GradientEnd, false, []);
+        var entity = new NativeSplineEntity(
+            new PickingId(PickingKind.Spline, 1),
+            new OmsiTileReference(1, -1, "tile_1_-1.map"),
+            spline, start.X, start.Y, start.Z);
+        var middle = NativeSplinePathMath.GetFrame(entity, shape.Length / 2).Center;
+        var finish = NativeSplinePathMath.GetFrame(entity, shape.Length).Center;
+        Assert.InRange(Vector3.Distance(middle, handle), 0, 0.001f);
+        Assert.InRange(Vector3.Distance(finish, end), 0, 0.001f);
+        Assert.Equal(measuredOffset,
+            NativeSplineEndpointEditMath.EstimateCurveOffset(shape), 6);
+    }
+
+    [Theory]
+    [InlineData(20, 20, 20)]
+    [InlineData(-20, 20, -20)]
+    [InlineData(0, 20, 0)]
+    public void AutomaticContinuationKeepsHeadingAndReachesEnd(
+        float x, float z, double expectedRadius)
+    {
+        var start = new Vector3(310, 2, -250);
+        var end = start + new Vector3(x, 3, z);
+        Assert.True(NativeSplinePlacementMath.TryCreateTangentArc(
+            start, end, Vector3.UnitZ, out var shape));
+        Assert.NotNull(shape);
+        Assert.Equal(expectedRadius, shape!.Radius, 6);
+        Assert.Equal(0, shape.Rotation, 6);
+        var spline = new OmsiPlacedSpline(
+            "0", "road.sli", 1, -1, -1, start.X, start.Z, start.Y,
+            shape.Rotation, shape.Length, shape.Radius,
+            shape.GradientStart, shape.GradientEnd, false, []);
+        var entity = new NativeSplineEntity(
+            new PickingId(PickingKind.Spline, 1),
+            new OmsiTileReference(1, -1, "tile_1_-1.map"),
+            spline, start.X, start.Y, start.Z);
+        Assert.InRange(Vector3.Distance(
+            NativeSplinePathMath.GetFrame(entity, 0).Forward, Vector3.UnitZ),
+            0, 0.001f);
+        Assert.InRange(Vector3.Distance(
+            NativeSplinePathMath.GetFrame(entity, shape.Length).Center, end),
+            0, 0.001f);
+    }
+
+    [Theory]
+    [InlineData(0, -20)]
+    [InlineData(2, 2)]
+    [InlineData(10, -10)]
+    public void AutomaticContinuationRejectsHooksAndReversal(float x, float z)
+    {
+        Assert.False(NativeSplinePlacementMath.TryCreateTangentArc(
+            Vector3.Zero, new Vector3(x, 0, z), Vector3.UnitZ, out var shape));
+        Assert.Null(shape);
     }
 }

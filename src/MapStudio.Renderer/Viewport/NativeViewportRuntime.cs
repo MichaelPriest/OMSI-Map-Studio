@@ -329,8 +329,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var shape =
             _splinePlacementShape;
 
+        if (shape is not null && _splinePlacementStage == NativeSplinePlacementStage.AwaitingEnd)
+        {
+            value = shape.Continuation?.End ?? shape.End;
+        }
         var length =
-            shape?.Length ??
+            shape?.TotalLength ??
             Math.Sqrt(
                 Math.Pow(
                     value.X -
@@ -1504,12 +1508,12 @@ public sealed class NativeViewportRuntime : IDisposable
             _splineEasyRoadEnabled &&
             !_splinePlacementIsHeight)
         {
-            NativeSplinePlacementMath
-                .TryCreateArcFromOffset(
-                    start,
-                    endPoint,
-                    _splineEasyRoadCurveOffset,
-                    out shape);
+            var nextId = _splineNextId;
+            if (_splinePlacementStage == NativeSplinePlacementStage.AwaitingEnd)
+            {
+                nextId = ResolveSplineEndSnap(Scene, ref endPoint)?.SplineId ?? -1;
+            }
+            TryCreateEasyRoadShape(start, endPoint, nextId, out shape);
         }
         else
         {
@@ -1612,14 +1616,14 @@ public sealed class NativeViewportRuntime : IDisposable
 
         NativeSplinePlacementShape? shape;
 
+        var nextId = _splineNextId;
+        if (_splinePlacementStage == NativeSplinePlacementStage.AwaitingEnd)
+        {
+            nextId = ResolveSplineEndSnap(Scene, ref endPoint)?.SplineId ?? -1;
+        }
         var valid =
             _splineEasyRoadEnabled
-                ? NativeSplinePlacementMath
-                    .TryCreateArcFromOffset(
-                        start,
-                        endPoint,
-                        _splineEasyRoadCurveOffset,
-                        out shape)
+                ? TryCreateEasyRoadShape(start, endPoint, nextId, out shape)
                 : NativeSplinePlacementMath
                     .TryCreateStraight(
                         start,
@@ -1668,6 +1672,20 @@ public sealed class NativeViewportRuntime : IDisposable
         if (
             !_splinePlacementActive ||
             Scene is null)
+        {
+            return false;
+        }
+
+        if (previousSplineId >= 0)
+        {
+            if (!NativeSplineEndpointSnapFinder.TryResolveContinuationStart(
+                    Scene, previousSplineId, out start))
+            {
+                return false;
+            }
+        }
+
+        if (!float.IsFinite(start.X) || !float.IsFinite(start.Y) || !float.IsFinite(start.Z))
         {
             return false;
         }
@@ -1853,16 +1871,17 @@ public sealed class NativeViewportRuntime : IDisposable
                 NativeSplinePlacementStage.AwaitingEnd &&
             _splineStartWorld is { } start)
         {
+            // Use the same endpoint snap and elevation rules for the ghost
+            // as for the click that commits the road. Keep the raw pointer
+            // above so advancing the placement resolves it exactly once.
+            var previewSnap = ResolveSplineEndSnap(Scene, ref point);
+
             if (
                 _splineEasyRoadEnabled &&
                 !_splinePlacementIsHeight)
             {
-                NativeSplinePlacementMath
-                    .TryCreateArcFromOffset(
-                        start,
-                        point,
-                        _splineEasyRoadCurveOffset,
-                        out shape);
+                TryCreateEasyRoadShape(start, point,
+                    previewSnap?.SplineId ?? -1, out shape);
             }
             else
             {
@@ -1940,6 +1959,161 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    private bool TryCreateEasyRoadShape(
+        Vector3 start, Vector3 end, int nextSplineId,
+        out NativeSplinePlacementShape? shape)
+    {
+        // An explicitly adjusted bend remains a manual operation.
+        // Automatic continuation is used only when no offset was requested.
+        if (Math.Abs(_splineEasyRoadCurveOffset) >= 0.05 ||
+            Scene is not { } scene || !_splineAutoConnectEnabled)
+        {
+            return NativeSplinePlacementMath.TryCreateArcFromOffset(
+                start, end, _splineEasyRoadCurveOffset, out shape);
+        }
+
+        var previous = _splinePreviousId < 0 ? null : scene.Splines
+            .FirstOrDefault(s => s.Spline.SplineId == _splinePreviousId);
+        var next = nextSplineId < 0 ? null : scene.Splines
+            .FirstOrDefault(s => s.Spline.SplineId == nextSplineId);
+        if (previous is not null && next is not null)
+        {
+            var a = NativeSplinePathMath.GetFrame(previous, previous.Spline.Length);
+            var b = NativeSplinePathMath.GetFrame(next, 0);
+            a = a with { Center = start };
+            b = b with { Center = end };
+            if (NativeSplineCompleteToSolver.TrySolveShape(a, b, double.MaxValue, out shape, out _))
+            {
+                return true;
+            }
+            if (string.Equals(previous.Spline.SplinePath, _placementSplinePath, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(next.Spline.SplinePath, _placementSplinePath, StringComparison.OrdinalIgnoreCase) &&
+                NativeSplineCompleteToSolver.TrySolveBiarc(a, b, double.MaxValue, out var first, out var second) &&
+                first is not null && second is not null && scene.Tiles.Any(tile =>
+                    tile.Reference.X == (int)Math.Floor(second.Start.X / OmsiTileGrid.TileSize) &&
+                    tile.Reference.Y == (int)Math.Floor(second.Start.Z / OmsiTileGrid.TileSize)))
+            {
+                shape = first with { Continuation = second };
+                return true;
+            }
+            shape = null;
+            return false;
+        }
+
+        if (previous is not null)
+        {
+            var frame = NativeSplinePathMath.GetFrame(previous, previous.Spline.Length);
+            return NativeSplinePlacementMath.TryCreateTangentArc(
+                start, end, frame.Forward, out shape);
+        }
+
+        if (next is not null)
+        {
+            var frame = NativeSplinePathMath.GetFrame(next, 0);
+            if (!NativeSplinePlacementMath.TryCreateTangentArc(
+                    end, start, -frame.Forward, out var reversed) ||
+                reversed is null)
+            {
+                shape = null;
+                return false;
+            }
+
+            var endHeading = reversed.Rotation + (reversed.IsCurved
+                ? reversed.Length / reversed.Radius * 180 / Math.PI : 0);
+            shape = new NativeSplinePlacementShape(start, end,
+                ((endHeading + 180) % 360 + 360) % 360,
+                reversed.Length, -reversed.Radius, -reversed.GradientEnd,
+                -reversed.GradientStart, reversed.IsCurved);
+            return true;
+        }
+
+        return NativeSplinePlacementMath.TryCreateStraight(start, end, out shape);
+    }
+
+    private NativeSplineEndpointSnap? ResolveSplineEndSnap(
+        NativeSceneSnapshot scene,
+        ref Vector3 point)
+    {
+        NativeSplineEndpointSnap?
+            endSnap =
+                null;
+
+        if (
+            _splineEndpointSnapEnabled &&
+            !_splinePlacementIsHeight)
+        {
+            endSnap =
+                NativeSplineEndpointSnapFinder
+                    .FindFreeEndpoint(
+                        scene,
+                        point,
+                        NativeSplineEndpointKind.Start,
+                        _splineEndpointSnapDistance,
+                        _splinePreviousId);
+
+            if (endSnap is not null)
+            {
+                var snappedPoint =
+                    endSnap.WorldPoint;
+
+                if (
+                    _splineElevationMode ==
+                        NativeRoadElevationMode
+                            .FollowTerrain ||
+                    _splineStartWorld is not
+                        { } snapStart)
+                {
+                    point =
+                        snappedPoint;
+                }
+                else
+                {
+                    var terrainHeightAtSnap =
+                        point.Y;
+
+                    if (
+                        NativeTerrainSampler
+                            .TryGetHeightAtWorldPoint(
+                                scene,
+                                snappedPoint.X,
+                                snappedPoint.Z,
+                                out var sampledHeight))
+                    {
+                        terrainHeightAtSnap =
+                            (float)
+                                sampledHeight;
+                    }
+
+                    point =
+                        new Vector3(
+                            snappedPoint.X,
+                            NativeSplinePlacementMath
+                                .ResolveRoadEndpointHeight(
+                                    terrainHeightAtSnap,
+                                    snapStart.Y,
+                                    _splineElevationMode,
+                                    _splineElevationOffset),
+                            snappedPoint.Z);
+
+                    if (
+                        Math.Abs(
+                            point.Y -
+                            snappedPoint.Y) >
+                        0.25f)
+                    {
+                        // Keep horizontal snap, but do not create
+                        // an invalid Previous/Next connection across
+                        // a vertical gap chosen by the elevation mode.
+                        endSnap =
+                            null;
+                    }
+                }
+            }
+        }
+
+        return endSnap;
+    }
+
     public bool TryAdvanceSplinePlacement(
         uint pixelX,
         uint pixelY,
@@ -1996,8 +2170,10 @@ public sealed class NativeViewportRuntime : IDisposable
                 }
             }
 
-            _splineStartWorld =
-                point;
+            _splineStartWorld = point;
+            _splinePointerWorld = point;
+            _splineEndWorld = null;
+            _splinePlacementShape = null;
 
             _splinePreviousId =
                 _splineAutoConnectEnabled &&
@@ -2036,82 +2212,7 @@ public sealed class NativeViewportRuntime : IDisposable
             _splinePlacementStage ==
             NativeSplinePlacementStage.AwaitingEnd)
         {
-            NativeSplineEndpointSnap?
-                endSnap =
-                    null;
-
-            if (
-                _splineEndpointSnapEnabled &&
-                !_splinePlacementIsHeight)
-            {
-                endSnap =
-                    NativeSplineEndpointSnapFinder
-                        .FindFreeEndpoint(
-                            Scene,
-                            point,
-                            NativeSplineEndpointKind.Start,
-                            _splineEndpointSnapDistance,
-                            _splinePreviousId);
-
-                if (endSnap is not null)
-                {
-                    var snappedPoint =
-                        endSnap.WorldPoint;
-
-                    if (
-                        _splineElevationMode ==
-                            NativeRoadElevationMode
-                                .FollowTerrain ||
-                        _splineStartWorld is not
-                            { } snapStart)
-                    {
-                        point =
-                            snappedPoint;
-                    }
-                    else
-                    {
-                        var terrainHeightAtSnap =
-                            point.Y;
-
-                        if (
-                            NativeTerrainSampler
-                                .TryGetHeightAtWorldPoint(
-                                    Scene,
-                                    snappedPoint.X,
-                                    snappedPoint.Z,
-                                    out var sampledHeight))
-                        {
-                            terrainHeightAtSnap =
-                                (float)
-                                    sampledHeight;
-                        }
-
-                        point =
-                            new Vector3(
-                                snappedPoint.X,
-                                NativeSplinePlacementMath
-                                    .ResolveRoadEndpointHeight(
-                                        terrainHeightAtSnap,
-                                        snapStart.Y,
-                                        _splineElevationMode,
-                                        _splineElevationOffset),
-                                snappedPoint.Z);
-
-                        if (
-                            Math.Abs(
-                                point.Y -
-                                snappedPoint.Y) >
-                            0.25f)
-                        {
-                            // Keep horizontal snap, but do not create
-                            // an invalid Previous/Next connection across
-                            // a vertical gap chosen by the elevation mode.
-                            endSnap =
-                                null;
-                        }
-                    }
-                }
-            }
+            var endSnap = ResolveSplineEndSnap(Scene, ref point);
 
             _splineNextId =
                 _splineAutoConnectEnabled &&
@@ -2132,12 +2233,7 @@ public sealed class NativeViewportRuntime : IDisposable
             var endShapeValid =
                 _splineEasyRoadEnabled &&
                 !_splinePlacementIsHeight
-                    ? NativeSplinePlacementMath
-                        .TryCreateArcFromOffset(
-                            start,
-                            point,
-                            _splineEasyRoadCurveOffset,
-                            out endShape)
+                    ? TryCreateEasyRoadShape(start, point, _splineNextId, out endShape)
                     : NativeSplinePlacementMath
                         .TryCreateStraight(
                             start,
@@ -2148,7 +2244,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 !endShapeValid ||
                 endShape is null)
             {
-                status = "Ponto final inválido.";
+                status = "Ponto inicial mantido. Escolha outro ponto final ou ajuste a curva/conexão automática.";
                 return false;
             }
 
@@ -2185,7 +2281,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 RenderInitialFrame();
 
                 status =
-                    endShape.IsCurved
+                    endShape.Continuation is not null
+                        ? $"Conexão em dois arcos tangentes · {endShape.TotalLength:F1} m. Confirme a Estrada fácil."
+                        : endShape.IsCurved
                         ? $"Fim definido · offset {_splineEasyRoadCurveOffset:+0.0;-0.0;0.0} m. Ajuste os pontos/curva e confirme."
                         : "Fim definido. Ajuste os pontos se necessário e confirme a Estrada fácil.";
 
@@ -2535,7 +2633,9 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         status =
-            shape.IsCurved
+            shape.Continuation is not null
+                ? "Estrada fácil: conexão em dois arcos confirmada."
+                : shape.IsCurved
                 ? "Estrada fácil curva confirmada."
                 : "Estrada fácil reta confirmada.";
 
@@ -9415,29 +9515,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         point.Y = height;
 
-        if (
-            _splinePlacementActive &&
-            SnapEnabled)
-        {
-            var endpointSnapDistance =
-                Math.Clamp(
-                    Navigation.Distance *
-                    0.003f,
-                    0.5f,
-                    3.0f);
-
-            if (
-                NativeSplineEndpointSnapper
-                    .TrySnap(
-                        Scene,
-                        point,
-                        endpointSnapDistance,
-                        out var snapped))
-            {
-                point =
-                    snapped;
-            }
-        }
+        // Road endpoints are resolved once, by the placement stage.
 
         var tileX =
             (int)Math.Floor(
@@ -9716,7 +9794,7 @@ public sealed class NativeViewportRuntime : IDisposable
             return null;
         }
 
-        return new NativeSplinePlacementRequest(
+        var request = new NativeSplinePlacementRequest(
             tile.Reference,
             _placementSplinePath,
             _splinePreviousId,
@@ -9735,6 +9813,20 @@ public sealed class NativeViewportRuntime : IDisposable
             shape.End,
             _splineNextId,
             _splinePlacementIsHeight);
+
+        if (shape.Continuation is { } next)
+        {
+            var continuation = CreateSplinePlacementRequest(next);
+            if (continuation is null || _splinePreviousId < 0 || _splineNextId < 0)
+            {
+                return null;
+            }
+            request = request with
+            {
+                Continuation = continuation with { PreviousSplineId = -1, NextSplineId = -1 }
+            };
+        }
+        return request;
     }
 
     private static bool TryResolveIndexedAssetPath(
