@@ -218,4 +218,30 @@ public sealed class NativeSplineEndpointSnapFinderTests
             10,
             snap!.SplineId);
     }
+
+    [Fact]
+    public void ContinuationUsesActualPersistedCurveEndpointAndHeight()
+    {
+        var spline = new NativeSplineEntity(new PickingId(PickingKind.Spline, 42),
+            new OmsiTileReference(0, 0, "tile.map"),
+            new OmsiPlacedSpline("0", "road.sli", 42, -1, -1, 290, 30, 8,
+                90, 20, 0, 10, 10, false, []), 290, 8, 30);
+        var scene = new NativeSceneSnapshot([], [], [spline], []);
+        Assert.True(NativeSplineEndpointSnapFinder.TryResolveContinuationStart(scene, 42, out var start));
+        Assert.Equal(310, start.X, 4);
+        Assert.Equal(10, start.Y, 4);
+        Assert.Equal(30, start.Z, 4);
+        Assert.False(NativeSplineEndpointSnapFinder.TryResolveContinuationStart(scene, 99, out _));
+    }
+
+    [Fact]
+    public void ContinuationRefusesAnAlreadyOccupiedSource()
+    {
+        var spline = new NativeSplineEntity(new PickingId(PickingKind.Spline, 42),
+            new OmsiTileReference(0, 0, "tile.map"),
+            new OmsiPlacedSpline("0", "road.sli", 42, -1, 99, 0, 0, 0,
+                0, 20, 0, 0, 0, false, []), 0, 0, 0);
+        var scene = new NativeSceneSnapshot([], [], [spline], []);
+        Assert.False(NativeSplineEndpointSnapFinder.TryResolveContinuationStart(scene, 42, out _));
+    }
 }

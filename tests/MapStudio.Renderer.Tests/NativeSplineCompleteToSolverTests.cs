@@ -251,6 +251,8 @@ public sealed class NativeSplineCompleteToSolverTests
                         0,
                         0,
                         "tile_0_0.map"),
+                    OmsiTileContent.Missing),
+                new NativeSceneTile(new OmsiTileReference(-1, 0, "tile_-1_0.map"),
                     OmsiTileContent.Missing)
             ],
             [],

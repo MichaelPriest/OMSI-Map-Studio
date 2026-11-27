@@ -1676,6 +1676,20 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
+        if (previousSplineId >= 0)
+        {
+            if (!NativeSplineEndpointSnapFinder.TryResolveContinuationStart(
+                    Scene, previousSplineId, out start))
+            {
+                return false;
+            }
+        }
+
+        if (!float.IsFinite(start.X) || !float.IsFinite(start.Y) || !float.IsFinite(start.Z))
+        {
+            return false;
+        }
+
         var tileX =
             (int)Math.Floor(
                 start.X /
@@ -2156,8 +2170,10 @@ public sealed class NativeViewportRuntime : IDisposable
                 }
             }
 
-            _splineStartWorld =
-                point;
+            _splineStartWorld = point;
+            _splinePointerWorld = point;
+            _splineEndWorld = null;
+            _splinePlacementShape = null;
 
             _splinePreviousId =
                 _splineAutoConnectEnabled &&
@@ -2228,7 +2244,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 !endShapeValid ||
                 endShape is null)
             {
-                status = "Não foi possível construir uma curva compatível. Afaste o ponto, ajuste a curva ou desative a conexão automática.";
+                status = "Ponto inicial mantido. Escolha outro ponto final ou ajuste a curva/conexão automática.";
                 return false;
             }
 
@@ -9499,29 +9515,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         point.Y = height;
 
-        if (
-            _splinePlacementActive &&
-            SnapEnabled)
-        {
-            var endpointSnapDistance =
-                Math.Clamp(
-                    Navigation.Distance *
-                    0.003f,
-                    0.5f,
-                    3.0f);
-
-            if (
-                NativeSplineEndpointSnapper
-                    .TrySnap(
-                        Scene,
-                        point,
-                        endpointSnapDistance,
-                        out var snapped))
-            {
-                point =
-                    snapped;
-            }
-        }
+        // Road endpoints are resolved once, by the placement stage.
 
         var tileX =
             (int)Math.Floor(

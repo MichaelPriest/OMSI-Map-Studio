@@ -3633,6 +3633,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var originalAsset = GetSelectedAssetLibraryEntry();
         try
         {
             PlaceAssetButton.Content =
@@ -3688,8 +3689,8 @@ public sealed partial class MainWindow : Window
             RedoButton.IsEnabled =
                 false;
 
-            var selectedAsset =
-                GetSelectedAssetLibraryEntry();
+            var selectedAsset = originalAsset;
+
 
             var canContinue =
                 !request.IsHeightSpline &&
@@ -3697,8 +3698,8 @@ public sealed partial class MainWindow : Window
                     0 &&
                 SplineContinuousCheckBox.IsChecked ==
                     true &&
-                selectedAsset?.Kind ==
-                    OmsiAssetKind.Spline;
+                selectedAsset?.Kind == OmsiAssetKind.Spline &&
+                string.Equals(selectedAsset.RelativePath, request.SplinePath, StringComparison.OrdinalIgnoreCase);
 
             if (canContinue)
             {
@@ -3727,6 +3728,11 @@ public sealed partial class MainWindow : Window
 
                     return;
                 }
+
+                Viewport.CancelSplinePlacement();
+                PlaceAssetButton.IsEnabled = true;
+                StatusText.Text = "Rua salva, mas a extremidade não está disponível no tile carregado para continuar. Reabra o trecho e selecione o endpoint.";
+                return;
             }
 
             PlaceAssetButton.IsEnabled =
