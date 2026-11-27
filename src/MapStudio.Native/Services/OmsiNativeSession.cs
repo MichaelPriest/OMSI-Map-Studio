@@ -1,3 +1,5 @@
+using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.IO;
 using MapStudio.Core.Omsi.Config;
@@ -458,6 +460,68 @@ public sealed class OmsiNativeSession
             georeference.Zoom,
             mapType,
             "Google Maps");
+    }
+
+    public async Task<NativeGoogleMapReference> LoadOpenStreetMapReferenceAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var snapshot = CurrentMap ?? throw new InvalidOperationException("Nenhum mapa OMSI está aberto.");
+        var geo = await LoadMapGeoreferenceAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("mapGeoreferenceRequired");
+        ValidateGeoreference(geo);
+        var focus = snapshot.ActiveTile ?? snapshot.Tiles.FirstOrDefault()?.Reference
+            ?? throw new InvalidDataException("mapReferenceCoverageRequired");
+        var nearby = snapshot.Tiles.Select(t => t.Reference)
+            .Where(t => Math.Abs((long)t.X - focus.X) <= 1 && Math.Abs((long)t.Y - focus.Y) <= 1)
+            .Append(focus).ToArray();
+        var minTileX = nearby.Min(t => t.X);
+        var minTileY = nearby.Min(t => t.Y);
+        var maxTileX = nearby.Max(t => t.X);
+        var maxTileY = nearby.Max(t => t.Y);
+        const int pixelsPerTile = 512;
+        var metersPerPixel = OmsiTileGrid.TileSize / (double)pixelsPerTile;
+        var minX = OmsiTileGrid.GetOriginX(minTileX);
+        var minZ = OmsiTileGrid.GetOriginZ(minTileY);
+        var width = (maxTileX - minTileX + 1) * pixelsPerTile;
+        var height = (maxTileY - minTileY + 1) * pixelsPerTile;
+        var anchor = new MapStudioGeographicAnchor(geo.Latitude, geo.Longitude,
+            OmsiTileGrid.GetOriginX(geo.AnchorTileX) + geo.AnchorX,
+            OmsiTileGrid.GetOriginZ(geo.AnchorTileY) + geo.AnchorY);
+        var nw = MapStudioGeographicProjection.Unproject(anchor, new MapStudioRoadPoint(minX, minZ));
+        var se = MapStudioGeographicProjection.Unproject(anchor, new MapStudioRoadPoint(
+            minX + width * metersPerPixel, minZ + height * metersPerPixel));
+        var cache = Path.Combine(OmsiRootPath ?? throw new InvalidOperationException("omsiRootRequired"),
+            ".mapstudio", "cache", "osm");
+        var download = await new MapStudioLayeredOsmSceneClient().DownloadAsync(
+            se.Latitude, nw.Longitude, nw.Latitude, se.Longitude, cache, cancellationToken).ConfigureAwait(false);
+        if (download.FailedChunkCount > 0 || download.SuccessfulChunkCount == 0)
+            throw new InvalidDataException("Referência OSM incompleta: tente novamente quando o serviço estiver disponível.");
+        var image = await Task.Run(() => MapStudioOsmVectorReferenceRaster.RenderPng(
+            download.OsmXml, anchor, minX, minZ, width, height, metersPerPixel), cancellationToken).ConfigureAwait(false);
+        var imageRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OMSI Map Studio", "reference-cache", "osm-vector-v1");
+        Directory.CreateDirectory(imageRoot);
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(image));
+        var path = Path.Combine(imageRoot, hash + ".png");
+        if (!File.Exists(path))
+        {
+            var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                await File.WriteAllBytesAsync(temp, image, cancellationToken).ConfigureAwait(false);
+                File.Move(temp, path, overwrite: true);
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
+        var centerX = minX + width * metersPerPixel / 2;
+        var centerZ = minZ + height * metersPerPixel / 2;
+        return new NativeGoogleMapReference(path, width, height, metersPerPixel,
+            centerX, centerZ, geo.Latitude, geo.Longitude, geo.Zoom, "osm-vector",
+            "© OpenStreetMap contributors · ODbL · openstreetmap.org/copyright")
+        {
+            Tiles = new[] { new NativeMapReferenceTile(path, width, height, metersPerPixel,
+                centerX, centerZ, focus.X, focus.Y) }
+        };
     }
 
     public async Task<NativeGoogleMapReference>

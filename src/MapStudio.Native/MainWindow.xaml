@@ -3312,11 +3312,20 @@
                                                       SelectedIndex="0"
                                                       HorizontalAlignment="Stretch"
                                                       SelectionChanged="OnRealMapProviderChanged">
-                                                <ComboBoxItem Content="CARTO / OpenStreetMap · API key CARTO" />
+                                                <ComboBoxItem Content="OpenStreetMap · sem API key" />
                                                 <ComboBoxItem Content="Google Maps · chave do usuário" />
+                                                <ComboBoxItem Content="CARTO · chave do usuário" />
+                                                <ComboBoxItem Content="Esri World Imagery · visualização licenciada" />
                                             </ComboBox>
 
+                                            <CheckBox x:Name="RealMapEsriLicenseCheckBox"
+                                                      Content="Tenho autorização/licença para visualizar Esri World Imagery"
+                                                      ToolTipService.ToolTip="A Esri exige licença e atribuição; somente visualização online, sem exportação ou cache offline."
+                                                      IsChecked="False" />
+                                            <TextBlock Text="OpenStreetMap: referência 3D vetorial gerada localmente, sem chave. Esri: somente visualização autorizada no seletor."
+                                                       TextWrapping="Wrap" FontSize="10" />
                                             <StackPanel x:Name="RealMapCartoKeyPanel"
+                                                        Visibility="Collapsed"
                                                         Spacing="7">
                                                 <PasswordBox x:Name="RealMapCartoKeyBox"
                                                              Header="Chave CARTO Basemaps"

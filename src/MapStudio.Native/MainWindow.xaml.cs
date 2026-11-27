@@ -27594,11 +27594,16 @@ public sealed partial class MainWindow : Window
                     .TryGetGoogleMapsApiKey()
                 : null;
 
-        var cartoKey =
-            google
-                ? null
-                : NativeMapCredentialStore
-                    .TryGetCartoBasemapsApiKey();
+        var esri = RealMapProviderBox.SelectedIndex == 3;
+        if (esri && RealMapEsriLicenseCheckBox.IsChecked != true)
+        {
+            RealMapProviderBox.SelectedIndex = 0;
+            esri = false;
+            StatusText.Text = "Esri: selecione apenas se possuir autorização de uso. OpenStreetMap não exige chave.";
+        }
+        var cartoKey = RealMapProviderBox.SelectedIndex == 2
+            ? NativeMapCredentialStore.TryGetCartoBasemapsApiKey()
+            : null;
 
         if (
             google &&
@@ -27611,17 +27616,14 @@ public sealed partial class MainWindow : Window
             google =
                 false;
 
-            cartoKey =
-                NativeMapCredentialStore
-                    .TryGetCartoBasemapsApiKey();
+            cartoKey = null;
 
             StatusText.Text =
-                "Google Maps: salve primeiro uma API key. O seletor voltou para CARTO/OpenStreetMap.";
+                "Google Maps: salve uma API key. O seletor voltou para OpenStreetMap sem chave.";
         }
         else if (
-            !google &&
-            string.IsNullOrWhiteSpace(
-                cartoKey))
+            RealMapProviderBox.SelectedIndex == 2 &&
+            string.IsNullOrWhiteSpace(cartoKey))
         {
             StatusText.Text =
                 "CARTO: informe a API key no campo acima. Enquanto isso, o seletor usa OpenStreetMap como fallback.";
@@ -27636,7 +27638,8 @@ public sealed partial class MainWindow : Window
                 googleKey,
                 cartoKey,
                 _realMapSelectionFractionX,
-                _realMapSelectionFractionY));
+                _realMapSelectionFractionY,
+                esri));
     }
 
     private static string BuildRealMapAreaPickerHtml(
@@ -27647,7 +27650,8 @@ public sealed partial class MainWindow : Window
         string? googleKey,
         string? cartoApiKey,
         double selectionFractionX,
-        double selectionFractionY)
+        double selectionFractionY,
+        bool esri = false)
     {
         var lat =
             latitude.ToString(
@@ -27756,14 +27760,16 @@ function initMap() {
                 string.Empty);
 
         var tileUrl =
+            esri ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?blankTile=false" :
             hasCartoKey
                 ? $"https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}{{r}}.png?key={cartoKey}"
                 : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
         var attribution =
+            esri ? "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" :
             hasCartoKey
-                ? "&copy; OpenStreetMap contributors &copy; CARTO"
-                : "&copy; OpenStreetMap contributors";
+                ? "© OpenStreetMap contributors © CARTO"
+                : "© OpenStreetMap contributors · https://www.openstreetmap.org/copyright";
 
         return $$"""
 <!doctype html>
@@ -27784,8 +27790,8 @@ html,body,#map { width:100%; height:100%; margin:0; overflow:hidden; background:
 const map = L.map('map', { zoomControl:true }).setView([{{lat}}, {{lon}}], {{zoom}});
 L.tileLayer('{{tileUrl}}', {
   subdomains:'abcd',
-  maxZoom:20,
-  attribution:'{{attribution}}'
+  maxZoom:{{(esri ? 21 : 19)}},
+  attribution:{{JsonSerializer.Serialize(attribution)}}
 }).addTo(map);
 
 let selectionFx = {{selectionX}}, selectionFy = {{selectionY}};
@@ -28246,7 +28252,7 @@ setTimeout(postBounds, 250);
 
         var carto =
             RealMapProviderBox.SelectedIndex ==
-                0;
+                2;
 
         RealMapCartoKeyPanel.Visibility =
             carto
@@ -28612,14 +28618,14 @@ setTimeout(postBounds, 250);
                             _realMapAreaZoom,
                             11,
                             19),
-                        RealMapProviderBox.SelectedIndex ==
-                            1
-                            ? "roadmap"
-                            : "roadmap",
-                        RealMapProviderBox.SelectedIndex ==
-                            1
-                            ? "Google Maps"
-                            : "CARTO Positron / OpenStreetMap"));
+                        RealMapProviderBox.SelectedIndex == 3 ? "satellite" : "roadmap",
+                        RealMapProviderBox.SelectedIndex switch
+                        {
+                            1 => "Google Maps",
+                            2 => "CARTO",
+                            3 => "Esri World Imagery (online preview)",
+                            _ => "OpenStreetMap"
+                        }));
 
             var minimumDx =
                 OmsiTileGrid
@@ -29217,28 +29223,15 @@ setTimeout(postBounds, 250);
                     .LoadGoogleMapReferenceAsync(
                         key);
         }
+        else if (RealMapProviderBox.SelectedIndex == 2 &&
+            NativeMapCredentialStore.TryGetCartoBasemapsApiKey() is { Length: > 0 } key)
+        {
+            cartoApiKey = key;
+            reference = await _session.LoadCartoReferenceAsync(key);
+        }
         else
         {
-            var key =
-                NativeMapCredentialStore
-                    .TryGetCartoBasemapsApiKey();
-
-            if (
-                string.IsNullOrWhiteSpace(
-                    key))
-            {
-                StatusText.Text =
-                    "Referência visual CARTO não aplicada: salve uma chave CARTO Basemaps no painel de criação do mapa real.";
-                return;
-            }
-
-            cartoApiKey =
-                key;
-
-            reference =
-                await _session
-                    .LoadCartoReferenceAsync(
-                        key);
+            reference = await _session.LoadOpenStreetMapReferenceAsync();
         }
 
         ApplyReferenceOverlay(
@@ -29988,11 +29981,10 @@ setTimeout(postBounds, 250);
                     0
             };
 
-        providerBox.Items.Add(
-            "CARTO / OpenStreetMap · API key CARTO");
-
-        providerBox.Items.Add(
-            "Google Maps · API key");
+        providerBox.Items.Add("OpenStreetMap vetorial · sem API key");
+        providerBox.Items.Add("Google Maps · API key");
+        providerBox.Items.Add("CARTO · API key");
+        providerBox.SelectedIndex = 0;
 
         var apiKeyBox =
             new PasswordBox
@@ -30004,8 +29996,7 @@ setTimeout(postBounds, 250);
                         .HasCartoBasemapsApiKey()
                         ? "Chave CARTO já salva · deixe vazio para reutilizar"
                         : "Solicite em carto.com/basemaps/apikey",
-                IsEnabled =
-                    true
+                IsEnabled = false
             };
 
         var saveKeyCheckBox =
@@ -30013,8 +30004,7 @@ setTimeout(postBounds, 250);
             {
                 Content =
                     "Salvar chave CARTO com segurança no Windows",
-                IsEnabled =
-                    true,
+                IsEnabled = false,
                 IsChecked =
                     true
             };
@@ -30038,7 +30028,7 @@ setTimeout(postBounds, 250);
             new TextBlock
             {
                 Text =
-                    "CARTO Basemaps exige API key própria e mantém atribuição OpenStreetMap/CARTO. A chave pode ser solicitada em carto.com/basemaps/apikey. Google Maps usa Maps Static API e requer a chave Google do usuário.",
+                    "OpenStreetMap gera uma referência de ruas e edifícios a partir dos dados vetoriais, sem chave. Google e CARTO são opcionais. A referência gratuita não é fotografia de satélite.",
                 TextWrapping =
                     TextWrapping.Wrap,
                 Opacity =
@@ -30052,8 +30042,7 @@ setTimeout(postBounds, 250);
                     providerBox.SelectedIndex ==
                         1;
 
-                apiKeyBox.IsEnabled =
-                    true;
+                apiKeyBox.IsEnabled = providerBox.SelectedIndex != 0;
 
                 apiKeyBox.Header =
                     google
@@ -30071,8 +30060,7 @@ setTimeout(postBounds, 250);
                             ? "Chave CARTO já salva · deixe vazio para reutilizar"
                             : "Solicite em carto.com/basemaps/apikey";
 
-                saveKeyCheckBox.IsEnabled =
-                    true;
+                saveKeyCheckBox.IsEnabled = providerBox.SelectedIndex != 0;
 
                 saveKeyCheckBox.Content =
                     google
@@ -30156,9 +30144,13 @@ setTimeout(postBounds, 250);
         {
             NativeGoogleMapReference reference;
 
-            if (
-                providerBox.SelectedIndex ==
-                    1)
+            if (providerBox.SelectedIndex == 0)
+            {
+                failureStage = "referência vetorial OpenStreetMap";
+                StatusText.Text = "Gerando referência OpenStreetMap sem chave...";
+                reference = await _session.LoadOpenStreetMapReferenceAsync();
+            }
+            else if (providerBox.SelectedIndex == 1)
             {
                 var enteredApiKey =
                     apiKeyBox.Password
@@ -30653,7 +30645,7 @@ setTimeout(postBounds, 250);
             safeOpacity;
 
         _activeCartoBasemapsApiKey =
-            reference.IsTiledMosaic
+            reference.IsTiledMosaic && reference.MapType != "osm-vector"
                 ? cartoApiKey ??
                     _activeCartoBasemapsApiKey
                 : null;
@@ -30723,24 +30715,27 @@ setTimeout(postBounds, 250);
             return;
         }
 
-        var apiKey =
+        var osm = currentReference.MapType == "osm-vector";
+        if (osm && !_referenceOverlayVisible) return;
+        if (osm && snapshot.ActiveTile is { } active &&
+            currentReference.Tiles.Any(t => t.TileX == active.X && t.TileY == active.Y))
+            return;
+        var apiKey = osm ? null :
             _activeCartoBasemapsApiKey ??
             NativeMapCredentialStore
                 .TryGetCartoBasemapsApiKey();
 
         if (
-            string.IsNullOrWhiteSpace(
-                apiKey))
+            !osm && string.IsNullOrWhiteSpace(apiKey))
         {
             return;
         }
 
         try
         {
-            var refreshed =
-                await _session
-                    .LoadCartoReferenceAsync(
-                        apiKey);
+            var refreshed = osm
+                ? await _session.LoadOpenStreetMapReferenceAsync()
+                : await _session.LoadCartoReferenceAsync(apiKey!);
 
             var previousPaths =
                 currentReference.Tiles
