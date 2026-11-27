@@ -79,3 +79,7 @@ Estrada fácil confirma por padrão tanto no segundo clique quanto ao soltar um 
 ### Desenho numérico de vias
 
 Road Studio > Precisão: definir início no mapa e informar comprimento de arco, raio assinado e direção inicial. Com conexão anterior, a tangente real substitui a direção digitada. Cota final segue modo de elevação; raio zero representa reta. Limites conservadores: 0,5–3000 m, raio mínimo 6 m, arco até 180°. Não encaixa automaticamente o fim para não alterar a geometria exata; conexão final permanece manual. Reutiliza inserção, backup e continuidade existentes. Testes de geometria adicionados; homologação de UI pendente.
+
+### Rotatórias — primeira fase
+
+Road Studio > Rotatória: selecionar SLI de mão única e marcar centro livre; gerar quatro arcos de 90°, com raio de eixo 6–200 m, sentido configurável, cota constante e links cíclicos em uma transação com backup. Amostra 64 pontos para rejeitar terreno ausente ou diferença superior a 1 m. A ferramenta não verifica o sentido das faixas do asset nem evita interseção com vias/objetos existentes. Não recorta ruas, não cria acessos nem adapta terreno: essas são etapas pendentes de paridade. Testes geométricos adicionados.

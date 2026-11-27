@@ -11308,6 +11308,38 @@ public sealed partial class MainWindow : Window
                 : "Ruas: cada segmento será criado separadamente.";
     }
 
+    private bool _roundaboutInserting;
+
+    private async void OnRoadRoundaboutBuildClick(object sender, RoutedEventArgs e)
+    {
+        if (_roundaboutInserting || _session.OmsiRootPath is null) return;
+        if (!Viewport.TryBuildRoundabout(RoadRoundaboutRadiusBox.Value, RoadRoundaboutClockwiseBox.IsChecked == true, out var batch, out var status) || batch is null)
+        { StatusText.Text = status; return; }
+        _roundaboutInserting = true;
+        PlaceAssetButton.IsEnabled = false;
+        try
+        {
+            if (_session.PendingTransformCount > 0)
+            {
+                await _session.SavePendingTransformsAsync();
+                SaveChangesButton.IsEnabled = false;
+            }
+            var insertion = await _session.InsertSplineBatchAsync(batch.Requests, batch.Links);
+            RegisterConstructionHistory("Criar anel de rotatória");
+            await Viewport.SetMapSnapshotAsync(insertion.Snapshot, _session.OmsiRootPath);
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+            StatusText.Text = "Rotatória: quatro arcos conectados em anel. Adicione e valide os acessos separadamente.";
+        }
+        catch (Exception ex) { StatusText.Text = $"Falha ao criar anel: {ex.Message}"; }
+        finally
+        {
+            _roundaboutInserting = false;
+            PlaceAssetButton.Content = "Construir spline";
+            PlaceAssetButton.IsEnabled = GetSelectedAssetLibraryEntry()?.Kind == OmsiAssetKind.Spline;
+        }
+    }
+
     private async void OnRoadNumericBuildClick(object sender, RoutedEventArgs e)
     {
         if (!Viewport.TryBuildNumericRoad(RoadNumericLengthBox.Value, RoadNumericRadiusBox.Value, RoadNumericHeadingBox.Value, out var request, out var status) || request is null)

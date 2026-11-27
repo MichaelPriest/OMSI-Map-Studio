@@ -767,6 +767,15 @@ public sealed partial class NativeViewport : UserControl
         return true;
     }
 
+    public bool TryBuildRoundabout(double radius, bool clockwise, out NativeProceduralRoadPlacementBuildResult? batch, out string status)
+    {
+        batch = null;
+        status = "Viewport indisponível.";
+        if (_runtime is null || !_runtime.TryBuildRoundabout(radius, clockwise, out batch, out status)) return false;
+        SplinePlacementControlStateChanged?.Invoke(null);
+        return true;
+    }
+
     public bool TryBuildNumericRoad(double length, double radius, double heading, out NativeSplinePlacementRequest? request, out string status)
     {
         request = null;

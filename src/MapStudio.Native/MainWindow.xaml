@@ -4150,6 +4150,19 @@
                                         </Flyout>
                                     </Button.Flyout>
                                 </Button>
+                                <Button Content="Rotatória…" Style="{StaticResource EditorToolbarButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Width="280" Spacing="8">
+                                                <TextBlock Text="Anel circular de splines" FontWeight="SemiBold" />
+                                                <TextBlock Text="Selecione uma SLI de mão única e marque um ponto inicial livre como centro. O anel não recorta nem conecta ruas existentes." TextWrapping="Wrap" FontSize="11" />
+                                                <NumberBox x:Name="RoadRoundaboutRadiusBox" Header="Raio do eixo (m)" Value="15" Minimum="6" Maximum="200" SpinButtonPlacementMode="Compact" />
+                                                <CheckBox x:Name="RoadRoundaboutClockwiseBox" Content="Sentido horário" IsChecked="False" />
+                                                <Button Content="Criar anel" HorizontalAlignment="Stretch" Click="OnRoadRoundaboutBuildClick" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
                                 <Button x:Name="RoadReviewButton" Content="Revisão: off" Style="{StaticResource EditorToolbarButtonStyle}"
                                         ToolTipService.ToolTip="Ative para ajustar as coordenadas e curvatura antes de confirmar cada trecho"
                                         Click="OnRoadReviewClick" />

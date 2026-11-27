@@ -2592,6 +2592,38 @@ public sealed class NativeViewportRuntime : IDisposable
         return state is not null;
     }
 
+    public bool TryBuildRoundabout(double radius, bool clockwise, out NativeProceduralRoadPlacementBuildResult? batch, out string status)
+    {
+        batch = null;
+        status = "Rotatória: selecione a spline de mão única e marque um centro livre.";
+        if (!_splinePlacementActive || _splinePlacementStage != NativeSplinePlacementStage.AwaitingEnd || _splinePreviousId >= 0 ||
+            _splineStartWorld is not { } center || Scene is not { } scene || _splinePlacementIsHeight) return false;
+        if (!NativeSplinePlacementMath.TryCreateRoundabout(center, radius, clockwise, out var shapes))
+        { status = "Raio inválido: use 6 a 200 m."; return false; }
+        // Reject unsupported terrain rather than silently floating a level ring.
+        for (var i = 0; i < 64; i++)
+        {
+            var angle = i * Math.PI / 32;
+            var x = center.X + radius * Math.Sin(angle);
+            var z = center.Z + radius * Math.Cos(angle);
+            if (!NativeTerrainSampler.TryGetHeightAtWorldPoint(scene, x, z, out var terrainHeight) || Math.Abs(terrainHeight - center.Y) > 1)
+            { status = "Anel fora do terreno carregado ou terreno desnivelado em mais de 1 m. Nivele a área primeiro."; return false; }
+        }
+        var requests = new List<NativeSplinePlacementRequest>();
+        var links = new List<NativeProceduralRoadPlacementLink>();
+        foreach (var shape in shapes)
+        {
+            var request = CreateSplinePlacementRequest(shape);
+            if (request is null) { status = "Tile da rotatória indisponível."; return false; }
+            requests.Add(request with { PreviousSplineId = -1, NextSplineId = -1 });
+        }
+        for (var i = 0; i < requests.Count; i++) links.Add(new NativeProceduralRoadPlacementLink(i, (i + 1) % requests.Count));
+        batch = new NativeProceduralRoadPlacementBuildResult(requests, links, 0);
+        CancelSplinePlacement();
+        status = "Anel circular preparado.";
+        return true;
+    }
+
     public bool TryBuildNumericRoad(double length, double radius, double heading, out NativeSplinePlacementRequest? request, out string status)
     {
         request = null;

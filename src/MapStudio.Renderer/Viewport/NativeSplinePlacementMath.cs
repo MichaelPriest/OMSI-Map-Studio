@@ -72,6 +72,26 @@ public static class NativeSplinePlacementMath
     }
 
     /// <summary>Exact horizontal arc length and signed OMSI radius, with an even grade.</summary>
+    public static bool TryCreateRoundabout(Vector3 center, double radius, bool clockwise, out NativeSplinePlacementShape[] shapes)
+    {
+        shapes = Array.Empty<NativeSplinePlacementShape>();
+        if (!IsFinite(center) || !double.IsFinite(radius) || radius < 6 || radius > 200) return false;
+        var sign = clockwise ? 1 : -1;
+        var segments = new NativeSplinePlacementShape[4];
+        var start = center + new Vector3(0, 0, (float)radius);
+        var current = start;
+        for (var i = 0; i < segments.Length; i++)
+        {
+            var heading = sign * (90 + i * 90);
+            if (!TryCreateNumeric(current, radius * Math.PI / 2, sign * radius, heading, center.Y, out var shape) || shape is null) return false;
+            if (i == 3) shape = shape with { End = start };
+            segments[i] = shape;
+            current = shape.End;
+        }
+        shapes = segments;
+        return true;
+    }
+
     public static bool TryCreateNumeric(Vector3 start, double length, double radius, double headingDegrees,
         double endHeight, out NativeSplinePlacementShape? shape)
     {
