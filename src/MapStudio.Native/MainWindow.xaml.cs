@@ -33339,7 +33339,7 @@ setTimeout(postBounds, 250);
             !EnsureCommercialFeature(
                 MapStudioEntitlementKeys
                     .ProceduralRoads,
-                "Importação GeoJSON"))
+                "Importação GPS"))
         {
             return;
         }
@@ -33347,7 +33347,7 @@ setTimeout(postBounds, 250);
         if (_session.CurrentMap is null)
         {
             StatusText.Text =
-                "Importação GeoJSON: abra um mapa primeiro.";
+                "Importação GPS: abra um mapa primeiro.";
 
             return;
         }
@@ -33355,7 +33355,7 @@ setTimeout(postBounds, 250);
         if (_proceduralRoadTraceMode)
         {
             StatusText.Text =
-                "Finalize ou limpe a linha manual atual antes de importar GeoJSON.";
+                "Finalize ou limpe a linha manual atual antes de importar GPS.";
 
             return;
         }
@@ -33367,7 +33367,7 @@ setTimeout(postBounds, 250);
         if (georeference is null)
         {
             StatusText.Text =
-                "Importação GeoJSON: o mapa precisa ter .mapstudio/georeference.json.";
+                "Importação GPS: o mapa precisa ter .mapstudio/georeference.json.";
 
             return;
         }
@@ -33383,8 +33383,9 @@ setTimeout(postBounds, 250);
         picker.FileTypeFilter.Add(
             ".geojson");
 
-        picker.FileTypeFilter.Add(
-            ".json");
+        picker.FileTypeFilter.Add(".json");
+        picker.FileTypeFilter.Add(".gpx");
+        picker.FileTypeFilter.Add(".kml");
 
         InitializeWithWindow.Initialize(
             picker,
@@ -33402,17 +33403,15 @@ setTimeout(postBounds, 250);
         try
         {
             StatusText.Text =
-                "Importando vias GeoJSON...";
+                "Importando vias GPS...";
 
-            var json =
-                await File
-                    .ReadAllTextAsync(
-                        file.Path);
-
-            var imported =
-                new MapStudioGeoJsonRoadImporter()
-                    .Parse(
-                        json);
+            if (new FileInfo(file.Path).Length > MapStudioGpsRoadImporter.MaxInputBytes)
+            {
+                StatusText.Text = "Arquivo GPS excede o limite de 16 MiB.";
+                return;
+            }
+            var content = await File.ReadAllTextAsync(file.Path);
+            var imported = new MapStudioGpsRoadImporter().Parse(content, Path.GetExtension(file.Path));
 
             var pointCount =
                 imported.Traces.Sum(
@@ -33426,7 +33425,7 @@ setTimeout(postBounds, 250);
                     100_000)
             {
                 StatusText.Text =
-                    $"GeoJSON recusado por segurança: {imported.Traces.Count} linha(s), {pointCount} ponto(s). Limite: 5.000 linhas / 100.000 pontos.";
+                    $"GPS recusado por segurança: {imported.Traces.Count} linha(s), {pointCount} ponto(s). Limite: 5.000 linhas / 100.000 pontos.";
 
                 return;
             }
@@ -33508,7 +33507,7 @@ setTimeout(postBounds, 250);
             if (added == 0)
             {
                 StatusText.Text =
-                    "GeoJSON não contém linhas de via válidas.";
+                    "GPS não contém linhas de via válidas.";
 
                 return;
             }
@@ -33530,13 +33529,13 @@ setTimeout(postBounds, 250);
                         graph);
 
             StatusText.Text =
-                $"GeoJSON importado: {added} linha(s), {graph.Segments.Count} segmento(s), {graph.Junctions.Count} cruzamento(s). " +
+                $"GPS importado: {added} linha(s), {graph.Segments.Count} segmento(s), {graph.Junctions.Count} cruzamento(s). " +
                 $"Preview D3D11: {preview.RenderedSegmentCount} segmento(s). Ignorados: {skipped}.";
         }
         catch (Exception exception)
         {
             StatusText.Text =
-                $"Falha ao importar GeoJSON: {exception.Message}";
+                $"Falha ao importar GPS: {exception.Message}";
         }
     }
 

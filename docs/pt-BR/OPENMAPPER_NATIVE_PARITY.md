@@ -54,3 +54,20 @@ OpenStreetMap é o mapa-base padrão. A referência sobre o terreno é gerada lo
 ### Keyless reference (EN)
 
 OpenStreetMap is the default map picker. The local ground overlay renders OSM vector road and building geometry into georeferenced PNG, without Google or CARTO credentials, within the active tile and loaded neighbors. It uses the existing OSM data cache, not bulk public raster tile downloads. Esri is a separate authorized online imagery preview, not an export/offline source. Labels, water and vegetation in the reference remain pending.
+
+## Auditoria de paridade — 27/11/2026
+
+Base externa: openMapper main, docs/FEATURES.md (licença AGPL-3.0-only). Comparação documental e estática, não homologação executável.
+
+| Prioridade | Diferença | Estado Map Studio |
+|---|---|---|
+| P0 | Desenho em dois cliques, tangência entre trechos, edição numérica durante desenho | Parcial; motor de splines existente |
+| P0 | Importação GPS GPX/KML/GeoJSON | Importador GPX/KML integrado ao fluxo existente de prévia de grafo; testes adicionados; altitude ignorada, sem download externo |
+| P0 | Importação por classe OSM, água, trilhos, linhas de ônibus | Parcial; validar cada gerador |
+| P0 | DEM Terrarium e provedores ortofoto autorizados | Pendente; Open-Meteo e referência vetorial OSM existentes |
+| P1 | Perfil longitudinal editável, régua, área, snap angular | Não localizada equivalência completa |
+| P1 | Rotatórias, baias, cruzamentos complexos reutilizáveis | Parcial/ausente |
+| P1 | HOF, calendários, reroteamento TTData ao mudar ruas | Não confirmada paridade |
+| P2 | Scripts, colaboração, edição de malha, plano SVG, merge de tiles | Avaliar separadamente; ausência não comprovada por execução |
+
+Não copiar código AGPL; implementação GPS independente baseada nos formatos XML e no grafo próprio. Não declarar paridade até testes de mapa real e reload.

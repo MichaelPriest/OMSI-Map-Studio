@@ -458,7 +458,7 @@
                             Text="Analisar referência de mapa com IA..."
                             Click="OnAnalyzeGoogleRoadReferenceWithAiClick" />
                         <MenuFlyoutItem
-                            Text="Importar GeoJSON georreferenciado..."
+                            Text="Importar trajetos GPS (GeoJSON / GPX / KML)..."
                             Click="OnImportProceduralRoadGeoJsonClick" />
                         <MenuFlyoutItem
                             Text="Importar OSM XML georreferenciado..."
