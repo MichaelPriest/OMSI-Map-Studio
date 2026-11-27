@@ -16,6 +16,63 @@ namespace MapStudio.Core.Tests;
 
 public sealed class MapStudioRealWorldRoadPipelineTests
 {
+    [Theory]
+    [InlineData(MapStudioRealWorldLayers.Roads)]
+    [InlineData(MapStudioRealWorldLayers.Vegetation)]
+    public async Task SelectiveReconstructionOnlyWritesRequestedLayer(MapStudioRealWorldLayers layers)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "mapstudio-selected-layers-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var mapDirectory = await CreateMapAsync(root);
+            var assets = new List<OmsiAssetIndexEntry>();
+            AddAsset(root, assets, @"Sceneryobjects\Vegetation\Tipuana\tipuana_tree.sco");
+            using var http = new HttpClient(new DelegateHandler(_ => XmlResponse(FullSceneXml)));
+            var pipeline = new MapStudioRealWorldMapPipeline(new MapStudioOverpassSceneClient(
+                http, [new Uri("https://scene.test/api/interpreter")]));
+            var result = await pipeline.RunAsync(root, mapDirectory,
+                -23.551, -46.631, -23.549, -46.629,
+                new MapStudioGeographicAnchor(-23.55, -46.63, 50, 50),
+                assets, layers: layers);
+
+            var tile = await new OmsiTileReader().ReadContentAsync(Path.Combine(mapDirectory, "tile_0_0.map"));
+            if (layers == MapStudioRealWorldLayers.Roads)
+            {
+                Assert.NotEmpty(tile.Splines);
+                Assert.Empty(result.Scene.Vegetation.Placements);
+                Assert.Equal(0, result.Scene.PlacedObjectCount);
+            }
+            else
+            {
+                Assert.Empty(tile.Splines);
+                Assert.Single(result.Scene.Vegetation.Placements);
+                Assert.Null(result.RoadTerrainConform);
+                Assert.Empty(result.Roads.RoadKit.SplineRelativePaths);
+                Assert.False(Directory.Exists(Path.Combine(root, "Splines", MapStudioRoadKitGenerator.PackFolderName)));
+            }
+            Assert.Empty(result.Scene.Buildings.Placements);
+            Assert.Empty(result.Scene.Infrastructure.Placements);
+            Assert.Empty(result.Scene.StreetFurniture.Placements);
+            Assert.True(result.PlacedElementCount > 0);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RejectsEmptyLayerSelectionBeforeDownloading()
+    {
+        using var http = new HttpClient(new DelegateHandler(_ => throw new InvalidOperationException("Unexpected network call")));
+        var pipeline = new MapStudioRealWorldMapPipeline(new MapStudioOverpassSceneClient(
+            http, [new Uri("https://scene.test/api/interpreter")]));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => pipeline.RunAsync(
+            "unused", "unused", -23.551, -46.631, -23.549, -46.629,
+            new MapStudioGeographicAnchor(-23.55, -46.63, 50, 50),
+            Array.Empty<OmsiAssetIndexEntry>(), layers: MapStudioRealWorldLayers.None));
+    }
+
     [Fact]
     public async Task RoadRunnerWritesSelectedRoadKitSplinesInOneTileBatch()
     {

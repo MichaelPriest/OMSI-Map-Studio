@@ -40,3 +40,8 @@ Cada recurso deve ser classificado como **equivalente**, **parcial**, **ausente*
 - Arquitetura nativa: `docs/pt-BR/NATIVE_MIGRATION.md`
 - Core e contratos OMSI: `src/MapStudio.Core`
 - Renderer e viewport: `src/MapStudio.Renderer`
+
+
+### Seleção de camadas do mapa real
+
+Na etapa Reconstrução, o modo automático permite escolher vias/cruzamentos, edificações, vegetação, infraestrutura e mobiliário urbano separadamente. A seleção padrão continua completa. A elevação e a referência visual mantêm controles independentes. As camadas desmarcadas não executam seus geradores; a sessão conserva backup e rollback. A seleção de classes de vias/SLI, água, linhas OSM e DEM Terrarium continuam pendentes de paridade.
