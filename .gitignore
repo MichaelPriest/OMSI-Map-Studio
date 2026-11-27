@@ -10,3 +10,9 @@
 .DS_Store
 local-test-data/
 *.bak
+
+# Local build output and test reports
+/artifacts/
+/TestResults/
+**/TestResults/
+/coverage/

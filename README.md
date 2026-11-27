@@ -48,3 +48,7 @@ See the English version for full details.
 
 - [Build de teste / Test build — CI 1720](https://github.com/MichaelPriest/OMSI-Map-Studio/actions/runs/46060172393)
 - [Galeria / Editor gallery (PT-BR)](docs/pt-BR/EDITOR_GALLERY.md) · [English](docs/en/EDITOR_GALLERY.md)
+
+## Repository structure / Estrutura do repositório
+
+[Português](docs/pt-BR/REPOSITORY_STRUCTURE.md) · [English](docs/en/REPOSITORY_STRUCTURE.md)

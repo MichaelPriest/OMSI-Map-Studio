@@ -44,3 +44,5 @@ dotnet build src/MapStudio.Native/MapStudio.Native.csproj -c Release -p:Platform
 ```
 
 Building the native host requires Windows. Official documentation is maintained in Brazilian Portuguese and English. Never replace missing real data with fabricated data or discard unknown commands on save.
+
+[Repository folder organization](docs/en/REPOSITORY_STRUCTURE.md)
