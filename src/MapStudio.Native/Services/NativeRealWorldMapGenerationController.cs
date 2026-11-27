@@ -100,7 +100,8 @@ public sealed class NativeRealWorldMapGenerationController :
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
             bool useOpenAerialMapEvidence = false,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All,
+            bool useTerrariumElevation = false)
     {
         CancellationTokenSource linked;
 
@@ -198,7 +199,8 @@ public sealed class NativeRealWorldMapGenerationController :
                             useBuildingVisualEvidence,
                         useOpenAerialMapEvidence:
                             useOpenAerialMapEvidence,
-                        layers: layers)
+                        layers: layers,
+                        useTerrariumElevation: useTerrariumElevation)
                     .ConfigureAwait(false);
 
             var summary =

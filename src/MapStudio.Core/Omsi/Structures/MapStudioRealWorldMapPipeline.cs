@@ -257,7 +257,8 @@ public sealed class MapStudioRealWorldMapPipeline
             CancellationToken cancellationToken = default,
             IMapStudioBuildingVisualEvidenceProvider?
                 buildingVisualEvidenceProvider = null,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All,
+            bool useTerrarium = false)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -301,13 +302,16 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .DownloadingElevation,
-                string.IsNullOrWhiteSpace(
+                useTerrarium ? "Baixando elevação AWS Terrarium sem API key..." : string.IsNullOrWhiteSpace(
                     openMeteoApiKey)
                     ? "Baixando grade Open-Meteo/Copernicus gratuita para todos os tiles..."
                     : "Baixando grade Open-Meteo/Copernicus customer para todos os tiles..."));
 
-        var elevation =
-            await _openMeteoElevationClient
+        var elevation = useTerrarium
+            ? await new MapStudioTerrariumElevationSurfaceClient().DownloadAsync(
+                elevationCoverage.South, elevationCoverage.West, elevationCoverage.North, elevationCoverage.East,
+                Math.Max(65, elevationRows), Math.Max(65, elevationColumns), elevationProgress, cancellationToken).ConfigureAwait(false)
+            : await _openMeteoElevationClient
                 .DownloadAsync(
                     openMeteoApiKey,
                     elevationCoverage.South,

@@ -55,7 +55,8 @@ public sealed partial class RealWorldGenerationPanel :
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
             bool useOpenAerialMapEvidence = false,
-            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All) =>
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All,
+            bool useTerrariumElevation = false) =>
         ViewModel.StartAsync(
             omsiRoot,
             mapDirectory,
@@ -69,7 +70,8 @@ public sealed partial class RealWorldGenerationPanel :
             useSavedOpenMeteoElevation,
             useBuildingVisualEvidence,
             useOpenAerialMapEvidence,
-            layers);
+            layers,
+            useTerrariumElevation);
 
     public bool Cancel() =>
         ViewModel.Cancel();
