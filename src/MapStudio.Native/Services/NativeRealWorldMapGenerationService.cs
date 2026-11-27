@@ -63,13 +63,14 @@ public sealed class NativeRealWorldMapGenerationService
             bool useSavedGoogleElevation = true,
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
-            bool useOpenAerialMapEvidence = false)
+            bool useOpenAerialMapEvidence = false,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
     {
         var buildingVisualEvidenceProvider =
             CreateBuildingVisualEvidenceProvider(
                 mapDirectory,
-                useBuildingVisualEvidence,
-                useOpenAerialMapEvidence);
+                useBuildingVisualEvidence && layers.HasFlag(MapStudioRealWorldLayers.Buildings),
+                useOpenAerialMapEvidence && layers.HasFlag(MapStudioRealWorldLayers.Buildings));
 
         var googleKey =
             NativeMapCredentialStore
@@ -98,7 +99,8 @@ public sealed class NativeRealWorldMapGenerationService
                         assetIndexProgress,
                         elevationProgress,
                         cancellationToken,
-                        buildingVisualEvidenceProvider)
+                        buildingVisualEvidenceProvider,
+                        layers)
                     .ConfigureAwait(false);
 
             return new NativeRealWorldMapGenerationResult(
@@ -131,7 +133,8 @@ public sealed class NativeRealWorldMapGenerationService
                         assetIndexProgress,
                         elevationProgress,
                         cancellationToken,
-                        buildingVisualEvidenceProvider)
+                        buildingVisualEvidenceProvider,
+                        layers)
                     .ConfigureAwait(false);
 
             return new NativeRealWorldMapGenerationResult(
@@ -154,7 +157,8 @@ public sealed class NativeRealWorldMapGenerationService
                     assetIndexProgress,
                     cancellationToken,
                     buildingVisualEvidenceProvider:
-                        buildingVisualEvidenceProvider)
+                        buildingVisualEvidenceProvider,
+                    layers: layers)
                 .ConfigureAwait(false);
 
         return new NativeRealWorldMapGenerationResult(

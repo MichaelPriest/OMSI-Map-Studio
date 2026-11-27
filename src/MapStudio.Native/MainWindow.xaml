@@ -3426,8 +3426,15 @@
                                                       HorizontalAlignment="Stretch">
                                                 <ComboBoxItem Content="Criar apenas terreno / referência" />
                                                 <ComboBoxItem Content="Importar vias como guias" />
-                                                <ComboBoxItem Content="Reconstrução completa automática · vias + cruzamentos + cenário" />
+                                                <ComboBoxItem Content="Reconstrução automática por camadas" />
                                             </ComboBox>
+                                            <TextBlock Text="Camadas da reconstrução automática" FontWeight="SemiBold" />
+                                            <CheckBox x:Name="RealMapGenerateRoadsCheckBox" Content="Vias, cruzamentos e estruturas viárias" IsChecked="True" />
+                                            <CheckBox x:Name="RealMapGenerateBuildingsCheckBox" Content="Edificações" IsChecked="True" />
+                                            <CheckBox x:Name="RealMapGenerateVegetationCheckBox" Content="Vegetação" IsChecked="True" />
+                                            <CheckBox x:Name="RealMapGenerateInfrastructureCheckBox" Content="Infraestrutura" IsChecked="True" />
+                                            <CheckBox x:Name="RealMapGenerateFurnitureCheckBox" Content="Mobiliário urbano e pontos de ônibus disponíveis" IsChecked="True" />
+                                            <TextBlock Text="Desmarque as camadas que não deseja gerar. Elevação e referência visual são configuradas na etapa anterior." FontSize="11" TextWrapping="Wrap" Opacity="0.75" />
                                             <TextBlock Text="A reconstrução completa baixa os dados OSM, aplica a elevação escolhida e gera vias, cruzamentos, prédios, vegetação, mobiliário e infraestrutura."
                                                        FontSize="10"
                                                        TextWrapping="Wrap"

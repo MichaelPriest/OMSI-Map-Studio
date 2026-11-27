@@ -49,7 +49,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
             IProgress<MapStudioBuildingVisualEvidenceProgress>?
                 buildingVisualEvidenceProgress = null,
             IReadOnlySet<string>?
-                excludedStreetFurnitureFeatureIds = null)
+                excludedStreetFurnitureFeatureIds = null,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -71,8 +72,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
 
         try
         {
-            var infrastructure =
-                await new MapStudioInfrastructureBatchReconstructionRunner()
+            var infrastructure = layers.HasFlag(MapStudioRealWorldLayers.Infrastructure)
+                ? await new MapStudioInfrastructureBatchReconstructionRunner()
                     .RunAsync(
                         root,
                         mapRoot,
@@ -80,10 +81,11 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         anchor,
                         cancellationToken,
                         elevation)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)
+                : new MapStudioInfrastructureBatchResult([], [], [], [], []);
 
-            var buildings =
-                await new MapStudioBuildingBatchReconstructionRunner()
+            var buildings = layers.HasFlag(MapStudioRealWorldLayers.Buildings)
+                ? await new MapStudioBuildingBatchReconstructionRunner()
                     .RunAsync(
                         root,
                         mapRoot,
@@ -94,10 +96,11 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         buildingVisualEvidenceProvider,
                         buildingVisualEvidenceProgress,
                         assets)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)
+                : new MapStudioBuildingBatchReconstructionResult([], [], [], [], []);
 
-            var vegetation =
-                await new MapStudioVegetationBatchReconstructionRunner()
+            var vegetation = layers.HasFlag(MapStudioRealWorldLayers.Vegetation)
+                ? await new MapStudioVegetationBatchReconstructionRunner()
                     .RunAsync(
                         root,
                         mapRoot,
@@ -106,10 +109,11 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         assets,
                         cancellationToken,
                         elevation)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)
+                : new MapStudioVegetationBatchReconstructionResult([], [], [], [], []);
 
-            var streetFurniture =
-                await new MapStudioStreetFurnitureBatchReconstructionRunner()
+            var streetFurniture = layers.HasFlag(MapStudioRealWorldLayers.StreetFurniture)
+                ? await new MapStudioStreetFurnitureBatchReconstructionRunner()
                     .RunAsync(
                         root,
                         mapRoot,
@@ -120,7 +124,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         cancellationToken,
                         elevation,
                         excludedStreetFurnitureFeatureIds)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)
+                : new MapStudioStreetFurnitureBatchReconstructionResult([], [], [], [], []);
 
             return new MapStudioRealWorldSceneReconstructionResult(
                 infrastructure,

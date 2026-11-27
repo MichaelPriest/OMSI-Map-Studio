@@ -3,8 +3,21 @@ using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Splines;
 
 namespace MapStudio.Core.Omsi.Structures;
+
+[Flags]
+public enum MapStudioRealWorldLayers
+{
+    None = 0,
+    Roads = 1,
+    Buildings = 2,
+    Vegetation = 4,
+    Infrastructure = 8,
+    StreetFurniture = 16,
+    All = Roads | Buildings | Vegetation | Infrastructure | StreetFurniture
+}
 
 public enum MapStudioRealWorldMapPipelineStage
 {
@@ -129,7 +142,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 elevationProgress = null,
             CancellationToken cancellationToken = default,
             IMapStudioBuildingVisualEvidenceProvider?
-                buildingVisualEvidenceProvider = null)
+                buildingVisualEvidenceProvider = null,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -213,7 +227,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 catalog.ConstructionAssets
                     .TrafficSignalObjects,
                 catalog.ConstructionAssets
-                    .CrosswalkAssets)
+                    .CrosswalkAssets,
+                layers)
             .ConfigureAwait(false);
     }
 
@@ -241,7 +256,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 elevationProgress = null,
             CancellationToken cancellationToken = default,
             IMapStudioBuildingVisualEvidenceProvider?
-                buildingVisualEvidenceProvider = null)
+                buildingVisualEvidenceProvider = null,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -328,7 +344,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 catalog.ConstructionAssets
                     .TrafficSignalObjects,
                 catalog.ConstructionAssets
-                    .CrosswalkAssets)
+                    .CrosswalkAssets,
+                layers)
             .ConfigureAwait(false);
     }
 
@@ -352,7 +369,8 @@ public sealed class MapStudioRealWorldMapPipeline
             CancellationToken cancellationToken = default,
             MapStudioGeoreferencedElevationSurface? elevation = null,
             IMapStudioBuildingVisualEvidenceProvider?
-                buildingVisualEvidenceProvider = null)
+                buildingVisualEvidenceProvider = null,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -401,7 +419,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 catalog.ConstructionAssets
                     .TrafficSignalObjects,
                 catalog.ConstructionAssets
-                    .CrosswalkAssets)
+                    .CrosswalkAssets,
+                layers)
             .ConfigureAwait(false);
     }
 
@@ -432,8 +451,13 @@ public sealed class MapStudioRealWorldMapPipeline
             IReadOnlyList<OmsiAssetIndexEntry>?
                 trafficSignalObjectAssets = null,
             IReadOnlyList<OmsiAssetIndexEntry>?
-                crosswalkAssets = null)
+                crosswalkAssets = null,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
     {
+        if (layers == MapStudioRealWorldLayers.None || (layers & ~MapStudioRealWorldLayers.All) != 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(layers), "Select at least one reconstruction layer.");
+        }
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
         ArgumentNullException.ThrowIfNull(assets);
@@ -573,8 +597,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         ? "Gerando vias reais com splines OMSI compatíveis · Road Kit como fallback..."
                         : "Gerando vias reais com o Road Kit..."));
 
-            var roads =
-                await new MapStudioRoadBatchReconstructionRunner()
+            var roads = layers.HasFlag(MapStudioRealWorldLayers.Roads)
+                ? await new MapStudioRoadBatchReconstructionRunner()
                     .RunAsync(
                         root,
                         mapRoot,
@@ -586,7 +610,9 @@ public sealed class MapStudioRealWorldMapPipeline
                         junctionObjectAssets,
                         trafficSignalObjectAssets,
                         crosswalkAssets)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)
+                : new MapStudioRoadBatchReconstructionResult([], [], 0, 0, 0, 0, [],
+                    new MapStudioRoadKitInstallResult(string.Empty, null, [], []));
 
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(
@@ -594,20 +620,21 @@ public sealed class MapStudioRealWorldMapPipeline
                         .GeneratingRoads,
                     "Ajustando o terreno ao corredor físico das vias..."));
 
-            var roadTerrainConform =
-                await new MapStudioRoadTerrainConformBatchApplier()
+            var roadTerrainConform = layers.HasFlag(MapStudioRealWorldLayers.Roads) && roads.Placements.Count > 0
+                ? await new MapStudioRoadTerrainConformBatchApplier()
                     .ApplyAsync(
                         root,
                         mapRoot,
                         roads.Placements,
                         cancellationToken)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)
+                : null;
 
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
                         .GeneratingRoads,
-                    $"Terreno ajustado às vias · {roadTerrainConform.ModifiedTileCount} tile(s) · {roadTerrainConform.ChangedSamples} amostra(s) corrigida(s)."));
+                    $"Terreno ajustado às vias · {roadTerrainConform?.ModifiedTileCount ?? 0} tile(s) · {roadTerrainConform?.ChangedSamples ?? 0} amostra(s) corrigida(s)."));
 
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(
@@ -660,7 +687,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         elevation,
                         buildingVisualEvidenceProvider,
                         buildingVisualEvidenceProgress,
-                        excludedStreetFurnitureFeatureIds)
+                        excludedStreetFurnitureFeatureIds,
+                        layers)
                     .ConfigureAwait(false);
 
             var result =
