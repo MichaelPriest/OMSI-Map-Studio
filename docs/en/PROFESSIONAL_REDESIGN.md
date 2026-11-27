@@ -25,3 +25,7 @@ Below 1250 DIPs, tool selection uses the side library instead of automatically o
 ## Stage 10 — clean visual language
 
 Neutral graphite/light palette, blue selection, subtle dividers and compact modules. Desktop rail only shows selection, vegetation and crossings rather than duplicating the top modules; fullscreen restores all rail shortcuts. Existing controls and handlers preserved, high contrast dictionary unchanged. Validate light/dark themes, tool switching and F11. Screenshots pending.
+
+## Stage 11 — clean layout structure
+
+Restored pre-stage-10 palette: focus on arrangement rather than color. Camera/grid controls grouped in View inside context strip; removed dedicated viewport strip. Project and Properties accessible in the same strip. Automatic Inspector collapses when empty and opens for editable selection or terrain tools; manual toggle disables automation, re-enable from View. Single-line Explorer tabs and collapsed project actions. Fullscreen restore controls retained. Fixed static rail guard while preserving module controls and top ribbon access. CI and visual acceptance pending.

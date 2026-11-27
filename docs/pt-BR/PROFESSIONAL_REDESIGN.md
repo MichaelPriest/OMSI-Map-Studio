@@ -52,3 +52,7 @@ Abaixo de 1250 DIPs, seleção de ferramentas usa biblioteca lateral em vez da b
 ## Etapa 10 — linguagem visual Clean
 
 Paleta neutra grafite/claro, azul para seleção, contornos discretos e módulos compactos. No desktop, o trilho vertical contém apenas seleção, vegetação e cruzamentos, sem repetir os módulos superiores; em tela cheia, todos os atalhos voltam. Controles e eventos preservados, tema de alto contraste intacto. Validar tema claro/escuro, troca de ferramenta e F11. Capturas pendentes.
+
+## Etapa 11 — layout Clean (estrutura)
+
+Restaurada a paleta anterior à etapa 10: foco na disposição, não na cor. Controles de câmera e grade em Vista, dentro da faixa contextual; removida a faixa exclusiva sobre o viewport. Projeto e Propriedades acessíveis na mesma faixa. Inspector automático recolhe quando vazio e abre quando há seleção editável ou ferramenta de terreno; alternância manual desativa o automático, reativável em Visualizar. Abas do Explorer em uma linha, ações de projeto recolhidas por padrão. Restauração em tela cheia preservada. Correção do bloqueio estático do trilho de módulos mantendo todos os atalhos no XAML e acesso pela faixa superior. CI e homologação visual pendentes.

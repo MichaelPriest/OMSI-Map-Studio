@@ -8,6 +8,9 @@ namespace MapStudio.Native;
 public sealed partial class MainWindow
 {
     private bool _geoWorkspaceDocked = true;
+    private bool _professionalInspectorReady;
+    private bool _professionalInspectorQueued;
+    private bool _professionalInspectorAutomatic = true;
 
     private void InitializeProfessionalWorkspace()
     {
@@ -23,9 +26,46 @@ public sealed partial class MainWindow
         SyncProfessionalRail();
         MapText.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => RefreshProfessionalWelcome());
         SelectionContextPanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => RefreshProfessionalWelcome());
-        MainRoot.Loaded += (_, _) => RefreshProfessionalWelcome();
+        MainRoot.Loaded += (_, _) =>
+        {
+            RefreshProfessionalWelcome();
+            _professionalInspectorReady = true;
+            QueueProfessionalInspector();
+        };
+        InspectorTransformCard.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => QueueProfessionalInspector());
+        InspectorTerrainFields.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => QueueProfessionalInspector());
+        DesktopChromePanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => QueueProfessionalInspector());
         AssetLibraryToolWindow.RegisterPropertyChangedCallback(FrameworkElement.VerticalAlignmentProperty,
             (_, _) => ApplyProfessionalAssetTrayBounds(WorkspaceGrid.ActualHeight));
+    }
+
+    private void QueueProfessionalInspector()
+    {
+        if (!_professionalInspectorReady || _professionalInspectorQueued) return;
+        _professionalInspectorQueued = true;
+        if (!MainRoot.DispatcherQueue.TryEnqueue(() =>
+        {
+            _professionalInspectorQueued = false;
+            if (!_professionalInspectorAutomatic || IsFullscreen()) return;
+            var needed = InspectorTransformCard.Visibility == Visibility.Visible ||
+                InspectorTerrainFields.Visibility == Visibility.Visible ||
+                InspectorSelectionActionsCard.Visibility == Visibility.Visible;
+            var visible = InspectorPanel.Visibility == Visibility.Visible && InspectorColumn.Width.Value > 0;
+            if (visible != needed) ToggleInspectorPanel();
+        })) _professionalInspectorQueued = false;
+    }
+
+    private void OnProfessionalAutoInspectorClick(object sender, RoutedEventArgs e)
+    {
+        _professionalInspectorAutomatic = ProfessionalAutoInspectorMenuItem.IsChecked;
+        QueueProfessionalInspector();
+    }
+
+    private void ToggleProfessionalInspectorManually()
+    {
+        _professionalInspectorAutomatic = false;
+        ProfessionalAutoInspectorMenuItem.IsChecked = false;
+        ToggleInspectorPanel();
     }
 
     private void SyncProfessionalRail()

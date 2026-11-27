@@ -21338,17 +21338,17 @@ public sealed partial class MainWindow : Window
     private void OnToggleInspectorClick(
         object sender,
         RoutedEventArgs e) =>
-        ToggleInspectorPanel();
+        ToggleProfessionalInspectorManually();
 
     private void OnMinimizeInspectorPanelClick(
         object sender,
         RoutedEventArgs e) =>
-        ToggleInspectorPanel();
+        ToggleProfessionalInspectorManually();
 
     private void OnRestoreInspectorPanelClick(
         object sender,
         RoutedEventArgs e) =>
-        ToggleInspectorPanel();
+        ToggleProfessionalInspectorManually();
 
     private void UpdatePanelRestoreButtons()
     {
@@ -21369,14 +21369,10 @@ public sealed partial class MainWindow : Window
                     0);
 
         RestoreExplorerPanelButton.Visibility =
-            explorerVisible
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+            explorerVisible || !IsFullscreen() ? Visibility.Collapsed : Visibility.Visible;
 
         RestoreInspectorPanelButton.Visibility =
-            inspectorVisible
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+            inspectorVisible || !IsFullscreen() ? Visibility.Collapsed : Visibility.Visible;
     }
 
 

@@ -371,6 +371,7 @@
                     <MenuFlyoutItem
                         Text="Alternar Inspector"
                         Click="OnToggleInspectorClick" />
+                    <ToggleMenuFlyoutItem x:Name="ProfessionalAutoInspectorMenuItem" Text="Propriedades automáticas" IsChecked="True" Click="OnProfessionalAutoInspectorClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Mapa">
                     <MenuFlyoutItem
@@ -954,59 +955,39 @@
 
                         <Button x:Name="SceneExplorerModeButton"
                                 Grid.Column="0"
-                                Style="{StaticResource ExplorerModeButtonStyle}"
+                                Style="{StaticResource ExplorerModeButtonStyle}" HorizontalAlignment="Stretch" MinHeight="28" Padding="3,2"
                                 ToolTipService.ToolTip="Elementos presentes no mapa"
                                 Click="OnSceneExplorerModeClick">
-                            <StackPanel Spacing="1">
-                                <TextBlock Text="◈"
-                                           FontSize="14"
+                            <TextBlock Text="Cena"
                                            HorizontalAlignment="Center" />
-                                <TextBlock Text="Cena"
-                                           HorizontalAlignment="Center" />
-                            </StackPanel>
                         </Button>
 
                         <Button x:Name="LibraryExplorerModeButton"
                                 Grid.Column="1"
-                                Style="{StaticResource ExplorerModeButtonStyle}"
+                                Style="{StaticResource ExplorerModeButtonStyle}" HorizontalAlignment="Stretch" MinHeight="28" Padding="3,2"
                                 ToolTipService.ToolTip="Biblioteca de itens do Workspace ou OMSI"
                                 Click="OnLibraryModeClick">
-                            <StackPanel Spacing="1">
-                                <TextBlock Text="▦"
-                                           FontSize="14"
+                            <TextBlock Text="Assets"
                                            HorizontalAlignment="Center" />
-                                <TextBlock Text="Assets"
-                                           HorizontalAlignment="Center" />
-                            </StackPanel>
                         </Button>
 
                         <Button x:Name="MapExplorerModeButton"
                                 Grid.Column="2"
-                                Style="{StaticResource ExplorerModeButtonStyle}"
+                                Style="{StaticResource ExplorerModeButtonStyle}" HorizontalAlignment="Stretch" MinHeight="28" Padding="3,2"
                                 ToolTipService.ToolTip="Tiles, coordenadas e estrutura do mapa"
                                 Click="OnMapExplorerModeClick">
-                            <StackPanel Spacing="1">
-                                <TextBlock Text="⌖"
-                                           FontSize="14"
+                            <TextBlock Text="Mapa"
                                            HorizontalAlignment="Center" />
-                                <TextBlock Text="Mapa"
-                                           HorizontalAlignment="Center" />
-                            </StackPanel>
                         </Button>
 
                         <Button x:Name="TransportExplorerModeButton"
                                 Grid.Column="3"
-                                Style="{StaticResource ExplorerModeButtonStyle}"
+                                Style="{StaticResource ExplorerModeButtonStyle}" HorizontalAlignment="Stretch" MinHeight="28" Padding="3,2"
                                 ToolTipService.ToolTip="Tracks, Trips, Stops, StationLinks e Lines/Tours"
                                 Click="OnToolTransportClick">
-                            <StackPanel Spacing="1">
-                                <TextBlock Text="↔"
-                                           FontSize="14"
-                                           HorizontalAlignment="Center" />
-                                <TextBlock Text="Rotas"
+                            <TextBlock Text="Rotas"
                                            FontSize="10"
                                            HorizontalAlignment="Center" />
-                            </StackPanel>
                         </Button>
                     </Grid>
 
@@ -1033,7 +1014,7 @@
                     <Expander x:Name="ProjectSummaryCard"
                               Grid.Row="3"
                               Header="Ações do projeto"
-                              IsExpanded="True"
+                              IsExpanded="False"
                               HorizontalAlignment="Stretch">
                         <StackPanel Spacing="5"
                                     Padding="0,5,0,0">
@@ -2372,61 +2353,13 @@
                 x:Name="Viewport"
                 Grid.Row="1"
                 Grid.Column="2"
-                Margin="54,46,0,6"
+                Margin="46,4,0,4"
                 AllowDrop="True"
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
 
-            <Border x:Name="ViewportCommandBar"
-                    Grid.Row="1"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Top"
-                    Margin="0,4,0,0"
-                    Padding="4,3"
-                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
-                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="3"
-                    Canvas.ZIndex="57">
-                <ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Border Padding="8,3"
-                            Background="{ThemeResource MapStudioAccentSurfaceBrush}"
-                            CornerRadius="5">
-                        <TextBlock x:Name="ViewportModuleText"
-                                   Text="Seleção fácil"
-                                   FontSize="10.5"
-                                   FontWeight="SemiBold"
-                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
-                    </Border>
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="3D"
-                            ToolTipService.ToolTip="Câmera em perspectiva"
-                            Click="OnPerspectiveViewClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="2D"
-                            ToolTipService.ToolTip="Vista superior"
-                            Click="OnTopViewClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Enquadrar"
-                            ToolTipService.ToolTip="Enquadrar a cena inteira"
-                            Click="OnFitSceneClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Grade"
-                            ToolTipService.ToolTip="Mostrar/ocultar grade"
-                            Click="OnGridVisibilityClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Referência"
-                            ToolTipService.ToolTip="Mostrar/ocultar a referência de mapa"
-                            Click="OnToggleMapReferenceVisibilityClick" />
-                </StackPanel>
-                </ScrollViewer>
-            </Border>
-
             <Border x:Name="ProfessionalWelcomePanel" Grid.Row="1" Grid.Column="2"
-                    Margin="64,56,10,12" MaxWidth="430" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Margin="52,10,10,10" MaxWidth="430" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Background="{ThemeResource MapStudioChromeBackgroundBrush}" CornerRadius="3"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}" BorderThickness="1" Padding="14"
                     Canvas.ZIndex="56" Visibility="Collapsed">
@@ -2461,7 +2394,7 @@
             <Button x:Name="RestoreExplorerPanelButton"
                     Grid.Row="1"
                     Grid.Column="2"
-                    Margin="10,72,0,0"
+                    Margin="52,8,0,0"
                     Padding="10,5"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
@@ -2476,7 +2409,7 @@
             <Button x:Name="RestoreInspectorPanelButton"
                     Grid.Row="1"
                     Grid.Column="2"
-                    Margin="0,72,10,0"
+                    Margin="0,8,10,0"
                     Padding="10,5"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
@@ -3992,11 +3925,13 @@
                     BorderThickness="1"
                     CornerRadius="3"
                     Canvas.ZIndex="48">
-                <Grid ColumnSpacing="10">
+                <Grid ColumnSpacing="6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0"
@@ -4581,6 +4516,45 @@
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
+                    <Border x:Name="ViewportCommandBar" Grid.Column="3" VerticalAlignment="Center">
+    <Button Content="Vista ▾" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Câmera, grade e referência">
+        <Button.Flyout><Flyout Placement="Bottom"><StackPanel Width="190" Spacing="6">
+                    <Border Padding="8,3"
+                            Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                            CornerRadius="5">
+                        <TextBlock x:Name="ViewportModuleText"
+                                   Text="Seleção fácil"
+                                   FontSize="10.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                    </Border>
+                    <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="3D"
+                            ToolTipService.ToolTip="Câmera em perspectiva"
+                            Click="OnPerspectiveViewClick" />
+                    <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="2D"
+                            ToolTipService.ToolTip="Vista superior"
+                            Click="OnTopViewClick" />
+                    <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Enquadrar"
+                            ToolTipService.ToolTip="Enquadrar a cena inteira"
+                            Click="OnFitSceneClick" />
+                    <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Grade"
+                            ToolTipService.ToolTip="Mostrar/ocultar grade"
+                            Click="OnGridVisibilityClick" />
+                    <Button HorizontalAlignment="Stretch" Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Referência"
+                            ToolTipService.ToolTip="Mostrar/ocultar a referência de mapa"
+                            Click="OnToggleMapReferenceVisibilityClick" />
+                </StackPanel></Flyout></Button.Flyout>
+    </Button>
+</Border>
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3">
+                        <Button Content="Projeto" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Mostrar ou recolher Explorer" Click="OnToggleExplorerClick"/>
+                        <Button Content="Propriedades" Style="{StaticResource EditorToolbarButtonStyle}" ToolTipService.ToolTip="Mostrar ou recolher Inspector" Click="OnToggleInspectorClick"/>
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -4591,7 +4565,7 @@
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
                     MaxHeight="350"
-                    Margin="6,50,0,10"
+                    Margin="3,4,0,4"
                     Padding="3"
                     Background="{ThemeResource MapStudioChromeBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
@@ -4613,7 +4587,7 @@
                               Data="M 2,2 L 20,10 L 12,12 L 16,20 L 12,22 L 8,14 L 3,19 Z" />
                     </Button>
 
-                    <Button x:Name="ModuleObjectsButton" Visibility="Collapsed"
+                    <Button x:Name="ModuleObjectsButton"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Objetos e cenário"
                             Click="OnToolObjectsClick">
@@ -4625,7 +4599,7 @@
                               Data="M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z M 3,7 L 12,12 L 21,7 M 12,12 L 12,22" />
                     </Button>
 
-                    <Button x:Name="ModuleRoadsButton" Visibility="Collapsed"
+                    <Button x:Name="ModuleRoadsButton"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Ruas e splines"
                             Click="OnToolSplinesClick">
@@ -4637,7 +4611,7 @@
                               Data="M 4,22 C 8,16 8,8 12,2 M 20,22 C 16,16 16,8 12,2 M 9,17 L 15,17 M 10.5,11 L 13.5,11" />
                     </Button>
 
-                    <Button x:Name="ModuleTerrainButton" Visibility="Collapsed"
+                    <Button x:Name="ModuleTerrainButton"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Terreno e água"
                             Click="OnToolTerrainClick">
@@ -4673,7 +4647,7 @@
                               Data="M 9,2 L 15,2 L 15,9 L 22,9 L 22,15 L 15,15 L 15,22 L 9,22 L 9,15 L 2,15 L 2,9 L 9,9 Z M 12,4 L 12,20 M 4,12 L 20,12" />
                     </Button>
 
-                    <Button x:Name="ModuleTrafficButton" Visibility="Collapsed"
+                    <Button x:Name="ModuleTrafficButton"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Tráfego e semáforos"
                             Click="OnToolTrafficClick">
@@ -4685,7 +4659,7 @@
                               Data="M 7,2 L 17,2 L 17,22 L 7,22 Z M 12,6 A 2,2 0 1 0 12,6.1 M 12,12 A 2,2 0 1 0 12,12.1 M 12,18 A 2,2 0 1 0 12,18.1" />
                     </Button>
 
-                    <Button x:Name="ModuleTransportButton" Visibility="Collapsed"
+                    <Button x:Name="ModuleTransportButton"
                             Style="{StaticResource EditorModuleRailButtonStyle}"
                             ToolTipService.ToolTip="Transporte e operação"
                             Click="OnToolTransportClick">
