@@ -41,3 +41,7 @@ Horizontal module ribbon hidden by default, available in View. Compact rail incl
 ## Stage 14 — compact contextual commands
 
 Road Studio keeps draw, straight and curve accessible and groups drawing options, numerical/roundabout construction and geometry/connections/elevation. Secondary terrain and traffic commands use menus. Panel toggles use icons with automation names and tooltips; selection instruction moved to tooltip. Existing control names and handlers preserved. Validate SLI selection, continuous/snap mode, group interaction and return to viewport; validate terrain and traffic menus with a loaded map. CI and screenshots pending.
+
+## Stage 15 — loaded-map visual review
+
+Stage 14 compiled and packaged successfully. CI attempts to create a disposable starter map through native controls (New map, unique folder/name, Create and open). A capture is labeled as loaded only when the editor's success status is found through UI Automation; otherwise shell captures remain unverified. Map creation is limited to a disposable GitHub Actions runner, not attached sessions. Loaded-map/Road Studio captures do not prove road drawing; visual and asset-editing acceptance is still required.

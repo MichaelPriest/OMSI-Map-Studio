@@ -68,3 +68,7 @@ Faixa horizontal de módulos recolhida por padrão, reativável em Visualizar. T
 ## Etapa 14 — comandos contextuais compactos
 
 Road Studio mantém desenho, reta e curva acessíveis e reúne opções de desenho, construção numérica/rotatória, geometria/conexões/elevação em três grupos. Controles de terreno e tráfego secundários passam para menus. Acesso aos painéis por ícones com nomes de automação e tooltips; instrução de seleção transferida para tooltip. Nenhum nome de controle ou evento existente removido. Validar seleção de SLI, continuidade/snap, abertura dos grupos e retorno ao viewport; validar menus de terreno e tráfego em mapa real. CI e captura pendentes.
+
+## Etapa 15 — homologação com mapa aberto
+
+Etapa 14 compilada e empacotada com sucesso. O CI tenta criar um mapa inicial descartável usando os controles nativos (Novo mapa, pasta/nome únicos, Criar e abrir). Só registra uma captura como mapa aberto se a mensagem de sucesso do editor for encontrada via UI Automation; caso contrário mantém as capturas como não verificadas. A opção de criar mapa é exclusiva do runner descartável do GitHub Actions, não opera em sessões anexadas. As capturas do mapa e Road Studio não comprovam desenho de ruas; a homologação visual e edição com assets permanece necessária.

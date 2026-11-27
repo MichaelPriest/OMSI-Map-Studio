@@ -7,7 +7,8 @@ param(
     [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$')][string]$Name = '00-startup',
     [ValidateRange(5,120)][int]$TimeoutSeconds = 45,
     [string]$Commit = '',
-    [switch]$CaptureModules
+    [switch]$CaptureModules,
+    [switch]$CreateReviewMap
 )
 $ErrorActionPreference = 'Stop'
 if (-not [Environment]::UserInteractive) { throw 'An interactive Windows desktop is required.' }
@@ -35,9 +36,64 @@ public static class EditorCaptureWin32 {
 [void][EditorCaptureWin32]::SetProcessDPIAware()
 $directory = New-Item -ItemType Directory -Force -Path $OutputDirectory
 $launched = $PSCmdlet.ParameterSetName -eq 'Launch'
+if ($CreateReviewMap -and (-not $launched -or $env:GITHUB_ACTIONS -ne 'true' -or -not $env:RUNNER_TEMP)) {
+    throw 'Review map creation is restricted to a launched editor on a disposable GitHub Actions runner.'
+}
 $app = $null
 $records = [System.Collections.Generic.List[object]]::new()
-function Save-EditorWindow([string]$FileName, [IntPtr]$Handle) {
+$reviewMapVerified = $false
+$reviewMapName = $null
+function Find-VisibleEditorElement([IntPtr]$Handle, [string]$Label, [int]$WaitSeconds = 15, [switch]$ById, [switch]$AllowDisabled) {
+    $until = [DateTime]::UtcNow.AddSeconds($WaitSeconds)
+    $property = if ($ById) { [Windows.Automation.AutomationElement]::AutomationIdProperty } else { [Windows.Automation.AutomationElement]::NameProperty }
+    $condition = New-Object Windows.Automation.PropertyCondition($property,$Label)
+    do {
+        try {
+            $root = [Windows.Automation.AutomationElement]::FromHandle($Handle)
+            $matches = $root.FindAll([Windows.Automation.TreeScope]::Descendants,$condition)
+            for ($n=0; $n -lt $matches.Count; $n++) {
+                $item = $matches.Item($n)
+                if (-not $item.Current.IsOffscreen -and ($AllowDisabled -or $item.Current.IsEnabled)) { return $item }
+            }
+        } catch [Windows.Automation.ElementNotAvailableException] {}
+        Start-Sleep -Milliseconds 350
+    } while ([DateTime]::UtcNow -lt $until)
+    return $null
+}
+function Invoke-EditorElement($Element, [string]$Label) {
+    if ($null -eq $Element) { throw "Visible control not found: $Label" }
+    $pattern = $null
+    if (-not $Element.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) { throw "InvokePattern unavailable: $Label" }
+    ([Windows.Automation.InvokePattern]$pattern).Invoke()
+}
+function Set-EditorValue($Element, [string]$Value) {
+    if ($null -eq $Element) { throw 'Review map input not found.' }
+    $pattern = $null
+    if (-not $Element.TryGetCurrentPattern([Windows.Automation.ValuePattern]::Pattern,[ref]$pattern)) { throw 'Review map input lacks ValuePattern.' }
+    ([Windows.Automation.ValuePattern]$pattern).SetValue($Value)
+}
+function New-EditorReviewMap([IntPtr]$Handle) {
+    $suffix = [Guid]::NewGuid().ToString('N').Substring(0,8)
+    $folder = "UI_Review_$suffix"
+    $display = "UI Review $suffix"
+    Invoke-EditorElement (Find-VisibleEditorElement $Handle 'Novo mapa' 20) 'Novo mapa'
+    Set-EditorValue (Find-VisibleEditorElement $Handle 'Pasta do projeto' 15) $folder
+    Set-EditorValue (Find-VisibleEditorElement $Handle 'Nome do mapa' 15) $display
+    Invoke-EditorElement (Find-VisibleEditorElement $Handle 'Criar e abrir' 15) 'Criar e abrir'
+    $until = [DateTime]::UtcNow.AddSeconds(100)
+    do {
+        if ($app.HasExited) { throw 'Editor closed during test map creation.' }
+        try {
+            $status = Find-VisibleEditorElement $Handle 'StatusText' 1 -ById -AllowDisabled
+            if ($null -ne $status -and $status.Current.Name -like "*$display*criado e aberto*") {
+                return $display
+            }
+        } catch [Windows.Automation.ElementNotAvailableException] {}
+        Start-Sleep -Milliseconds 500
+    } while ([DateTime]::UtcNow -lt $until)
+    throw 'Map creation was not confirmed by the editor status.'
+}
+function Save-EditorWindow([string]$FileName, [IntPtr]$Handle, [string]$Workspace = 'not verified by capture script', [string]$MapName = '') {
     if (-not [EditorCaptureWin32]::IsWindowVisible($Handle) -or [EditorCaptureWin32]::IsIconic($Handle)) {
         throw 'Editor window is hidden or minimized.'
     }
@@ -76,7 +132,7 @@ function Save-EditorWindow([string]$FileName, [IntPtr]$Handle) {
             file = ($FileName + '.png'); width = $rect.Width; height = $rect.Height;
             capturedAtUtc = [DateTime]::UtcNow.ToString('o'); commit = $Commit;
             sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant();
-            source = 'actual foreground WinUI window'; workspace = 'not verified by capture script'
+            source = 'actual foreground WinUI window'; workspace = $Workspace; mapName = $MapName
         })
         Write-Host "Captured $file"
     } finally { $graphics.Dispose(); $bitmap.Dispose() }
@@ -104,6 +160,19 @@ try {
     if ($launched) { [void][EditorCaptureWin32]::ShowWindowAsync($handle,3) }
     Start-Sleep -Seconds 3
     Save-EditorWindow $Name $handle
+    if ($CreateReviewMap) {
+        try {
+            $reviewMapName = New-EditorReviewMap $handle
+            $reviewMapVerified = $true
+            Start-Sleep -Seconds 2
+            Save-EditorWindow '03-loaded-map' $handle 'created and opened; editor status verified' $reviewMapName
+        } catch {
+            Write-Warning "Optional review map: $_"
+            # If the creation dialog is still open, cancel only that dialog before module captures.
+            $cancel = Find-VisibleEditorElement $handle 'Cancelar' 2
+            if ($null -ne $cancel) { try { Invoke-EditorElement $cancel 'Cancelar' } catch {} }
+        }
+    }
     if ($CaptureModules) {
         $root = [Windows.Automation.AutomationElement]::FromHandle($handle)
         $welcomeCondition = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::NameProperty,'Ir para o editor →')
@@ -130,7 +199,12 @@ try {
                 if (-not $control.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) { throw 'Module does not expose InvokePattern.' }
                 ([Windows.Automation.InvokePattern]$pattern).Invoke()
                 Start-Sleep -Seconds 3
-                Save-EditorWindow $module.file $handle
+                if ($reviewMapVerified -and $module.label -eq 'Road Studio') {
+                    # This verifies map creation, not road placement or a particular selected asset.
+                    Save-EditorWindow '04-road-studio-loaded-map' $handle 'created and opened; editor status verified' $reviewMapName
+                } else {
+                    Save-EditorWindow $module.file $handle
+                }
             } catch { Write-Warning "Optional module $($module.label): $_" }
         }
     }

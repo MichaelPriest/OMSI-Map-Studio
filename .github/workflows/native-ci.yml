@@ -142,7 +142,7 @@ jobs:
     name: Capture real editor window (best effort)
     needs: validate-native
     runs-on: windows-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -154,7 +154,7 @@ jobs:
         continue-on-error: true
         shell: powershell
         run: |
-          ./tools/capture_native_editor.ps1 -Executable artifacts/native-editor/app/MapStudio.Native.exe -OutputDirectory artifacts/editor-screenshots -Commit "$env:GITHUB_SHA" -CaptureModules
+          ./tools/capture_native_editor.ps1 -Executable artifacts/native-editor/app/MapStudio.Native.exe -OutputDirectory artifacts/editor-screenshots -Commit "$env:GITHUB_SHA" -CaptureModules -CreateReviewMap
       - name: Report screenshot availability
         if: always()
         shell: pwsh
@@ -164,6 +164,13 @@ jobs:
             Write-Warning 'Screenshot capture failed. Build validation is independent.'
           } else {
             'Actual window capture available as an artifact; review visually before adding to documentation.' >> $env:GITHUB_STEP_SUMMARY
+            $manifest = Get-Content artifacts/editor-screenshots/capture-manifest.json -Raw | ConvertFrom-Json
+            $loaded = @($manifest | Where-Object { $_.workspace -eq 'created and opened; editor status verified' })
+            if ($loaded.Count -gt 0) {
+              "Loaded-map capture(s): $($loaded.Count). Starter map creation confirmed by editor status; visual acceptance still required." >> $env:GITHUB_STEP_SUMMARY
+            } else {
+              'No loaded-map capture was verified; shell captures are not evidence of a loaded map.' >> $env:GITHUB_STEP_SUMMARY
+            }
           }
       - name: Upload screenshots for review
         if: steps.capture.outcome == 'success'
