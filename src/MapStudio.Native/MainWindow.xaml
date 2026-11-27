@@ -841,6 +841,11 @@
 
         <Grid x:Name="WorkspaceGrid"
               Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="ExplorerColumn"
                                   Width="300" />
@@ -854,6 +859,8 @@
             </Grid.ColumnDefinitions>
 
             <Border x:Name="ExplorerPanel"
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
                     Grid.Column="0"
                     Margin="6"
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"
@@ -1187,7 +1194,11 @@
 
                         <Grid x:Name="AssetLibraryPanel"
                               Visibility="Collapsed"
-                              RowSpacing="8">
+                              RowSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition x:Name="AssetDockActionsColumn" Width="0" />
+                            </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -1201,7 +1212,7 @@
                                       Header="ASSETS · FILTROS"
                                       IsExpanded="False"
                                       HorizontalAlignment="Stretch">
-                                <ScrollViewer MaxHeight="340"
+                                <ScrollViewer x:Name="AssetDockFiltersScroll" MaxHeight="340"
                                               VerticalScrollMode="Auto"
                                               VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollMode="Disabled"
@@ -1346,8 +1357,9 @@
                                 </ScrollViewer>
                             </Expander>
 
-                            <StackPanel Grid.Row="1"
-                                        Spacing="6">
+                            <ScrollViewer x:Name="AssetDockActionsScroll" Grid.Row="1"
+                                          VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+                            <StackPanel Spacing="6">
                                 <Border Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                         BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                                         BorderThickness="1"
@@ -1642,6 +1654,7 @@
                                                SpinButtonPlacementMode="Compact" />
                                 </StackPanel>
                             </StackPanel>
+                            </ScrollViewer>
 
                             <TextBlock x:Name="LibraryStatusText"
                                        Grid.Row="2"
@@ -2315,6 +2328,8 @@
             </Border>
 
             <Border x:Name="ExplorerSplitter"
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
                     Grid.Column="1"
                     Margin="1,8"
                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
@@ -2325,6 +2340,7 @@
 
             <controls:NativeViewport
                 x:Name="Viewport"
+                Grid.Row="1"
                 Grid.Column="2"
                 Margin="0,8"
                 AllowDrop="True"
@@ -2332,6 +2348,7 @@
                 Drop="OnViewportLibraryDrop" />
 
             <Border x:Name="ViewportCommandBar"
+                    Grid.Row="1"
                     Grid.Column="2"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top"
@@ -2377,6 +2394,7 @@
             </Border>
 
             <Border x:Name="MapReferenceAttributionBorder"
+                    Grid.Row="1"
                     Grid.Column="2"
                     Margin="8,0,8,14"
                     Padding="7,3"
@@ -2393,6 +2411,7 @@
             </Border>
 
             <Button x:Name="RestoreExplorerPanelButton"
+                    Grid.Row="1"
                     Grid.Column="2"
                     Margin="10,72,0,0"
                     Padding="10,5"
@@ -2407,6 +2426,7 @@
                     Click="OnRestoreExplorerPanelClick" />
 
             <Button x:Name="RestoreInspectorPanelButton"
+                    Grid.Row="1"
                     Grid.Column="2"
                     Margin="0,72,10,0"
                     Padding="10,5"
@@ -2421,6 +2441,7 @@
                     Click="OnRestoreInspectorPanelClick" />
 
             <Border x:Name="TileNavigatorWindow"
+                    Grid.RowSpan="3"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
                     Width="440"
@@ -2608,6 +2629,7 @@
             </Border>
 
             <Border x:Name="TrafficPathsWindow"
+                    Grid.RowSpan="3"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
                     Width="430"
@@ -2789,6 +2811,7 @@
             </Border>
 
             <Border x:Name="AiToolWindow"
+                    Grid.RowSpan="3"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
                     Width="390"
@@ -2966,13 +2989,12 @@
             </Border>
 
             <Border x:Name="AssetLibraryToolWindow"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="5"
-                    Width="560"
-                    Height="600"
-                    Margin="350,84,0,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
+                    Grid.Row="2"
+                    Grid.Column="2"
+                    Height="285"
+                    Margin="0,3,0,6"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
                     Visibility="Collapsed"
                     Canvas.ZIndex="110"
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"
@@ -3019,6 +3041,10 @@
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
                                     Spacing="4">
+                            <Button x:Name="AssetLibraryDockToggleButton"
+                                    Content="Desacoplar"
+                                    ToolTipService.ToolTip="Alternar entre biblioteca inferior e janela flutuante"
+                                    Click="OnToggleAssetLibraryDockClick" />
                             <Button x:Name="AssetLibraryToolMinimizeButton"
                                     Width="28"
                                     Height="28"
@@ -3068,6 +3094,7 @@
             </Border>
 
             <Border x:Name="TransportToolWindow"
+                    Grid.RowSpan="3"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
                     Width="620"
@@ -3170,6 +3197,7 @@
             </Border>
 
             <Border x:Name="RealMapAreaWindow"
+                    Grid.RowSpan="3"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
                     Width="800"
@@ -3661,6 +3689,7 @@
             </Border>
 
             <Grid x:Name="LoadingOverlay"
+                    Grid.RowSpan="3"
                   Grid.Column="0"
                   Grid.ColumnSpan="5"
                   Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
@@ -3759,6 +3788,7 @@
             </Grid>
 
             <Grid x:Name="FullscreenEditorBar"
+                    Grid.RowSpan="3"
                   Grid.Column="0"
                   Grid.ColumnSpan="5"
                   Margin="12,10"
@@ -3875,12 +3905,12 @@
             </Grid>
 
             <Border x:Name="ContextToolPalette"
+                    Grid.Row="0"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    HorizontalAlignment="Center"
-                    MaxWidth="1180"
-                    VerticalAlignment="Bottom"
-                    Margin="70,20,20,22"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Top"
+                    Margin="6,3,6,3"
                     Padding="8,6"
                     Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
@@ -4427,6 +4457,7 @@
 
 
             <Border x:Name="EditorModuleRail"
+                    Grid.Row="1"
                     Grid.Column="2"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
@@ -4537,6 +4568,7 @@
             </Border>
 
             <Border x:Name="MapToolPalette"
+                    Grid.Row="1"
                     Grid.Column="0"
                     Visibility="Collapsed"
                     Grid.ColumnSpan="5"
@@ -4878,6 +4910,8 @@
             </Border>
 
             <Border x:Name="InspectorSplitter"
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
                     Grid.Column="3"
                     Margin="1,8"
                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
@@ -4887,6 +4921,8 @@
                     PointerReleased="OnPanelSplitterPointerReleased" />
 
             <Border x:Name="InspectorPanel"
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
                     Grid.Column="4"
                     Margin="6"
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"

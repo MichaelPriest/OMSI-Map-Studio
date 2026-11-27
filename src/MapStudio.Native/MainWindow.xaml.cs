@@ -565,6 +565,8 @@ public sealed partial class MainWindow : Window
     private double _assetLibraryToolDragOriginY;
     private bool _resizingAssetLibraryToolWindow;
     private bool _assetLibraryToolWindowMinimized;
+    private bool _assetLibraryDocked = true;
+    private const double AssetDockHeight = 285;
     private double _assetLibraryToolRestoreHeight =
         680;
     private uint _assetLibraryToolResizePointerId;
@@ -648,7 +650,7 @@ public sealed partial class MainWindow : Window
             $"{versionLabel} · WinUI 3 · Direct3D 11 · .NET 10";
 
         Title =
-            $"OMSI Map Studio — World Creator · {versionLabel}";
+            $"OMSI Map Studio — Professional · {versionLabel}";
 
         _assetLibraryPanelHome =
             AssetLibraryPanel.Parent as
@@ -10438,7 +10440,7 @@ public sealed partial class MainWindow : Window
         await ActivateLibraryToolAsync(
             2,
             null,
-            "Ruas: escolha uma SLI e clique-arraste do início ao fim. Use Curva, ↑/↓, Snap e Contínuo na barra inferior.");
+            "Ruas: escolha uma SLI e clique-arraste do início ao fim. Use Curva, ↑/↓, Snap e Contínuo na barra superior.");
     }
 
     private void ConfigureRoadPreset(
@@ -20711,6 +20713,10 @@ public sealed partial class MainWindow : Window
         string? searchText,
         string status)
     {
+        if (_assetLibraryDocked)
+        {
+            OpenAssetLibraryToolWindow();
+        }
         _libraryMode =
             true;
 
@@ -24955,6 +24961,11 @@ public sealed partial class MainWindow : Window
     private void SetAssetLibraryPanelProjectVisibility(
         bool visible)
     {
+        if (!visible && _assetLibraryDocked && AssetLibraryToolWindow.Visibility == Visibility.Visible)
+        {
+            CloseAssetLibraryToolWindow();
+            return;
+        }
         AssetLibraryPanel.Visibility =
             AssetLibraryToolWindow.Visibility ==
                 Visibility.Visible ||
@@ -24982,7 +24993,7 @@ public sealed partial class MainWindow : Window
         OpenAssetLibraryToolWindow();
 
         StatusText.Text =
-            "Biblioteca aberta em janela flutuante · mova, redimensione ou minimize livremente.";
+            _assetLibraryDocked ? "Biblioteca acoplada abaixo do mapa." : "Biblioteca aberta em janela flutuante.";
 
         OnLibraryModeClick(
             sender,
@@ -25004,6 +25015,45 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Biblioteca aberta: selecione um SCO/SLI e use “+ Posicionar no mapa”.";
+    }
+
+    private void OnToggleAssetLibraryDockClick(object sender, RoutedEventArgs e)
+    {
+        _assetLibraryDocked = !_assetLibraryDocked;
+        ApplyAssetLibraryDockLayout();
+        StatusText.Text = _assetLibraryDocked ? "Biblioteca acoplada abaixo do mapa." : "Biblioteca flutuante.";
+    }
+
+    private void ApplyAssetLibraryDockLayout()
+    {
+        var docked = _assetLibraryDocked;
+        _draggingAssetLibraryToolWindow = false;
+        _resizingAssetLibraryToolWindow = false;
+        Grid.SetRow(AssetLibraryToolWindow, docked ? 2 : 0);
+        Grid.SetRowSpan(AssetLibraryToolWindow, docked ? 1 : 3);
+        Grid.SetColumn(AssetLibraryToolWindow, docked ? 2 : 0);
+        Grid.SetColumnSpan(AssetLibraryToolWindow, docked ? 1 : 5);
+        AssetLibraryToolWindow.Width = docked ? double.NaN : 560;
+        AssetLibraryToolWindow.Height = _assetLibraryToolWindowMinimized ? 58 : docked ? AssetDockHeight : 600;
+        AssetLibraryToolWindow.Margin = docked ? new Thickness(0, 3, 0, 6) : new Thickness(350, 84, 0, 0);
+        AssetLibraryToolWindow.HorizontalAlignment = docked ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
+        AssetLibraryToolWindow.VerticalAlignment = docked ? VerticalAlignment.Stretch : VerticalAlignment.Top;
+        AssetLibraryToolWindowTranslate.X = 0;
+        AssetLibraryToolWindowTranslate.Y = 0;
+        AssetLibraryDockToggleButton.Content = docked ? "Desacoplar" : "Acoplar";
+        AssetLibraryToolResizeGrip.Visibility = docked || _assetLibraryToolWindowMinimized ? Visibility.Collapsed : Visibility.Visible;
+        SetAssetDockContentLayout(docked);
+    }
+
+    private void SetAssetDockContentLayout(bool docked)
+    {
+        AssetDockActionsColumn.Width = new GridLength(docked ? 190 : 0);
+        Grid.SetColumn(AssetDockActionsScroll, docked ? 1 : 0);
+        Grid.SetRow(AssetDockActionsScroll, docked ? 0 : 1);
+        Grid.SetRowSpan(AssetDockActionsScroll, docked ? 5 : 1);
+        AssetDockActionsScroll.Margin = docked ? new Thickness(6, 0, 0, 0) : new Thickness(0);
+        AssetDockFiltersScroll.MaxHeight = docked ? 100 : 340;
+        LibraryThumbnailBorder.Height = docked ? 0 : 128;
     }
 
     private void OpenAssetLibraryToolWindow()
@@ -25045,6 +25095,8 @@ public sealed partial class MainWindow : Window
 
         AssetLibraryToolWindow.Visibility =
             Visibility.Visible;
+
+        ApplyAssetLibraryDockLayout();
 
         if (_assetLibraryToolWindowMinimized)
         {
@@ -25104,6 +25156,7 @@ public sealed partial class MainWindow : Window
                     AssetLibraryPanel);
         }
 
+        SetAssetDockContentLayout(false);
         AssetLibraryPanel.Visibility =
             _libraryMode
                 ? Visibility.Visible
@@ -25144,14 +25197,14 @@ public sealed partial class MainWindow : Window
                 : Visibility.Visible;
 
         AssetLibraryToolResizeGrip.Visibility =
-            minimized
+            minimized || _assetLibraryDocked
                 ? Visibility.Collapsed
                 : Visibility.Visible;
 
         AssetLibraryToolWindow.Height =
             minimized
                 ? 58
-                : Math.Max(
+                : _assetLibraryDocked ? AssetDockHeight : Math.Max(
                     360,
                     _assetLibraryToolRestoreHeight);
 
@@ -25166,7 +25219,7 @@ public sealed partial class MainWindow : Window
         PointerRoutedEventArgs e)
     {
         if (
-            sender is not UIElement element)
+            _assetLibraryDocked || sender is not UIElement element)
         {
             return;
         }
@@ -25294,7 +25347,7 @@ public sealed partial class MainWindow : Window
         PointerRoutedEventArgs e)
     {
         if (
-            sender is not UIElement element)
+            _assetLibraryDocked || sender is not UIElement element)
         {
             return;
         }
