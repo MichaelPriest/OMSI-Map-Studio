@@ -7,6 +7,7 @@ on:
       - feature/native-winui-d3d11
     paths:
       - ".github/workflows/native-preview-release.yml"
+      - "tools/package_native_portable.ps1"
       - "installer/MapStudio.NativePreview.iss"
       - "src/MapStudio.Native/App.xaml"
       - "src/MapStudio.Native/App.xaml.cs"
@@ -6501,7 +6502,8 @@ jobs:
         shell: pwsh
         run: |
           $zip = "artifacts/OMSI-Map-Studio-$env:VERSION-portable-win-x64.zip"
-          Compress-Archive -Path "artifacts/publish/win-x64/*" -DestinationPath $zip -CompressionLevel Optimal -Force
+          ./tools/package_native_portable.ps1 -PublishDirectory artifacts/publish/win-x64 -PackageDirectory artifacts/portable/win-x64 -Version "$env:VERSION" -Commit "$env:GITHUB_SHA" -WorkflowUrl "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          [System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path artifacts/portable/win-x64).Path, $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($zip), [System.IO.Compression.CompressionLevel]::Optimal, $false)
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $(Split-Path -Leaf $zip)" | Set-Content "$zip.sha256" -Encoding ascii
 

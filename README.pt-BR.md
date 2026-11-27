@@ -46,3 +46,7 @@ dotnet build src/MapStudio.Native/MapStudio.Native.csproj -c Release -p:Platform
 A compilação do host nativo exige Windows. Documentação oficial em pt-BR e inglês. Não substituir dados ausentes por dados fictícios nem descartar comandos desconhecidos na gravação.
 
 [Organização das pastas do repositório](docs/pt-BR/REPOSITORY_STRUCTURE.md)
+
+## Pacote portátil organizado
+
+Os novos ZIPs de CI e release agrupam os arquivos em `app/` (runtime intacto), `Documentacao/` (manuais e verificação), e deixam apenas `Iniciar OMSI Map Studio.cmd` e `LEIA-ME.txt` na raiz. Extraia tudo antes de iniciar. Os ZIPs anteriores ainda usam o layout antigo.

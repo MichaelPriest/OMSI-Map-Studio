@@ -12,6 +12,7 @@ on:
       - "tests/MapStudio.Renderer.Tests/**"
       - ".github/workflows/native-ci.yml"
       - "tools/capture_native_editor.ps1"
+      - "tools/package_native_portable.ps1"
   pull_request:
     branches:
       - feature/alpha3-material-preview
@@ -24,6 +25,7 @@ on:
       - "tests/MapStudio.Renderer.Tests/**"
       - ".github/workflows/native-ci.yml"
       - "tools/capture_native_editor.ps1"
+      - "tools/package_native_portable.ps1"
   workflow_dispatch:
 
 permissions:
@@ -117,38 +119,15 @@ jobs:
         run: dotnet build src/MapStudio.Native/MapStudio.Native.csproj --configuration Release -p:Platform=x64
 
       - name: Publish testable Windows x64 build
-        run: dotnet publish src/MapStudio.Native/MapStudio.Native.csproj --configuration Release --runtime win-x64 --self-contained true -p:Platform=x64 -p:WindowsAppSDKSelfContained=true --output artifacts/OMSI-Map-Studio-test
+        run: dotnet publish src/MapStudio.Native/MapStudio.Native.csproj --configuration Release --runtime win-x64 --self-contained true -p:Platform=x64 -p:WindowsAppSDKSelfContained=true --output artifacts/native-publish
 
-      - name: Write build information
+      - name: Organize portable package
         shell: pwsh
         run: |
-          $output = "artifacts/OMSI-Map-Studio-test/BUILD-INFO.txt"
-          @(
-            "Product: OMSI Map Studio"
-            "Platform: Windows x64"
-            "Configuration: Release"
-            "Commit: $env:GITHUB_SHA"
-            "Workflow run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
-            "Run attempt: $env:GITHUB_RUN_ATTEMPT"
-            "Built at (UTC): $([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
-            ""
-            "This file identifies the generated package; it does not certify manual validation inside OMSI 2."
-          ) | Set-Content -Path $output -Encoding utf8
-
-      - name: Generate SHA-256 manifest
-        shell: pwsh
-        run: |
-          $root = Resolve-Path artifacts/OMSI-Map-Studio-test
-          $manifest = Join-Path $root "SHA256SUMS.txt"
-          $lines = Get-ChildItem $root -File -Recurse |
-            Where-Object { $_.FullName -ne $manifest } |
-            Sort-Object FullName |
-            ForEach-Object {
-              $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-              $relative = [System.IO.Path]::GetRelativePath($root.Path, $_.FullName).Replace([string][char]92, "/")
-              "$hash  $relative"
-            }
-          Set-Content -Path $manifest -Value $lines -Encoding utf8
+          New-Item -ItemType Directory -Force -Path artifacts/native-publish/Docs | Out-Null
+          Copy-Item docs/pt-BR/USER_MANUAL.md artifacts/native-publish/Docs/Manual-pt-BR.md
+          Copy-Item docs/en/USER_MANUAL.md artifacts/native-publish/Docs/Manual-en.md
+          ./tools/package_native_portable.ps1 -PublishDirectory artifacts/native-publish -PackageDirectory artifacts/OMSI-Map-Studio-test -Commit "$env:GITHUB_SHA" -Version "CI $env:GITHUB_RUN_NUMBER" -WorkflowUrl "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
 
       - name: Upload Windows x64 test build
         uses: actions/upload-artifact@v4
@@ -175,7 +154,7 @@ jobs:
         continue-on-error: true
         shell: powershell
         run: |
-          ./tools/capture_native_editor.ps1 -Executable artifacts/native-editor/MapStudio.Native.exe -OutputDirectory artifacts/editor-screenshots -Commit "$env:GITHUB_SHA" -CaptureModules
+          ./tools/capture_native_editor.ps1 -Executable artifacts/native-editor/app/MapStudio.Native.exe -OutputDirectory artifacts/editor-screenshots -Commit "$env:GITHUB_SHA" -CaptureModules
       - name: Report screenshot availability
         if: always()
         shell: pwsh

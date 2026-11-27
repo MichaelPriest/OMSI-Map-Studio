@@ -46,3 +46,7 @@ dotnet build src/MapStudio.Native/MapStudio.Native.csproj -c Release -p:Platform
 Building the native host requires Windows. Official documentation is maintained in Brazilian Portuguese and English. Never replace missing real data with fabricated data or discard unknown commands on save.
 
 [Repository folder organization](docs/en/REPOSITORY_STRUCTURE.md)
+
+## Organized portable package
+
+New CI and release ZIPs group files into `app/` (intact runtime) and `Documentacao/` (manuals and integrity information), with only `Iniciar OMSI Map Studio.cmd` and `LEIA-ME.txt` at the root. Extract everything before launching. Earlier ZIPs still use the old layout.
