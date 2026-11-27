@@ -56,3 +56,7 @@ Paleta neutra grafite/claro, azul para seleção, contornos discretos e módulos
 ## Etapa 11 — layout Clean (estrutura)
 
 Restaurada a paleta anterior à etapa 10: foco na disposição, não na cor. Controles de câmera e grade em Vista, dentro da faixa contextual; removida a faixa exclusiva sobre o viewport. Projeto e Propriedades acessíveis na mesma faixa. Inspector automático recolhe quando vazio e abre quando há seleção editável ou ferramenta de terreno; alternância manual desativa o automático, reativável em Visualizar. Abas do Explorer em uma linha, ações de projeto recolhidas por padrão. Restauração em tela cheia preservada. Correção do bloqueio estático do trilho de módulos mantendo todos os atalhos no XAML e acesso pela faixa superior. CI e homologação visual pendentes.
+
+## Etapa 12 — separação de início e edição
+
+Tela inicial ocupa o workspace sem expor painéis vazios; quatro ações reais de projeto, acesso explícito ao editor e retorno pelo menu Visualizar quando nenhum mapa estiver aberto. Em tela cheia a tela inicial é ocultada. Explorer usa lista compacta sem cards por objeto, preserva tipo/detalhe e caminho em tooltip. Marca superior simplificada. Paleta e motor inalterados. Capturas e CI da etapa 12 pendentes.

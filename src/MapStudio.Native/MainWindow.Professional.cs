@@ -11,6 +11,7 @@ public sealed partial class MainWindow
     private bool _professionalInspectorReady;
     private bool _professionalInspectorQueued;
     private bool _professionalInspectorAutomatic = true;
+    private bool _professionalWelcomeDismissed;
 
     private void InitializeProfessionalWorkspace()
     {
@@ -22,7 +23,7 @@ public sealed partial class MainWindow
         }
         SyncProfessionalLayers();
         WorkspaceGrid.SizeChanged += OnProfessionalWorkspaceSizeChanged;
-        DesktopChromePanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => SyncProfessionalRail());
+        DesktopChromePanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => { SyncProfessionalRail(); RefreshProfessionalWelcome(); });
         SyncProfessionalRail();
         MapText.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => RefreshProfessionalWelcome());
         SelectionContextPanel.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, (_, _) => RefreshProfessionalWelcome());
@@ -79,8 +80,30 @@ public sealed partial class MainWindow
 
     private void RefreshProfessionalWelcome()
     {
-        ProfessionalWelcomePanel.Visibility = _session.CurrentMap is null && SelectionContextPanel.Visibility == Visibility.Visible
+        if (_session.CurrentMap is not null) _professionalWelcomeDismissed = false;
+        ProfessionalWelcomePanel.Visibility = !_professionalWelcomeDismissed &&
+            _session.CurrentMap is null && SelectionContextPanel.Visibility == Visibility.Visible &&
+            DesktopChromePanel.Visibility == Visibility.Visible
             ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnProfessionalDismissWelcomeClick(object sender, RoutedEventArgs e)
+    {
+        _professionalWelcomeDismissed = true;
+        RefreshProfessionalWelcome();
+    }
+
+    private void OnProfessionalShowWelcomeClick(object sender, RoutedEventArgs e)
+    {
+        if (_session.CurrentMap is not null)
+        {
+            StatusText.Text = "Feche o mapa antes de voltar à tela inicial.";
+            return;
+        }
+        _professionalWelcomeDismissed = false;
+        if (SelectionContextPanel.Visibility != Visibility.Visible)
+            OnToolSelectionClick(sender, e);
+        RefreshProfessionalWelcome();
     }
 
     private void OnProfessionalWorkspaceSizeChanged(object sender, SizeChangedEventArgs e)

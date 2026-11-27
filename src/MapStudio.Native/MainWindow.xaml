@@ -234,10 +234,8 @@
                     Grid.Column="0"
                     Margin="6,3,6,3"
                     Padding="7,3"
-                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
-                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8">
+                    Background="Transparent"
+                    BorderThickness="0">
                 <StackPanel Orientation="Horizontal"
                             Spacing="9">
                     <Border Width="28"
@@ -257,10 +255,7 @@
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                        <TextBlock Text="PROFESSIONAL"
-                                   FontSize="9"
-                                   CharacterSpacing="35"
-                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                        
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -371,6 +366,7 @@
                     <MenuFlyoutItem
                         Text="Alternar Inspector"
                         Click="OnToggleInspectorClick" />
+                    <MenuFlyoutItem Text="Tela inicial (sem mapa)" Click="OnProfessionalShowWelcomeClick" />
                     <ToggleMenuFlyoutItem x:Name="ProfessionalAutoInspectorMenuItem" Text="Propriedades automáticas" IsChecked="True" Click="OnProfessionalAutoInspectorClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Mapa">
@@ -1064,48 +1060,14 @@
                                   DoubleTapped="OnExplorerDoubleTapped">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="0,2"
-                                            Padding="8"
-                                            Background="{ThemeResource MapStudioSurfaceAltBrush}"
-                                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="7">
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <Border Grid.Column="0"
-                                                    MinWidth="48"
-                                                    Padding="6,4"
-                                                    VerticalAlignment="Top"
-                                                    Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
-                                                    CornerRadius="5">
-                                                <TextBlock Text="{Binding KindLabel}"
-                                                           FontSize="9"
-                                                           FontWeight="SemiBold"
-                                                           HorizontalAlignment="Center"
-                                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
-                                            </Border>
-
-                                            <StackPanel Grid.Column="1"
-                                                        Spacing="2">
-                                                <TextBlock Text="{Binding AssetName}"
-                                                           FontSize="12"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                                                <TextBlock Text="{Binding DetailText}"
-                                                           FontSize="10"
-                                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
-                                                <TextBlock Text="{Binding AssetPath}"
-                                                           FontSize="9.5"
-                                                           Foreground="{ThemeResource MapStudioTextMutedBrush}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
+                                    <Grid Padding="4,5" ColumnSpacing="6" ToolTipService.ToolTip="{Binding AssetPath}">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding AssetName}" FontSize="12" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource MapStudioTextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding DetailText}" FontSize="10" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource MapStudioTextMutedBrush}"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding KindLabel}" FontSize="10" VerticalAlignment="Top" Foreground="{ThemeResource MapStudioTextSecondaryBrush}"/>
+                                    </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
@@ -2358,20 +2320,35 @@
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
 
-            <Border x:Name="ProfessionalWelcomePanel" Grid.Row="1" Grid.Column="2"
-                    Margin="52,10,10,10" MaxWidth="430" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="{ThemeResource MapStudioChromeBackgroundBrush}" CornerRadius="3"
-                    BorderBrush="{ThemeResource MapStudioBorderBrush}" BorderThickness="1" Padding="14"
-                    Canvas.ZIndex="56" Visibility="Collapsed">
+            <Border x:Name="ProfessionalWelcomePanel" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="5"
+                    Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                    Canvas.ZIndex="95" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="7">
-                        <TextBlock Text="Comece um mapa" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                        <TextBlock Text="Crie ou abra um mapa para começar." FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextSecondaryBrush}"/>
-                        <Button Content="Novo mapa" HorizontalAlignment="Stretch" Click="OnCreateStandaloneMapClick" Background="{ThemeResource MapStudioAccentSurfaceBrush}"/>
-                        <Button Content="Abrir mapa" HorizontalAlignment="Stretch" IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}" Click="OnOpenMapCatalogClick"/>
-                        <Button Content="Importar mapa OMSI" HorizontalAlignment="Stretch" Click="OnImportStandaloneMapClick"/>
-                        <Button Content="Geo Studio · mapa real" HorizontalAlignment="Stretch" Click="OnCreateCoordinateMapClick"/>
-                    </StackPanel>
+                    <Grid Padding="24" MinHeight="300">
+                        <StackPanel MaxWidth="480" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="OMSI Map Studio" FontSize="27" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="Comece um projeto ou continue um mapa existente." FontSize="13" TextWrapping="Wrap" Foreground="{ThemeResource MapStudioTextSecondaryBrush}"/>
+                            </StackPanel>
+                            <Grid ColumnSpacing="10" RowSpacing="10">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <Button Grid.Row="0" Grid.Column="0" HorizontalAlignment="Stretch" MinHeight="64" Padding="12" Click="OnCreateStandaloneMapClick" Background="{ThemeResource MapStudioAccentSurfaceBrush}">
+                                    <StackPanel Spacing="5"><SymbolIcon Symbol="Add"/><TextBlock Text="Novo mapa" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel>
+                                </Button>
+                                <Button Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" MinHeight="64" Padding="12" IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}" Click="OnOpenMapCatalogClick">
+                                    <StackPanel Spacing="5"><SymbolIcon Symbol="OpenFile"/><TextBlock Text="Abrir mapa" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel>
+                                </Button>
+                                <Button Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch" MinHeight="64" Padding="12" Click="OnImportStandaloneMapClick">
+                                    <StackPanel Spacing="5"><SymbolIcon Symbol="Import"/><TextBlock Text="Importar mapa OMSI" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel>
+                                </Button>
+                                <Button Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" MinHeight="64" Padding="12" Click="OnCreateCoordinateMapClick">
+                                    <StackPanel Spacing="5"><SymbolIcon Symbol="Map"/><TextBlock Text="Geo Studio · mapa real" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel>
+                                </Button>
+                            </Grid>
+                            <Button HorizontalAlignment="Left" Style="{StaticResource EditorToolbarButtonStyle}" Content="Ir para o editor →" Click="OnProfessionalDismissWelcomeClick"/>
+                        </StackPanel>
+                    </Grid>
                 </ScrollViewer>
             </Border>
             <Border x:Name="MapReferenceAttributionBorder"

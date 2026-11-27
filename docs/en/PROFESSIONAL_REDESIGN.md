@@ -29,3 +29,7 @@ Neutral graphite/light palette, blue selection, subtle dividers and compact modu
 ## Stage 11 — clean layout structure
 
 Restored pre-stage-10 palette: focus on arrangement rather than color. Camera/grid controls grouped in View inside context strip; removed dedicated viewport strip. Project and Properties accessible in the same strip. Automatic Inspector collapses when empty and opens for editable selection or terrain tools; manual toggle disables automation, re-enable from View. Single-line Explorer tabs and collapsed project actions. Fullscreen restore controls retained. Fixed static rail guard while preserving module controls and top ribbon access. CI and visual acceptance pending.
+
+## Stage 12 — separate startup and editing
+
+Welcome view occupies the workspace without exposing empty panels; four actual project actions, explicit editor entry and return via View when no map is open. Fullscreen hides welcome. Explorer uses a compact flat list with type/details and asset path tooltip. Simplified header branding. Palette and engine unchanged. Stage 12 CI and screenshots pending.
