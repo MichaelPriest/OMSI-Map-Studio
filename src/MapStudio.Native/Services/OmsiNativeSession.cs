@@ -1902,7 +1902,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         terrainPath,
                         Path.Combine(
@@ -2089,7 +2089,7 @@ public sealed class OmsiNativeSession
             {
                 await SafeFileTransaction
                     .WriteAllAsync(
-                        [
+                        (global::MapStudio.Core.IO.PendingFileWrite[])[
                             new PendingFileWrite(
                                 tilePath,
                                 backupTile,
@@ -2124,7 +2124,7 @@ public sealed class OmsiNativeSession
 
                 await SafeFileTransaction
                     .WriteAllAsync(
-                        [
+                        (global::MapStudio.Core.IO.PendingFileWrite[])[
                             new PendingFileWrite(
                                 tilePath,
                                 backupTile,
@@ -2384,7 +2384,7 @@ public sealed class OmsiNativeSession
 
             await SafeFileTransaction
                 .WriteAllAsync(
-                    [
+                    (global::MapStudio.Core.IO.PendingFileWrite[])[
                         new PendingFileWrite(
                             tilePath,
                             backupTile,
@@ -2781,7 +2781,7 @@ public sealed class OmsiNativeSession
 
             await SafeFileTransaction
                 .WriteAllAsync(
-                    [
+                    (global::MapStudio.Core.IO.PendingFileWrite[])[
                         new PendingFileWrite(
                             snapshot.Map
                                 .GlobalConfigPath,
@@ -3104,7 +3104,7 @@ public sealed class OmsiNativeSession
         {
             await SafeFileTransaction
                 .WriteAllAsync(
-                    [
+                    (global::MapStudio.Core.IO.PendingFileWrite[])[
                         new PendingFileWrite(
                             snapshot.Map
                                 .GlobalConfigPath,
@@ -4643,7 +4643,7 @@ public sealed class OmsiNativeSession
                         2.0;
 
                     extraValues =
-                        [
+                        (string[])[
                             "4",
                             tree.TextureName,
                             height.ToString(
@@ -5066,7 +5066,7 @@ public sealed class OmsiNativeSession
                     2.0;
 
                 extraValues =
-                    [
+                    (string[])[
                         "4",
                         tree.TextureName,
                         height.ToString(
@@ -5424,7 +5424,7 @@ public sealed class OmsiNativeSession
                     2.0;
 
                 extraValues =
-                    [
+                    (string[])[
                         "4",
                         tree.TextureName,
                         height.ToString(
@@ -5504,7 +5504,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         targetPath,
                         backupPath,
@@ -5819,7 +5819,7 @@ public sealed class OmsiNativeSession
             OmsiTileSplineEditor
                 .ApplyTransforms(
                     sourceDocument,
-                    [
+                    (global::MapStudio.Core.Omsi.Maps.OmsiSplineTransformEdit[])[
                         new OmsiSplineTransformEdit(
                             source.SourceSectionOrdinal,
                             source.SplinePath,
@@ -5846,7 +5846,7 @@ public sealed class OmsiNativeSession
                 .ApplyLinks(
                     await GetDocumentAsync(
                         sourcePath),
-                    [
+                    (global::MapStudio.Core.Omsi.Maps.OmsiSplineLinkEdit[])[
                         new OmsiSplineLinkEdit(
                             source.SourceSectionOrdinal,
                             source.SplinePath,
@@ -5928,7 +5928,7 @@ public sealed class OmsiNativeSession
                     .ApplyLinks(
                         await GetDocumentAsync(
                             nextPath),
-                        [
+                        (global::MapStudio.Core.Omsi.Maps.OmsiSplineLinkEdit[])[
                             new OmsiSplineLinkEdit(
                                 nextEntry.Spline
                                     .SourceSectionOrdinal,
@@ -6975,7 +6975,7 @@ public sealed class OmsiNativeSession
             OmsiTileAttachmentEditor
                 .ApplyTransforms(
                     document,
-                    [edit]);
+                    (global::MapStudio.Core.Omsi.Maps.OmsiAttachmentTransformEdit[])[edit]);
 
         if (edited.AppliedCount != 1)
         {
@@ -7007,7 +7007,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         targetPath,
                         Path.Combine(
@@ -7204,7 +7204,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         tilePath,
                         backupPath,
@@ -7324,7 +7324,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -7436,7 +7436,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -7543,7 +7543,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -7651,7 +7651,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -7763,7 +7763,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -7875,7 +7875,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -8067,7 +8067,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -8427,7 +8427,7 @@ public sealed class OmsiNativeSession
 
             await SafeFileTransaction
                 .WriteAllAsync(
-                    [
+                    (global::MapStudio.Core.IO.PendingFileWrite[])[
                         new PendingFileWrite(
                             target,
                             backupPath,
@@ -8546,7 +8546,7 @@ public sealed class OmsiNativeSession
 
             await SafeFileTransaction
                 .WriteAllAsync(
-                    [
+                    (global::MapStudio.Core.IO.PendingFileWrite[])[
                         new PendingFileWrite(
                             target,
                             backupPath,
@@ -8666,7 +8666,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -8783,7 +8783,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -8917,7 +8917,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -9035,7 +9035,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -9146,7 +9146,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -9255,7 +9255,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         terrainPath,
                         CreateNativeBackupPath(
@@ -9381,7 +9381,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         terrainPath,
                         CreateNativeBackupPath(
@@ -10161,7 +10161,7 @@ public sealed class OmsiNativeSession
         {
             await SafeFileTransaction
                 .WriteAllAsync(
-                    [
+                    (global::MapStudio.Core.IO.PendingFileWrite[])[
                         new PendingFileWrite(
                             maskPath,
                             CreateNativeBackupPath(
@@ -10428,7 +10428,7 @@ public sealed class OmsiNativeSession
             {
                 await SafeFileTransaction
                     .WriteAllAsync(
-                        [
+                        (global::MapStudio.Core.IO.PendingFileWrite[])[
                             new PendingFileWrite(
                                 maskPath,
                                 CreateNativeBackupPath(
@@ -11037,7 +11037,7 @@ public sealed class OmsiNativeSession
 
                 await SafeFileTransaction
                     .WriteAllAsync(
-                        [
+                        (global::MapStudio.Core.IO.PendingFileWrite[])[
                             new PendingFileWrite(
                                 targetFullPath,
                                 Path.Combine(
@@ -11231,7 +11231,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         tilePath,
                         CreateNativeBackupPath(
@@ -11354,7 +11354,7 @@ public sealed class OmsiNativeSession
             OmsiTileSplineAdvancedEditor
                 .Apply(
                     document,
-                    [
+                    (global::MapStudio.Core.Omsi.Maps.OmsiSplineAdvancedEdit[])[
                         new OmsiSplineAdvancedEdit(
                             source.SourceSectionOrdinal,
                             source.SplinePath,
@@ -11374,7 +11374,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         tilePath,
                         backupPath,
@@ -11653,7 +11653,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         tilePath,
                         backupPath,
@@ -12953,7 +12953,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,
@@ -13063,7 +13063,7 @@ public sealed class OmsiNativeSession
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
+                (global::MapStudio.Core.IO.PendingFileWrite[])[
                     new PendingFileWrite(
                         target,
                         backupPath,

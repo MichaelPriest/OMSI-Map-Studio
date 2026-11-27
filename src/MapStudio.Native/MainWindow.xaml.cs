@@ -382,7 +382,7 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<
         LibraryGroupOption>
         _libraryGroupOptions =
-            [
+            (LibraryGroupOption[])[
                 new(
                     OmsiAssetLibraryGroup.All,
                     "Todos")
@@ -4001,7 +4001,7 @@ public sealed partial class MainWindow : Window
                                     true),
 
                         _ =>
-                            [
+                            (global::MapStudio.Renderer.Viewport.NativeSceneryPatternPlacement[])[
                                 new NativeSceneryPatternPlacement(
                                     request.WorldPoint.X,
                                     request.WorldPoint.Z,
@@ -6310,7 +6310,7 @@ public sealed partial class MainWindow : Window
             var graph =
                 new MapStudioRoadGraphBuilder()
                     .Build(
-                        [
+                        (global::MapStudio.Core.Generation.Roads.MapStudioRoadTrace[])[
                             new MapStudioRoadTrace(
                                 "terrain-shape-preview",
                                 points,
@@ -11557,7 +11557,7 @@ public sealed partial class MainWindow : Window
             var graph =
                 new MapStudioRoadGraphBuilder()
                     .Build(
-                        [
+                        (global::MapStudio.Core.Generation.Roads.MapStudioRoadTrace[])[
                             new MapStudioRoadTrace(
                                 "custom-shape-preview",
                                 points,
@@ -16379,7 +16379,7 @@ public sealed partial class MainWindow : Window
             await _session
                 .CreateTimetableTrackAsync(
                     nameBox.Text,
-                    [entry]);
+                    (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableTrackEntry[])[entry]);
 
         await ReloadTransportCatalogAsync(
             "Track",
@@ -17375,7 +17375,7 @@ public sealed partial class MainWindow : Window
                 tourBox.Text.Trim(),
                 aiGroupBox.Text.Trim(),
                 "0",
-                [
+                (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableAddTrip[])[
                     new OmsiTimetableAddTrip(
                         "Created with OMSI Map Studio",
                         tripName,
@@ -17392,7 +17392,7 @@ public sealed partial class MainWindow : Window
                     priorityBox.Text,
                     userAllowed.IsChecked ==
                         true,
-                    [tour]);
+                    (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableTour[])[tour]);
 
         await ReloadTransportCatalogAsync(
             "Line",
@@ -19743,7 +19743,7 @@ public sealed partial class MainWindow : Window
 
         return Viewport
             .PreviewTimetableTrack(
-                [entry]);
+                (global::MapStudio.Core.Omsi.Timetables.OmsiTimetableTrackEntry[])[entry]);
     }
 
     private void OnTransportValidateClick(
@@ -30655,7 +30655,7 @@ setTimeout(postBounds, 250);
         if (!reference.IsTiledMosaic)
         {
             return
-                [
+                (global::MapStudio.Renderer.Viewport.NativeReferenceOverlayDefinition[])[
                     new NativeReferenceOverlayDefinition(
                         reference.ImagePath,
                         reference.Width,
@@ -33088,7 +33088,7 @@ setTimeout(postBounds, 250);
                 await provider
                     .AnalyzeRoadReferenceAsync(
                         new MapStudioRoadReferenceRequest(
-                            [
+                            (global::MapStudio.Core.AI.MapStudioAiImageReference[])[
                                 new MapStudioAiImageReference(
                                     bytes,
                                     mimeType,
@@ -37671,7 +37671,7 @@ setTimeout(postBounds, 250);
                 groups.Add(
                     new NativeSceneryPlacementBatchGroup(
                         relativePath,
-                        [request]));
+                        (global::MapStudio.Renderer.Viewport.NativeSceneryPlacementRequest[])[request]));
 
                 generated++;
             }

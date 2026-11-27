@@ -2374,7 +2374,7 @@ public sealed partial class NativeViewport : UserControl
         SetReferenceOverlays(
             overlay is null
                 ? null
-                : [
+                : (global::MapStudio.Renderer.Viewport.NativeReferenceOverlayDefinition[])[
                     overlay
                 ]);
     }
