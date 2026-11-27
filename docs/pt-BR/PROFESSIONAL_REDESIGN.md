@@ -36,3 +36,7 @@ Faixa de módulos compacta, cabeçalhos com quebra de linha, contexto do Inspect
 ## Etapa 6 — hierarquia visual
 
 Duas faixas de navegação no desktop, ações frequentes junto ao menu e ações secundárias agrupadas em Mais. Barra contextual plana e rolável, câmera em faixa reservada, trilho vertical menor com rolagem, ações de projeto em duas linhas, minimapa inicialmente recolhido, biblioteca limitada à altura do workspace e Geo Studio com fundo opaco. Todos os nomes de controles e eventos existentes preservados. Validar abertura do menu Mais, alternância de módulos, tela cheia, biblioteca e Geo Studio com as capturas de CI.
+
+## Etapa 7 — Road Studio por grupos
+
+Desenho, reta, curva, snap e continuidade ficam no início; edição de curva/endpoints, conexões/paralelas e elevação passam para grupos expansíveis. Precisão, rotatória, revisão, perfil e ferramentas avançadas permanecem acessíveis. Biblioteca com miniaturas e comandos compactos; limite proporcional somente no modo acoplado. Todos os controles e eventos foram preservados. Homologação visual e de edição pendente.

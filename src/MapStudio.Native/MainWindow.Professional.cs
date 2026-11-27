@@ -19,6 +19,8 @@ public sealed partial class MainWindow
         }
         SyncProfessionalLayers();
         WorkspaceGrid.SizeChanged += OnProfessionalWorkspaceSizeChanged;
+        AssetLibraryToolWindow.RegisterPropertyChangedCallback(FrameworkElement.VerticalAlignmentProperty,
+            (_, _) => ApplyProfessionalAssetTrayBounds(WorkspaceGrid.ActualHeight));
     }
 
     private void OnProfessionalWorkspaceSizeChanged(object sender, SizeChangedEventArgs e)
@@ -26,7 +28,14 @@ public sealed partial class MainWindow
         var compact = e.NewSize.Width > 0 && e.NewSize.Width < 1200;
         ExplorerColumn.MaxWidth = compact ? 250 : double.PositiveInfinity;
         InspectorColumn.MaxWidth = compact ? 255 : double.PositiveInfinity;
-        AssetLibraryToolWindow.MaxHeight = Math.Max(155, Math.Min(285, e.NewSize.Height * 0.36));
+        ApplyProfessionalAssetTrayBounds(e.NewSize.Height);
+    }
+
+    private void ApplyProfessionalAssetTrayBounds(double workspaceHeight)
+    {
+        AssetLibraryToolWindow.MaxHeight = _assetLibraryDocked && workspaceHeight > 0
+            ? Math.Max(155, Math.Min(285, workspaceHeight * 0.40))
+            : double.PositiveInfinity;
     }
 
     private void SyncProfessionalLayers()
