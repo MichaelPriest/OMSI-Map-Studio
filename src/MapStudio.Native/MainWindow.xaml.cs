@@ -28540,6 +28540,18 @@ setTimeout(postBounds, 250);
             ) ==
             2;
 
+        var generationLayers = MapStudioRealWorldLayers.None;
+        if (RealMapGenerateRoadsCheckBox.IsChecked == true) generationLayers |= MapStudioRealWorldLayers.Roads;
+        if (RealMapGenerateBuildingsCheckBox.IsChecked == true) generationLayers |= MapStudioRealWorldLayers.Buildings;
+        if (RealMapGenerateVegetationCheckBox.IsChecked == true) generationLayers |= MapStudioRealWorldLayers.Vegetation;
+        if (RealMapGenerateInfrastructureCheckBox.IsChecked == true) generationLayers |= MapStudioRealWorldLayers.Infrastructure;
+        if (RealMapGenerateFurnitureCheckBox.IsChecked == true) generationLayers |= MapStudioRealWorldLayers.StreetFurniture;
+        if (requestedFullReconstruction && generationLayers == MapStudioRealWorldLayers.None)
+        {
+            StatusText.Text = "Selecione pelo menos uma camada ou escolha apenas terreno/referência.";
+            return;
+        }
+
         if (requestedFullReconstruction)
         {
             RealMapAreaWizardTabs.SelectedIndex =
@@ -28881,7 +28893,8 @@ setTimeout(postBounds, 250);
                             useOpenAerialMapEvidence:
                                 RealMapUseOpenAerialMapEvidenceCheckBox
                                     .IsChecked ==
-                                true);
+                                true,
+                            layers: generationLayers);
 
                     if (
                         generationRunSummary

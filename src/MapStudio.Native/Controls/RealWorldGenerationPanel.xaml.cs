@@ -1,3 +1,4 @@
+using MapStudio.Core.Omsi.Structures;
 using System.ComponentModel;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Native.Services;
@@ -53,7 +54,8 @@ public sealed partial class RealWorldGenerationPanel :
             bool useSavedGoogleElevation = true,
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
-            bool useOpenAerialMapEvidence = false) =>
+            bool useOpenAerialMapEvidence = false,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All) =>
         ViewModel.StartAsync(
             omsiRoot,
             mapDirectory,
@@ -66,7 +68,8 @@ public sealed partial class RealWorldGenerationPanel :
             useSavedGoogleElevation,
             useSavedOpenMeteoElevation,
             useBuildingVisualEvidence,
-            useOpenAerialMapEvidence);
+            useOpenAerialMapEvidence,
+            layers);
 
     public bool Cancel() =>
         ViewModel.Cancel();

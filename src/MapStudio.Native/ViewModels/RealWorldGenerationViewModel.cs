@@ -286,7 +286,8 @@ public sealed class RealWorldGenerationViewModel :
             bool useSavedGoogleElevation = true,
             bool useSavedOpenMeteoElevation = false,
             bool useBuildingVisualEvidence = false,
-            bool useOpenAerialMapEvidence = false)
+            bool useOpenAerialMapEvidence = false,
+            MapStudioRealWorldLayers layers = MapStudioRealWorldLayers.All)
     {
         if (IsBusy)
         {
@@ -336,7 +337,8 @@ public sealed class RealWorldGenerationViewModel :
                         useSavedGoogleElevation,
                         useSavedOpenMeteoElevation,
                         useBuildingVisualEvidence,
-                        useOpenAerialMapEvidence);
+                        useOpenAerialMapEvidence,
+                        layers);
 
             Summary =
                 summary;
